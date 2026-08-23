@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Hairline divider, white_10 (§12.1): use as listViewDivider or
+     LinearLayout showDividers between rows/cards. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <size
+        android:width="@dimen/xx_hairline"
+        android:height="@dimen/xx_hairline"/>
+    <solid android:color="@color/pxx_white_10"/>
+</shape>

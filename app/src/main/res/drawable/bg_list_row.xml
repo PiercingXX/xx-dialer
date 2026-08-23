@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- List row background: flat ink surface, quiet white_10 wash on press.
+     Dividers come from drawable/divider_hairline on the parent layout. -->
+<ripple xmlns:android="http://schemas.android.com/apk/res/android"
+    android:color="@color/pxx_white_10">
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="@android:color/transparent"/>
+        </shape>
+    </item>
+</ripple>

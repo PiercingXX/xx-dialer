@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Action: BLOCK — circle with a slash. Row/notification recovery
+     affordance (§12 notifications). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24"
+    android:tint="@color/pxx_white_90">
+    <path
+        android:pathData="M12 3.8 A8.2 8.2 0 1 1 11.99 3.8 Z"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="1.75"/>
+    <path
+        android:pathData="M6.6 6.6 L17.4 17.4"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="1.75"
+        android:strokeLineCap="round"/>
+</vector>

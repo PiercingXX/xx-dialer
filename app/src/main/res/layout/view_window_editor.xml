@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Window editor dialog (§7, §12.4): start/end time rows (TimePickerDialog)
+     plus seven day-toggle chips writing daysMask bit0=Mon..bit6=Sun. Chips
+     are added in code from WindowChips.DAY_LABELS; save persists via
+     SettingsRepository.windowToJson. Static labels get their text in code —
+     no new string resources may be added by this screen. -->
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingLeft="@dimen/xx_gutter"
+        android:paddingRight="@dimen/xx_gutter"
+        android:paddingTop="16dp"
+        android:paddingBottom="8dp">
+
+        <TextView
+            android:id="@+id/winTimesEyebrow"
+            style="@style/TextAppearance.Xx.Chip"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" />
+
+        <TextView
+            android:id="@+id/winStartRow"
+            style="@style/TextAppearance.Xx.Body"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:minHeight="48dp"
+            android:gravity="center_vertical"
+            android:background="@drawable/bg_list_row" />
+
+        <TextView
+            android:id="@+id/winEndRow"
+            style="@style/TextAppearance.Xx.Body"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:minHeight="48dp"
+            android:gravity="center_vertical"
+            android:background="@drawable/bg_list_row" />
+
+        <TextView
+            android:id="@+id/winDaysEyebrow"
+            style="@style/TextAppearance.Xx.Chip"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:paddingTop="18dp" />
+
+        <HorizontalScrollView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:scrollbars="none">
+
+            <com.google.android.material.chip.ChipGroup
+                android:id="@+id/winDays"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                app:chipSpacingHorizontal="6dp"
+                app:singleLine="true" />
+        </HorizontalScrollView>
+
+        <TextView
+            android:id="@+id/winSemanticsNote"
+            style="@style/TextAppearance.Xx.BodySmall"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingTop="10dp" />
+
+    </LinearLayout>
+</ScrollView>

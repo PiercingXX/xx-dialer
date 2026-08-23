@@ -1,0 +1,19 @@
+# Gradle
+.gradle/
+build/
+
+# Android Studio / IntelliJ
+.idea/
+*.iml
+*.ipr
+*.iws
+captures/
+
+# Local machine paths (SDK location et al.) — never commit.
+local.properties
+
+# Kotlin/Native and toolchain scratch
+.kotlin/
+
+# OS noise
+.DS_Store

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">XX-Phone</string>
+
+    <!-- Tab labels (§12) -->
+    <string name="tab_recents">Recents</string>
+    <string name="tab_keypad">Keypad</string>
+    <string name="tab_people">People</string>
+    <string name="tab_rules">Rules</string>
+
+    <!-- Generic actions used by shared treatments (answer/decline blocks,
+         row and notification recovery affordances, Rules screen) -->
+    <string name="call_back">Call back</string>
+    <string name="block">Block</string>
+    <string name="answer">Answer</string>
+    <string name="decline">Decline</string>
+    <string name="expecting_a_call">Expecting a call</string>
+</resources>

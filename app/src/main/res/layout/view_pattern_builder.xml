@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Pattern-rule mask builder dialog (§8, §12.4): type a sample number, slide
+     to mask trailing digits into X's (live preview "425-555-XXXX"), pick
+     block(default)/silence, SAVE computes e164Prefix+wildcards per
+     core.PatternRule semantics. Labels set in code (no new string res). -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingLeft="@dimen/xx_gutter"
+    android:paddingRight="@dimen/xx_gutter"
+    android:paddingTop="16dp"
+    android:paddingBottom="8dp">
+
+    <TextView
+        android:id="@+id/patternEyebrow"
+        style="@style/TextAppearance.Xx.Chip"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content" />
+
+    <EditText
+        android:id="@+id/patternInput"
+        style="@style/TextAppearance.Xx.Body"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:inputType="phone"
+        android:maxLines="1" />
+
+    <TextView
+        android:id="@+id/patternPreview"
+        style="@style/TextAppearance.Xx.Duration"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp" />
+
+    <SeekBar
+        android:id="@+id/patternMask"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:max="0"
+        android:progress="0" />
+
+    <TextView
+        android:id="@+id/patternMaskLabel"
+        style="@style/TextAppearance.Xx.BodySmall"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+
+    <com.google.android.material.chip.ChipGroup
+        android:id="@+id/patternAction"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        app:singleSelection="true" />
+
+    <TextView
+        android:id="@+id/patternHint"
+        style="@style/TextAppearance.Xx.BodySmall"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingTop="8dp" />
+
+    <Button
+        android:id="@+id/patternSave"
+        style="@style/Widget.Xx.ButtonPrimary"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp" />
+
+</LinearLayout>

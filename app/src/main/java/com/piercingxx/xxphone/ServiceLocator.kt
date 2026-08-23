@@ -1,0 +1,61 @@
+package com.piercingxx.xxphone
+
+import android.content.Context
+import com.piercingxx.xxphone.data.PatternRuleDao
+import com.piercingxx.xxphone.data.RulesProvider
+import com.piercingxx.xxphone.data.SettingDao
+import com.piercingxx.xxphone.data.SettingsRepository
+import com.piercingxx.xxphone.data.XxDatabase
+import com.piercingxx.xxphone.data.XxDb
+import com.piercingxx.xxphone.ring.ChannelRegistry
+import com.piercingxx.xxphone.telecom.EmergencyMarker
+
+/**
+ * Process-wide singletons, built lazily on first use and cached for the life
+ * of the process (design §14). Deliberately dumb: application context in,
+ * instance out, double-checked lazy under the hood. Nothing here does I/O.
+ */
+object ServiceLocator {
+
+    @Volatile private var dbInstance: XxDatabase? = null
+    @Volatile private var settingsInstance: SettingsRepository? = null
+    @Volatile private var rulesInstance: RulesProvider? = null
+    @Volatile private var emergencyMarkerInstance: EmergencyMarker? = null
+    @Volatile private var channelRegistryInstance: ChannelRegistry? = null
+
+    fun db(context: Context): XxDatabase =
+        dbInstance ?: synchronized(this) {
+            dbInstance ?: XxDb.build(context.applicationContext).also { dbInstance = it }
+        }
+
+    fun settings(context: Context): SettingsRepository =
+        settingsInstance ?: synchronized(this) {
+            settingsInstance ?: SettingsRepository(db(context).settingDao())
+                .also { settingsInstance = it }
+        }
+
+    fun rules(context: Context): RulesProvider =
+        rulesInstance ?: synchronized(this) {
+            val db = db(context)
+            rulesInstance
+                ?: RulesProvider(
+                    db.settingDao(),
+                    db.patternRuleDao(),
+                ).also { rulesInstance = it }
+        }
+
+    /** telecom/ owns the class; we only hold the process-wide handle. */
+    fun emergencyMarker(context: Context): EmergencyMarker =
+        emergencyMarkerInstance ?: synchronized(this) {
+            emergencyMarkerInstance ?: EmergencyMarker(db(context))
+                .also { emergencyMarkerInstance = it }
+        }
+
+    fun channelRegistry(context: Context): ChannelRegistry =
+        channelRegistryInstance ?: synchronized(this) {
+            channelRegistryInstance ?: ChannelRegistry(
+                context.applicationContext,
+                db(context).channelRegistryDao(),
+            ).also { channelRegistryInstance = it }
+        }
+}

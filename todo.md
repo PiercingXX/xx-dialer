@@ -3,6 +3,36 @@
 Spec: [design.md](design.md). Target: Pixel 9 Pro (`caiman`), GrapheneOS,
 Android 17 / SDK 37.
 
+## Status ledger — 2026-08-23
+
+Code-complete at the JVM level; nothing device-proven. This ledger
+supersedes the stale "Status: nothing built" line kept below.
+
+- **WS0 BUILT-AWAITING-DEVICE** — probe APK builds
+  (`./gradlew :probe:assembleDebug` → `probe/build/outputs/apk/debug/probe-debug.apk`);
+  run [PROBE.md](PROBE.md) on `caiman`, paste answers into design §4.
+- **WS1 DONE** — gate: `./gradlew :app:assembleDebug` PASS.
+- **WS2 DONE** — gate: §6 truth table, 66 named tests PASS in `core/`.
+- **WS3 CODE-COMPLETE** — Setup flow + InCallService + `placeCall()` in tree;
+  device gate OPEN.
+- **WS4 CODE-COMPLETE** — Room v1 + mirror engine (`data/`,
+  `ContactMirror.kt`); empty-grant-on-device unproven; device gate OPEN.
+- **WS5 CODE-COMPLETE** — screening fail-open (`XxCallScreeningService`);
+  spam-block-live and the 5 s budget unproven; device gate OPEN.
+- **WS6 CODE-COMPLETE** — channels/router/notifier/tile (`ring/`); headline
+  behavior needs `caiman`.
+- **WS7 PARTIAL** — incoming/in-call UI ships this cycle (incl. call-waiting
+  surface); daily-driver gate OPEN.
+- **WS8 DONE-CODE** — recents/keypad/people + T9.
+- **WS9 DONE-CODE** — rules/test-a-number/log/tallies/import-backup +
+  missed-call notification ownership.
+- **WS10 MOSTLY-DONE** — backup hardened, Expecting-a-call bypass + QS tile
+  done, hidden-caller policy + repeat toggle done; offline blocklist import
+  found in tree (`util/BlocklistImport.kt` + `RulesActivity` button +
+  `BlocklistImportTest`) — code-complete, JVM-tested (update 2026-08-23).
+
+---
+
 **Status: nothing built.** The repo holds `design.md`, this file, and
 `design/` (the screen mockup + research notes).
 

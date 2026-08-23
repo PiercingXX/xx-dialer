@@ -1,0 +1,182 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  In-call surface (design §12 In-call, mockup screen 03): tabular duration,
+  caller name in Body, waiting-call card, the Keypad · Mute · Speaker · More
+  control row (text labels — no ic_* drawable fits the mono look), and the
+  End-call block. The DTMF grid mounts into incall_dtmf_grid at runtime.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:fitsSystemWindows="true"
+    android:paddingLeft="@dimen/xx_gutter"
+    android:paddingRight="@dimen/xx_gutter"
+    android:paddingTop="48dp"
+    android:paddingBottom="20dp">
+
+    <TextView
+        android:id="@+id/incall_kind"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textAppearance="@style/TextAppearance.Xx.Chip"/>
+
+    <TextView
+        android:id="@+id/incall_duration"
+        style="@style/TextAppearance.Xx.Duration"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:visibility="gone"
+        tools:text="04:12"/>
+
+    <TextView
+        android:id="@+id/incall_name"
+        style="@style/TextAppearance.Xx.Body"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"/>
+
+    <TextView
+        android:id="@+id/incall_context"
+        style="@style/TextAppearance.Xx.BodySmall"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:visibility="gone"/>
+
+    <!-- Swap lives on the top banner (§12 call waiting): visible only while
+         one ACTIVE + one HELD pair exists. -->
+    <Button
+        android:id="@+id/btn_swap"
+        style="@style/Widget.Xx.ButtonSecondary"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:text="Swap calls"
+        android:visibility="gone"/>
+
+    <Space
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"/>
+
+    <!-- Call waiting card: the second incoming call, hold-and-answer on accept -->
+    <LinearLayout
+        android:id="@+id/waiting_card"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="@drawable/bg_card"
+        android:padding="16dp"
+        android:visibility="gone">
+
+        <TextView
+            style="@style/TextAppearance.Xx.Chip"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Waiting"/>
+
+        <TextView
+            android:id="@+id/waiting_name"
+            style="@style/TextAppearance.Xx.Body"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"/>
+
+        <Button
+            android:id="@+id/btn_answer_waiting"
+            style="@style/Widget.Xx.ButtonPrimary"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="@string/answer"/>
+    </LinearLayout>
+
+    <!-- DTMF pad: digit grid reusing the KeypadActivity key treatment,
+         mounted by InCallActivity into this container -->
+    <ScrollView
+        android:id="@+id/incall_dtmf_scroll"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:scrollbars="none"
+        android:visibility="gone">
+
+        <GridLayout
+            android:id="@+id/incall_dtmf_grid"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:columnCount="3"
+            android:rowCount="4"/>
+    </ScrollView>
+
+    <!-- Primary control row: Keypad · Mute · Speaker/route · More -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/btn_keypad"
+            style="@style/Widget.Xx.ButtonSecondary"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginEnd="4dp"
+            android:minHeight="48dp"
+            android:paddingLeft="2dp"
+            android:paddingRight="2dp"
+            android:text="Keypad"/>
+
+        <Button
+            android:id="@+id/btn_mute"
+            style="@style/Widget.Xx.ButtonSecondary"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="4dp"
+            android:layout_marginEnd="4dp"
+            android:minHeight="48dp"
+            android:paddingLeft="2dp"
+            android:paddingRight="2dp"
+            android:text="Mute"/>
+
+        <Button
+            android:id="@+id/btn_speaker"
+            style="@style/Widget.Xx.ButtonSecondary"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="4dp"
+            android:layout_marginEnd="4dp"
+            android:minHeight="48dp"
+            android:paddingLeft="2dp"
+            android:paddingRight="2dp"
+            android:text="Audio"/>
+
+        <Button
+            android:id="@+id/btn_more"
+            style="@style/Widget.Xx.ButtonSecondary"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="4dp"
+            android:minHeight="48dp"
+            android:paddingLeft="2dp"
+            android:paddingRight="2dp"
+            android:text="More"/>
+    </LinearLayout>
+
+    <!-- End call: the one loud state may use error (§12.1 glyph-first rule) -->
+    <Button
+        android:id="@+id/btn_end"
+        style="@style/Widget.Xx.ButtonSecondary"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="14dp"
+        android:textColor="@color/pxx_error"
+        android:text="End call"/>
+
+</LinearLayout>

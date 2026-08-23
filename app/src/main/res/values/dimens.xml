@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  XX-Phone layout metrics (design §12). No FAB dimensions exist anywhere:
+  keypad is the center-tab IA, not a FAB (§12.2).
+-->
+<resources>
+
+    <!-- Screen gutter -->
+    <dimen name="xx_gutter">20dp</dimen>
+
+    <!-- List rows -->
+    <dimen name="xx_row_height">64dp</dimen>
+
+    <!-- Keypad grid: oversized keys, generous gaps -->
+    <dimen name="xx_key_size">56dp</dimen>
+    <dimen name="xx_key_gap">12dp</dimen>
+    <dimen name="xx_key_corner">10dp</dimen>
+
+    <!-- Chips / eyebrows -->
+    <dimen name="xx_chip_height">28dp</dimen>
+
+    <!-- Blocks (Answer / Decline) and cards -->
+    <dimen name="xx_button_height">56dp</dimen>
+    <dimen name="xx_radius_block">12dp</dimen>
+    <dimen name="xx_radius_card">8dp</dimen>
+    <dimen name="xx_hairline">1dp</dimen>
+
+</resources>

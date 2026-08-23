@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Bottom-nav tab label/icon color: active tab is the Signal moment
+     (pure white); everything else sits at white_50. Covers both the
+     Material `checked` state and plain-view `selected`/`activated`. -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_checked="true" android:color="@color/pxx_signal"/>
+    <item android:state_selected="true" android:color="@color/pxx_signal"/>
+    <item android:state_activated="true" android:color="@color/pxx_signal"/>
+    <item android:color="@color/pxx_white_50"/>
+</selector>

@@ -1,0 +1,636 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:fitsSystemWindows="true"
+    android:background="@color/pxx_ink">
+
+    <TextView
+        style="@style/TextAppearance.Xx.Display"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:paddingLeft="@dimen/xx_gutter"
+        android:paddingRight="@dimen/xx_gutter"
+        android:paddingTop="18dp"
+        android:text="@string/tab_rules" />
+
+    <TextView
+        android:id="@+id/observeBanner"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="@dimen/xx_gutter"
+        android:layout_marginRight="@dimen/xx_gutter"
+        android:layout_marginTop="12dp"
+        android:background="@drawable/bg_emphasis_invert"
+        android:gravity="center"
+        android:fontFamily="@string/font_body"
+        android:paddingTop="10dp"
+        android:paddingBottom="10dp"
+        android:textSize="11sp"
+        android:letterSpacing="0.08"
+        android:textAllCaps="true"
+        android:textColor="@color/pxx_emphasis_fg"
+        android:visibility="gone" />
+
+    <ScrollView
+        android:id="@+id/rulesScroll"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingBottom="48dp">
+
+            <!-- enforcement switch + observe-week offer -->
+            <LinearLayout
+                style="@style/Widget.Xx.Card"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="@dimen/xx_gutter"
+                android:layout_marginRight="@dimen/xx_gutter"
+                android:layout_marginTop="16dp"
+                android:orientation="vertical">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:id="@+id/enforceLabel"
+                        style="@style/TextAppearance.Xx.Body"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1" />
+
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/enforceSwitch"
+                        style="@style/Widget.Xx.Switch"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" />
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/enforceCaption"
+                    style="@style/TextAppearance.Xx.BodySmall"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp" />
+
+                <Button
+                    android:id="@+id/enforceOfferButton"
+                    style="@style/Widget.Xx.ButtonPrimary"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:visibility="gone" />
+            </LinearLayout>
+
+            <!-- expecting a call (D15) -->
+            <Button
+                android:id="@+id/expectButton"
+                style="@style/Widget.Xx.ButtonSecondary"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="@dimen/xx_gutter"
+                android:layout_marginRight="@dimen/xx_gutter"
+                android:layout_marginTop="12dp"
+                android:text="@string/expecting_a_call" />
+
+            <TextView
+                android:id="@+id/expectCountdown"
+                style="@style/TextAppearance.Xx.Duration"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:gravity="center"
+                android:visibility="gone" />
+
+            <!-- §6 precedence list -->
+            <TextView
+                android:id="@+id/precedEyebrow"
+                style="@style/TextAppearance.Xx.Chip"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="@dimen/xx_gutter"
+                android:layout_marginTop="24dp" />
+
+            <LinearLayout
+                android:id="@+id/precedList"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="@dimen/xx_gutter"
+                android:layout_marginRight="@dimen/xx_gutter"
+                android:layout_marginTop="6dp"
+                android:background="@drawable/bg_card"
+                android:divider="@drawable/divider_hairline"
+                android:showDividers="middle"
+                android:orientation="vertical" />
+
+            <!-- windows -->
+            <TextView
+                android:id="@+id/windowsEyebrow"
+                style="@style/TextAppearance.Xx.Chip"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="@dimen/xx_gutter"
+                android:layout_marginTop="24dp" />
+
+            <LinearLayout
+                android:id="@+id/windowUnknownRow"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:minHeight="@dimen/xx_row_height"
+                android:layout_marginLeft="@dimen/xx_gutter"
+                android:layout_marginRight="@dimen/xx_gutter"
+                android:layout_marginTop="6dp"
+                android:background="@drawable/bg_list_row"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingLeft="16dp"
+                android:paddingRight="16dp">
+
+                <TextView
+                    android:id="@+id/windowUnknownTitle"
+                    style="@style/TextAppearance.Xx.Body"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1" />
+
+                <TextView
+                    android:id="@+id/windowUnknownDetail"
+                    style="@style/TextAppearance.Xx.BodySmall"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="12dp"
+                    android:gravity="end" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/windowBusinessRow"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:minHeight="@dimen/xx_row_height"
+                android:layout_marginLeft="@dimen/xx_gutter"
+                android:layout_marginRight="@dimen/xx_gutter"
+                android:background="@drawable/bg_list_row"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingLeft="16dp"
+                android:paddingRight="16dp">
+
+                <TextView
+                    android:id="@+id/windowBusinessTitle"
+                    style="@style/TextAppearance.Xx.Body"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1" />
+
+                <TextView
+                    android:id="@+id/windowBusinessDetail"
+                    style="@style/TextAppearance.Xx.BodySmall"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="12dp"
+                    android:gravity="end" />
+            </LinearLayout>
+
+            <!-- unknown-caller tone -->
+            <TextView
+                android:id="@+id/toneEyebrow"
+                style="@style/TextAppearance.Xx.Chip"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="@dimen/xx_gutter"
+                android:layout_marginTop="24dp" />
+
+            <LinearLayout
+                style="@style/Widget.Xx.Card"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="@dimen/xx_gutter"
+                android:layout_marginRight="@dimen/xx_gutter"
+                android:layout_marginTop="6dp"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/toneCurrent"
+                    style="@style/TextAppearance.Xx.Body"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content" />
+
+                <Button
+                    android:id="@+id/tonePick"
+                    style="@style/Widget.Xx.ButtonSecondary"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp" />
+            </LinearLayout>
+
+            <!-- policies -->
+            <TextView
+                android:id="@+id/policiesEyebrow"
+                style="@style/TextAppearance.Xx.Chip"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="@dimen/xx_gutter"
+                android:layout_marginTop="24dp" />
+
+            <LinearLayout
+                style="@style/Widget.Xx.Card"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="@dimen/xx_gutter"
+                android:layout_marginRight="@dimen/xx_gutter"
+                android:layout_marginTop="6dp"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/hiddenPolicyLabel"
+                    style="@style/TextAppearance.Xx.BodySmall"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content" />
+
+                <com.google.android.material.chip.ChipGroup
+                    android:id="@+id/hiddenPolicyGroup"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    app:singleSelection="true">
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chipHiddenUnknown"
+                        style="@style/Widget.Xx.Chip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chipHiddenSilence"
+                        style="@style/Widget.Xx.Chip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chipHiddenBlock"
+                        style="@style/Widget.Xx.Chip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" />
+                </com.google.android.material.chip.ChipGroup>
+
+                <TextView
+                    android:id="@+id/stirLabel"
+                    style="@style/TextAppearance.Xx.BodySmall"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:paddingTop="14dp" />
+
+                <com.google.android.material.chip.ChipGroup
+                    android:id="@+id/stirGroup"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    app:singleSelection="true">
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chipStirBlock"
+                        style="@style/Widget.Xx.Chip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chipStirSilence"
+                        style="@style/Widget.Xx.Chip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chipStirOff"
+                        style="@style/Widget.Xx.Chip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" />
+                </com.google.android.material.chip.ChipGroup>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:paddingTop="14dp">
+
+                    <TextView
+                        android:id="@+id/repeatLabel"
+                        style="@style/TextAppearance.Xx.BodySmall"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1" />
+
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/repeatSwitch"
+                        style="@style/Widget.Xx.Switch"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" />
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/notifLabel"
+                    style="@style/TextAppearance.Xx.BodySmall"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:paddingTop="14dp" />
+
+                <com.google.android.material.chip.ChipGroup
+                    android:id="@+id/notifGroup"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    app:singleSelection="true">
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chipNotifImmediate"
+                        style="@style/Widget.Xx.Chip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chipNotifDaily"
+                        style="@style/Widget.Xx.Chip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chipNotifNever"
+                        style="@style/Widget.Xx.Chip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" />
+                </com.google.android.material.chip.ChipGroup>
+            </LinearLayout>
+
+            <!-- pattern rules -->
+            <TextView
+                android:id="@+id/patternsEyebrow"
+                style="@style/TextAppearance.Xx.Chip"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="@dimen/xx_gutter"
+                android:layout_marginTop="24dp" />
+
+            <LinearLayout
+                android:id="@+id/patternsBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="@dimen/xx_gutter"
+                android:layout_marginRight="@dimen/xx_gutter"
+                android:layout_marginTop="6dp"
+                android:background="@drawable/bg_card"
+                android:divider="@drawable/divider_hairline"
+                android:showDividers="middle"
+                android:orientation="vertical" />
+
+            <TextView
+                android:id="@+id/exemptionNote"
+                style="@style/TextAppearance.Xx.BodySmall"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="@dimen/xx_gutter"
+                android:layout_marginRight="@dimen/xx_gutter"
+                android:layout_marginTop="8dp" />
+
+            <Button
+                android:id="@+id/neighborButton"
+                style="@style/Widget.Xx.ButtonSecondary"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="@dimen/xx_gutter"
+                android:layout_marginRight="@dimen/xx_gutter"
+                android:layout_marginTop="12dp" />
+
+            <Button
+                android:id="@+id/addPatternButton"
+                style="@style/Widget.Xx.ButtonSecondary"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="@dimen/xx_gutter"
+                android:layout_marginRight="@dimen/xx_gutter"
+                android:layout_marginTop="12dp" />
+
+            <!-- system blocklist link -->
+            <TextView
+                android:id="@+id/blockedEyebrow"
+                style="@style/TextAppearance.Xx.Chip"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="@dimen/xx_gutter"
+                android:layout_marginTop="24dp" />
+
+            <LinearLayout
+                android:id="@+id/blockedLinkRow"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:minHeight="@dimen/xx_row_height"
+                android:layout_marginLeft="@dimen/xx_gutter"
+                android:layout_marginRight="@dimen/xx_gutter"
+                android:layout_marginTop="6dp"
+                android:background="@drawable/bg_list_row"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingLeft="16dp"
+                android:paddingRight="16dp">
+
+                <TextView
+                    android:id="@+id/blockedLinkTitle"
+                    style="@style/TextAppearance.Xx.Body"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1" />
+
+                <TextView
+                    android:id="@+id/blockedLinkDetail"
+                    style="@style/TextAppearance.Xx.BodySmall"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="12dp" />
+            </LinearLayout>
+
+            <!-- test a number -->
+            <TextView
+                android:id="@+id/testEyebrowRow"
+                style="@style/TextAppearance.Xx.Chip"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="@dimen/xx_gutter"
+                android:layout_marginTop="24dp" />
+
+            <LinearLayout
+                android:id="@+id/testRow"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:minHeight="@dimen/xx_row_height"
+                android:layout_marginLeft="@dimen/xx_gutter"
+                android:layout_marginRight="@dimen/xx_gutter"
+                android:layout_marginTop="6dp"
+                android:background="@drawable/bg_list_row"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingLeft="16dp"
+                android:paddingRight="16dp">
+
+                <TextView
+                    android:id="@+id/testRowTitle"
+                    style="@style/TextAppearance.Xx.Body"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1" />
+
+                <TextView
+                    android:id="@+id/testRowDetail"
+                    style="@style/TextAppearance.Xx.BodySmall"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="12dp" />
+            </LinearLayout>
+
+            <!-- weekly tallies -->
+            <TextView
+                android:id="@+id/tallyEyebrow"
+                style="@style/TextAppearance.Xx.Chip"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="@dimen/xx_gutter"
+                android:layout_marginTop="24dp" />
+
+            <LinearLayout
+                style="@style/Widget.Xx.Card"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="@dimen/xx_gutter"
+                android:layout_marginRight="@dimen/xx_gutter"
+                android:layout_marginTop="6dp"
+                android:orientation="horizontal">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/tallyScreened"
+                        style="@style/TextAppearance.Xx.Duration"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" />
+
+                    <TextView
+                        android:id="@+id/tallyScreenedLabel"
+                        style="@style/TextAppearance.Xx.Chip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/tallySilenced"
+                        style="@style/TextAppearance.Xx.Duration"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" />
+
+                    <TextView
+                        android:id="@+id/tallySilencedLabel"
+                        style="@style/TextAppearance.Xx.Chip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/tallyBlocked"
+                        style="@style/TextAppearance.Xx.Duration"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textColor="@color/pxx_error" />
+
+                    <TextView
+                        android:id="@+id/tallyBlockedLabel"
+                        style="@style/TextAppearance.Xx.Chip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- screening log -->
+            <TextView
+                android:id="@+id/logEyebrow"
+                style="@style/TextAppearance.Xx.Chip"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="@dimen/xx_gutter"
+                android:layout_marginTop="24dp" />
+
+            <LinearLayout
+                android:id="@+id/logBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="@dimen/xx_gutter"
+                android:layout_marginRight="@dimen/xx_gutter"
+                android:layout_marginTop="6dp"
+                android:background="@drawable/bg_card"
+                android:divider="@drawable/divider_hairline"
+                android:showDividers="middle"
+                android:orientation="vertical" />
+
+            <!-- backup / restore -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="@dimen/xx_gutter"
+                android:layout_marginRight="@dimen/xx_gutter"
+                android:layout_marginTop="20dp"
+                android:orientation="horizontal">
+
+                <Button
+                    android:id="@+id/exportButton"
+                    style="@style/Widget.Xx.ButtonSecondary"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1" />
+
+                <Button
+                    android:id="@+id/importButton"
+                    style="@style/Widget.Xx.ButtonSecondary"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="12dp" />
+            </LinearLayout>
+
+            <!-- offline blocklist import (§8, R8): one number per line, on-device -->
+            <Button
+                android:id="@+id/importBlocklistButton"
+                style="@style/Widget.Xx.ButtonSecondary"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="@dimen/xx_gutter"
+                android:layout_marginRight="@dimen/xx_gutter"
+                android:layout_marginTop="12dp" />
+        </LinearLayout>
+    </ScrollView>
+
+    <include android:id="@+id/tab_bar" layout="@layout/view_tab_bar"/>
+
+</LinearLayout>

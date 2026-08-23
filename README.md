@@ -7,7 +7,14 @@ starred contacts always ring, and everyone else rings only when their window
 says so — unknown numbers on their own ringtone, 9 to 5. All screening is
 local. The app declares no `INTERNET` permission, and that is checkable.
 
-**Status:** specification only. Nothing built.
+**Status:** specification → implemented at the code level. The pure-JVM
+policy core (`core/`, 66 tests), the FactStore/telecom/ring layers, all
+screens, and the WS0 probe APK exist in-tree; ~220 JVM tests green; no
+`INTERNET` permission in either built APK (`aapt2 dump permissions`, checked).
+Device-gated gates remain OPEN: the four WS0 [VERIFY] answers, the daily-driver
+gate (WS7), and the instrumented suites wait until the `caiman` runs
+[PROBE.md](PROBE.md) and installs the app. Nothing on this list is
+device-proven yet.
 **Spec:** [design.md](design.md) — the full design.
 **Build plan:** [todo.md](todo.md) — workstreams, gates, and the order to do them in.
 **Screens:** [design/xx-phone-screens.html](design/xx-phone-screens.html) — the mockup.
@@ -58,3 +65,27 @@ Launcher.
 
 Free and ad-free. Collects no personal data. Nothing this app sees ever
 leaves your device.
+
+## Build
+
+Prerequisites: JDK 17; Android SDK with `platforms;android-35` at minimum
+(the build pins `compileSdk 35` — see the note in `build.gradle.kts`;
+`platforms;android-37.1` is installed locally but unused by the build).
+
+```
+./gradlew :app:assembleDebug
+adb install -r app/build/outputs/apk/debug/app-debug.apk
+```
+
+The WS0 probe builds separately: `./gradlew :probe:assembleDebug`, then
+follow [PROBE.md](PROBE.md). `verifyNoInternet` runs automatically on every
+debug build (`:app` and `:probe`): it dumps the APK's declared permissions via
+`aapt2 dump permissions` and fails the build if `android.permission.INTERNET`
+appears — the design.md R8/D8 claim, enforced by the build.
+
+First run after install: the Setup flow claims `ROLE_DIALER` +
+`ROLE_CALL_SCREENING`, with the Restricted-Settings walk-through when the
+role request comes back not-held (design §4.1). The app then starts in
+**observe mode** for a week — every call rings normally while the log
+records what enforcement would have done. Enforcement is offered, never
+flipped automatically (design §6, D13).

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  BRAND-GUIDE.md §4: monospace IS the identity. Space Mono for display,
+  JetBrains Mono for body/UI.
+
+  Both faces now ship as real TTFs in res/font/ (§12.1 type ramp). The
+  indirection through strings stays: layouts reference font_display /
+  font_body, so swapping a face is a one-line change here.
+-->
+<resources>
+    <string name="font_display" translatable="false">@font/spacemono_regular</string>
+    <string name="font_body" translatable="false">@font/jetbrainsmono_regular</string>
+</resources>

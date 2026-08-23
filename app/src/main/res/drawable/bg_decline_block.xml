@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Decline block: hairline-outlined block (white_25 stroke), transparent
+     fill, quiet white_10 wash on press. Mockup .decline. -->
+<ripple xmlns:android="http://schemas.android.com/apk/res/android"
+    android:color="@color/pxx_white_10">
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="@android:color/transparent"/>
+            <stroke
+                android:width="@dimen/xx_hairline"
+                android:color="@color/pxx_white_25"/>
+            <corners android:radius="@dimen/xx_radius_block"/>
+        </shape>
+    </item>
+</ripple>

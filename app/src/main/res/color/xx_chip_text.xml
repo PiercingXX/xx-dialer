@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Chip label: muted until selected; selected chips read as ink on the
+     emphasis-invert background. -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_checked="true" android:color="@color/pxx_emphasis_fg"/>
+    <item android:state_selected="true" android:color="@color/pxx_emphasis_fg"/>
+    <item android:color="@color/pxx_white_50"/>
+</selector>

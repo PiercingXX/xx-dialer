@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  AMOLED-black monochrome, matching the family (design §12). Material3 dark
+  parent; the accent is inversion, not hue — Signal white does the work.
+-->
+<resources>
+    <style name="Theme.XxPhone" parent="Theme.Material3.Dark.NoActionBar">
+        <item name="android:windowBackground">@color/pxx_ink</item>
+        <item name="android:statusBarColor">#000000</item>
+        <item name="android:navigationBarColor">#000000</item>
+
+        <!-- §12.1 defaults: mono everything, body caps at 90% white -->
+        <item name="android:textAppearance">@style/TextAppearance.Xx.Body</item>
+        <item name="textAppearanceDisplaySmall">@style/TextAppearance.Xx.Display</item>
+        <item name="textAppearanceHeadlineLarge">@style/TextAppearance.Xx.CallerName</item>
+        <item name="textAppearanceHeadlineMedium">@style/TextAppearance.Xx.Duration</item>
+        <item name="textAppearanceHeadlineSmall">@style/TextAppearance.Xx.KeypadDigit</item>
+        <item name="textAppearanceBodyLarge">@style/TextAppearance.Xx.Body</item>
+        <item name="textAppearanceBodyMedium">@style/TextAppearance.Xx.BodySmall</item>
+        <item name="textAppearanceLabelSmall">@style/TextAppearance.Xx.Chip</item>
+    </style>
+</resources>

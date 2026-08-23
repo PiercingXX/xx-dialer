@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Incoming-call surface (design §12): caller name/number huge in Space Mono,
+  one context line (tier + why-it-rang), the CNAP clause on its own line,
+  Answer as the Signal-white block, Decline hairline, reply-with-text beneath.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fitsSystemWindows="true"
+    android:orientation="vertical"
+    android:paddingLeft="@dimen/xx_gutter"
+    android:paddingRight="@dimen/xx_gutter"
+    android:paddingTop="48dp"
+    android:paddingBottom="20dp">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Incoming call"
+        android:textAppearance="@style/TextAppearance.Xx.Chip"/>
+
+    <TextView
+        android:id="@+id/tv_name"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:text=""
+        android:textAppearance="@style/TextAppearance.Xx.CallerName"/>
+
+    <TextView
+        android:id="@+id/tv_context"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:visibility="gone"
+        android:textAppearance="@style/TextAppearance.Xx.BodySmall"/>
+
+    <TextView
+        android:id="@+id/tv_cnap"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:visibility="gone"
+        android:textAppearance="@style/TextAppearance.Xx.BodySmall"/>
+
+    <Space
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"/>
+
+    <!-- Slider mode (§12 answer-interaction setting): pill drag ≥70% answers;
+         populated with a custom touch view in code. Decline stays a button. -->
+    <FrameLayout
+        android:id="@+id/slider_container"
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/xx_button_height"
+        android:layout_marginBottom="12dp"
+        android:visibility="gone"/>
+
+    <Button
+        android:id="@+id/btn_answer"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/answer"
+        style="@style/Widget.Xx.ButtonPrimary"/>
+
+    <Button
+        android:id="@+id/btn_decline"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:text="@string/decline"
+        style="@style/Widget.Xx.ButtonSecondary"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
+        android:text="Reply with text · long-press to edit"
+        android:textAppearance="@style/TextAppearance.Xx.Chip"/>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:divider="@drawable/divider_hairline"
+        android:showDividers="middle"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/btn_reply_1"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:minHeight="@dimen/xx_row_height"
+            android:gravity="center_vertical"
+            android:background="?android:attr/selectableItemBackground"
+            android:text=""
+            android:textAppearance="@style/TextAppearance.Xx.BodySmall"/>
+
+        <TextView
+            android:id="@+id/btn_reply_2"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:minHeight="@dimen/xx_row_height"
+            android:gravity="center_vertical"
+            android:background="?android:attr/selectableItemBackground"
+            android:text=""
+            android:textAppearance="@style/TextAppearance.Xx.BodySmall"/>
+
+        <TextView
+            android:id="@+id/btn_reply_3"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:minHeight="@dimen/xx_row_height"
+            android:gravity="center_vertical"
+            android:background="?android:attr/selectableItemBackground"
+            android:text=""
+            android:textAppearance="@style/TextAppearance.Xx.BodySmall"/>
+    </LinearLayout>
+
+</LinearLayout>

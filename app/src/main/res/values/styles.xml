@@ -1,0 +1,188 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  XX-Phone type ramp + component styles (design.md §12.1).
+
+  Contract for UI agents:
+  - fontFamily is ALWAYS set via the string indirection @string/font_display
+    (Space Mono) / @string/font_body (JetBrains Mono) — never @font directly.
+  - Tabular figures ("tnum") on every role where digits can appear.
+  - Reserved-white rule: body text caps at pxx_white_90; pure pxx_signal is
+    the Answer block / active tab alone.
+  - Verdict states are glyph-first; color lives in the glyph drawables.
+-->
+<resources>
+
+    <!-- ================================================================ -->
+    <!-- Type ramp                                                        -->
+    <!-- ================================================================ -->
+
+    <!-- Base: JetBrains Mono body face by default -->
+    <style name="TextAppearance.Xx" parent="android:TextAppearance">
+        <item name="android:fontFamily">@string/font_body</item>
+        <item name="android:textStyle">normal</item>
+        <item name="android:fontFeatureSettings">tnum</item>
+    </style>
+
+    <!-- Incoming caller name. Space Mono 44sp -->
+    <style name="TextAppearance.Xx.CallerName">
+        <item name="android:fontFamily">@string/font_display</item>
+        <item name="android:textSize">44sp</item>
+        <item name="android:lineHeight">48sp</item>
+        <item name="android:textColor">@color/pxx_white_90</item>
+    </style>
+
+    <!-- Keypad digits. Space Mono 34sp, tabular -->
+    <style name="TextAppearance.Xx.KeypadDigit">
+        <item name="android:fontFamily">@string/font_display</item>
+        <item name="android:textSize">34sp</item>
+        <item name="android:textColor">@color/pxx_white_90</item>
+    </style>
+
+    <!-- Call duration / stat numerals. Space Mono 28sp, tabular -->
+    <style name="TextAppearance.Xx.Duration">
+        <item name="android:fontFamily">@string/font_display</item>
+        <item name="android:textSize">28sp</item>
+        <item name="android:textColor">@color/pxx_white_90</item>
+    </style>
+
+    <!-- Screen titles. Space Mono 34sp -->
+    <style name="TextAppearance.Xx.Display">
+        <item name="android:fontFamily">@string/font_display</item>
+        <item name="android:textSize">34sp</item>
+        <item name="android:lineHeight">40sp</item>
+        <item name="android:textColor">@color/pxx_white_90</item>
+    </style>
+
+    <!-- Body, list-row primaries, reasons. JetBrains Mono 16sp @ 90% white -->
+    <style name="TextAppearance.Xx.Body">
+        <item name="android:textSize">16sp</item>
+        <item name="android:lineHeight">24sp</item>
+        <item name="android:textColor">@color/pxx_white_90</item>
+    </style>
+
+    <!-- Secondary body, reasons, timestamps. JetBrains Mono 14sp @ 80% -->
+    <style name="TextAppearance.Xx.BodySmall">
+        <item name="android:textSize">14sp</item>
+        <item name="android:lineHeight">20sp</item>
+        <item name="android:textColor">@color/pxx_white_80</item>
+    </style>
+
+    <!-- Chips, eyebrows, verdict glyph lines. JB Mono 11sp +0.08em @ 50% -->
+    <style name="TextAppearance.Xx.Chip">
+        <item name="android:textSize">11sp</item>
+        <item name="android:letterSpacing">0.08</item>
+        <item name="android:textAllCaps">true</item>
+        <item name="android:textColor">@color/pxx_white_50</item>
+    </style>
+
+    <!-- ================================================================ -->
+    <!-- Components                                                       -->
+    <!-- ================================================================ -->
+
+    <!-- Bottom-nav tab item: mono label; active = Signal white via
+         @color/xx_tab_text selector (icon tint uses the same selector). -->
+    <style name="Widget.Xx.Tab" parent="">
+        <item name="android:fontFamily">@string/font_body</item>
+        <item name="android:textSize">11sp</item>
+        <item name="android:letterSpacing">0.08</item>
+        <item name="android:textStyle">normal</item>
+        <item name="android:textAllCaps">true</item>
+        <item name="android:textColor">@color/xx_tab_text</item>
+        <item name="android:gravity">center</item>
+        <item name="android:background">?android:attr/selectableItemBackgroundBorderless</item>
+        <item name="android:elevation">0dp</item>
+    </style>
+
+    <!-- Filter chip: hairline outline white_25. Selected state = emphasis
+         invert (white bg, ink text) via Widget.Xx.Chip.Selected or by
+         swapping bg_chip_selected + ink text per-view. -->
+    <style name="Widget.Xx.Chip" parent="Widget.MaterialComponents.Chip.Action">
+        <item name="android:fontFamily">@string/font_body</item>
+        <item name="android:textSize">11sp</item>
+        <item name="android:letterSpacing">0.08</item>
+        <item name="android:textStyle">normal</item>
+        <item name="android:textAllCaps">true</item>
+        <item name="android:textColor">@color/xx_chip_text</item>
+        <item name="chipBackgroundColor">@android:color/transparent</item>
+        <item name="chipStrokeColor">@color/xx_chip_stroke</item>
+        <item name="chipStrokeWidth">1dp</item>
+        <item name="chipCornerRadius">2dp</item>
+        <item name="rippleColor">@color/pxx_white_10</item>
+        <item name="checkedIconVisible">false</item>
+        <item name="closeIconVisible">false</item>
+        <item name="elevation">0dp</item>
+    </style>
+
+    <!-- Selected chip: full emphasis invert, no hue -->
+    <style name="Widget.Xx.Chip.Selected">
+        <item name="android:textColor">@color/pxx_emphasis_fg</item>
+        <item name="chipBackgroundColor">@color/pxx_emphasis_bg</item>
+        <item name="chipStrokeColor">@color/pxx_emphasis_bg</item>
+        <item name="rippleColor">#33000000</item>
+    </style>
+
+    <!-- Primary action = the Answer block treatment: Signal-white block,
+         ink text, display face. Inversion, not hue. -->
+    <style name="Widget.Xx.ButtonPrimary" parent="Widget.MaterialComponents.Button.UnelevatedButton">
+        <item name="android:fontFamily">@string/font_display</item>
+        <item name="android:textSize">15sp</item>
+        <item name="android:letterSpacing">0.04</item>
+        <item name="android:textStyle">normal</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:textColor">@color/pxx_emphasis_fg</item>
+        <item name="backgroundTint">@color/pxx_emphasis_bg</item>
+        <item name="rippleColor">#33000000</item>
+        <item name="cornerRadius">@dimen/xx_radius_block</item>
+        <item name="android:minHeight">@dimen/xx_button_height</item>
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+        <item name="elevation">0dp</item>
+    </style>
+
+    <!-- Secondary action = Decline treatment: hairline-outlined block,
+         white_90 text, transparent fill. -->
+    <style name="Widget.Xx.ButtonSecondary" parent="Widget.MaterialComponents.Button.OutlinedButton">
+        <item name="android:fontFamily">@string/font_display</item>
+        <item name="android:textSize">13sp</item>
+        <item name="android:letterSpacing">0.04</item>
+        <item name="android:textStyle">normal</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:textColor">@color/pxx_white_90</item>
+        <item name="backgroundTint">@android:color/transparent</item>
+        <item name="strokeColor">@color/pxx_white_25</item>
+        <item name="strokeWidth">1dp</item>
+        <item name="rippleColor">@color/pxx_white_10</item>
+        <item name="cornerRadius">@dimen/xx_radius_block</item>
+        <item name="android:minHeight">@dimen/xx_button_height</item>
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+        <item name="elevation">0dp</item>
+    </style>
+
+    <!-- List row: min-height 64dp, flat (no elevation), hairline dividers
+         drawn by parent layouts using drawable/divider_hairline. -->
+    <style name="Widget.Xx.ListRow" parent="">
+        <item name="android:minHeight">@dimen/xx_row_height</item>
+        <item name="android:elevation">0dp</item>
+        <item name="android:paddingLeft">@dimen/xx_gutter</item>
+        <item name="android:paddingRight">@dimen/xx_gutter</item>
+        <item name="android:gravity">center_vertical</item>
+        <item name="android:background">@drawable/bg_list_row</item>
+        <item name="android:textAppearance">@style/TextAppearance.Xx.Body</item>
+    </style>
+
+    <!-- Card: slate surface, 8dp radius, flat -->
+    <style name="Widget.Xx.Card" parent="">
+        <item name="android:background">@drawable/bg_card</item>
+        <item name="android:elevation">0dp</item>
+        <item name="android:padding">16dp</item>
+    </style>
+
+    <!-- Switch: Material3 mechanics, monochrome track/thumb (no hue) -->
+    <style name="Widget.Xx.Switch" parent="Widget.Material3.CompoundButton.Switch">
+        <item name="thumbTint">@color/xx_switch_thumb</item>
+        <item name="trackTint">@color/xx_switch_track</item>
+        <item name="elevation">0dp</item>
+    </style>
+
+</resources>

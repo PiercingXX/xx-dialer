@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="test_contact_name">XX Probe 5550100</string>
+    <string name="restricted_settings_hint">Role NOT held after request. Likely the Restricted Settings gate: App Info -> menu (3-dot) -> Allow restricted settings, then re-request this role.</string>
+    <string name="ring_instructions">Channel: ring_probe_v1 (HIGH, sound = DEFAULT_RINGTONE_URI indirection, vibration on).\nManual check: press the button below — a CallStyle incoming-call notification should ring with the current system tone.\nEnd-to-end check: hold ROLE_DIALER first (section 1), then have another phone call this one.\n1. Does it ring with the system tone?\n2. Change Settings - Sound - Phone ringtone, call again. Did the tone FOLLOW?</string>
+    <string name="contact_instructions">Ensure contact \"XX Probe 5550100\" exists with number 555-0100, then run the probe.\nScope test: Settings - Apps - XX-Probe - Contacts -> set to limited (or remove), then press re-run and compare row counts.</string>
+    <string name="log_hint">Every line is ISO-timestamped and self-contained; paste verbatim into design.md section 4 [VERIFY] flags.</string>
+</resources>

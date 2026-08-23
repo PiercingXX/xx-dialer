@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Chip outline: hairline white_25 at rest; the stroke disappears into
+     the emphasis-invert fill when selected. -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_checked="true" android:color="@color/pxx_emphasis_bg"/>
+    <item android:state_selected="true" android:color="@color/pxx_emphasis_bg"/>
+    <item android:color="@color/pxx_white_25"/>
+</selector>

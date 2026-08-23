@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Verdict glyph: SILENCED — the arrow, the absence of a ring. Quiet
+     pxx_info tint; spam gets no badge, no banner (§12.1). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24"
+    android:tint="@color/pxx_info">
+    <path
+        android:pathData="M4 12 H18.5 M13 6.5 L19.5 12 L13 17.5"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"/>
+</vector>

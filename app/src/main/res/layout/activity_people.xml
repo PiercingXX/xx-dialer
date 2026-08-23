@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- People tab (§12.3): the mirror, sectioned ★ Starred / Business /
+     Everyone. The empty-grant card states plainly why the list is bare
+     (§4.5) and every control stays alive either way. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:fitsSystemWindows="true"
+    android:background="@color/pxx_ink">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingLeft="@dimen/xx_gutter"
+        android:paddingRight="@dimen/xx_gutter"
+        android:paddingTop="18dp"
+        android:paddingBottom="10dp">
+
+        <TextView
+            style="@style/TextAppearance.Xx.Chip"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/app_name" />
+
+        <TextView
+            style="@style/TextAppearance.Xx.Display"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="@string/tab_people" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/emptyGrantCard"
+        style="@style/Widget.Xx.Card"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="@dimen/xx_gutter"
+        android:layout_marginRight="@dimen/xx_gutter"
+        android:orientation="vertical"
+        android:visibility="gone">
+
+        <TextView
+            style="@style/TextAppearance.Xx.Chip"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/tab_people" />
+
+        <TextView
+            android:id="@+id/emptyGrantWhy"
+            style="@style/TextAppearance.Xx.BodySmall"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp" />
+    </LinearLayout>
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/peopleList"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:layout_marginTop="8dp"
+        android:clipToPadding="false"
+        android:paddingBottom="24dp" />
+
+    <include android:id="@+id/tab_bar" layout="@layout/view_tab_bar"/>
+
+</LinearLayout>

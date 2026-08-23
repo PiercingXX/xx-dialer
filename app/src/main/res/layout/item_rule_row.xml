@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generic Rules-screen row (§12.4): index/glyph, condition/title, live
+     detail, optional trailing action (✕ delete). Used for the §6 precedence
+     list, the pattern-rule list, and the screening log; colors are set in
+     code per verdict kind. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:minHeight="52dp"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:paddingLeft="@dimen/xx_gutter"
+    android:paddingRight="@dimen/xx_gutter"
+    android:paddingTop="9dp"
+    android:paddingBottom="9dp">
+
+    <TextView
+        android:id="@+id/rowIndex"
+        style="@style/TextAppearance.Xx.Chip"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:minWidth="24dp" />
+
+    <TextView
+        android:id="@+id/rowTitle"
+        style="@style/TextAppearance.Xx.BodySmall"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:layout_marginStart="12dp"
+        android:textColor="@color/pxx_white_90" />
+
+    <TextView
+        android:id="@+id/rowDetail"
+        style="@style/TextAppearance.Xx.BodySmall"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="12dp"
+        android:gravity="end" />
+
+    <TextView
+        android:id="@+id/rowAction"
+        style="@style/TextAppearance.Xx.BodySmall"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="12dp"
+        android:minWidth="32dp"
+        android:gravity="center"
+        android:text="✕"
+        android:contentDescription="@string/block"
+        android:visibility="gone" />
+
+</LinearLayout>

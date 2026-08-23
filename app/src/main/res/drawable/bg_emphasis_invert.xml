@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Emphasis invert, generic: Signal-white fill with a soft ink ripple.
+     The Answer block and any strong-emphasis moment (§12.1 reserved
+     white). -->
+<ripple xmlns:android="http://schemas.android.com/apk/res/android"
+    android:color="#33000000">
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="@color/pxx_emphasis_bg"/>
+            <corners android:radius="@dimen/xx_radius_block"/>
+        </shape>
+    </item>
+</ripple>

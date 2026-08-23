@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Switch track: white_80 when enforcing/on, hairline white_25 when off.
+     Monochrome only — no hue on chrome (§12.1). -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_checked="true" android:color="@color/pxx_white_80"/>
+    <item android:color="@color/pxx_white_25"/>
+</selector>

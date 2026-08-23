@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Recents tab (design §12.1): starred strip, filter chips, merged log.
+     Full-bleed column with xx_gutter padding; the shared tab shell lands
+     later and mounts around this root. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:fitsSystemWindows="true"
+    android:paddingLeft="@dimen/xx_gutter"
+    android:paddingRight="@dimen/xx_gutter">
+
+    <TextView
+        android:id="@+id/recents_title"
+        style="@style/TextAppearance.Xx.Display"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:text="@string/tab_recents"/>
+
+    <!-- Collapsible starred strip: monogram avatars (§12.1), deterministic —
+         photos are deliberately not loaded under Contact Scopes. -->
+    <LinearLayout
+        android:id="@+id/recents_star_bar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginTop="8dp">
+
+        <HorizontalScrollView
+            android:id="@+id/recents_star_scroll"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:scrollbars="none">
+
+            <LinearLayout
+                android:id="@+id/recents_star_strip"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingTop="6dp"
+                android:paddingBottom="6dp"/>
+        </HorizontalScrollView>
+
+        <TextView
+            android:id="@+id/recents_star_toggle"
+            style="@style/TextAppearance.Xx.Chip"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:paddingLeft="8dp"
+            android:paddingRight="8dp"
+            android:paddingTop="6dp"
+            android:paddingBottom="6dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:background="?android:attr/selectableItemBackground"/>
+    </LinearLayout>
+
+    <HorizontalScrollView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:scrollbars="none">
+
+        <com.google.android.material.chip.ChipGroup
+            android:id="@+id/recents_chips"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:singleLine="true"
+            app:singleSelection="true"
+            app:selectionRequired="true">
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/recents_chip_all"
+                style="@style/Widget.Xx.Chip"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:checked="true"
+                android:text="All"/>
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/recents_chip_missed"
+                style="@style/Widget.Xx.Chip"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Missed"/>
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/recents_chip_silenced"
+                style="@style/Widget.Xx.Chip"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Silenced"/>
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/recents_chip_blocked"
+                style="@style/Widget.Xx.Chip"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Blocked"/>
+        </com.google.android.material.chip.ChipGroup>
+    </HorizontalScrollView>
+
+    <!-- Deep-link banner: Recents opened pre-filtered from a silenced-call
+         notification (EXTRA_FILTER_E164, §12 notifications). -->
+    <TextView
+        android:id="@+id/recents_filter_note"
+        style="@style/TextAppearance.Xx.BodySmall"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:paddingTop="6dp"
+        android:paddingBottom="6dp"
+        android:clickable="true"
+        android:focusable="true"
+        android:visibility="gone"/>
+
+    <TextView
+        android:id="@+id/recents_empty"
+        style="@style/TextAppearance.Xx.BodySmall"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="32dp"
+        android:gravity="center"
+        android:text="No calls yet"
+        android:visibility="gone"/>
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/recents_list"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:layout_marginTop="4dp"
+        android:clipToPadding="false"
+        android:paddingBottom="@dimen/xx_gutter"
+        android:overScrollMode="ifContentScrolls"/>
+
+    <include android:id="@+id/tab_bar" layout="@layout/view_tab_bar"/>
+
+</LinearLayout>

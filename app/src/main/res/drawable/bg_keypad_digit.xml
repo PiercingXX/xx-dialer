@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Keypad key: circle ripple at the white_10 stop over a transparent
+     oval; keys draw their own hairline border via bg_keypad_key or the
+     layout foreground. -->
+<ripple xmlns:android="http://schemas.android.com/apk/res/android"
+    android:color="@color/pxx_white_10">
+    <item>
+        <shape android:shape="oval">
+            <solid android:color="@android:color/transparent"/>
+        </shape>
+    </item>
+</ripple>

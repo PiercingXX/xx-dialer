@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Expecting a call: bell with a plus — arming the window (§7.1, §12.4).
+     white_90; the tile is an action, not a verdict. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24"
+    android:tint="@color/pxx_white_90">
+    <path
+        android:pathData="M12 4.2 C15 4.2 17 6.5 17 9.5 C17 13 18 14.6 19.2 15.8 H4.8 C6 14.6 7 13 7 9.5 C7 6.5 9 4.2 12 4.2 Z"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="1.75"
+        android:strokeLineJoin="round"/>
+    <path
+        android:pathData="M10.1 18.4 A2 2 0 0 0 13.9 18.4"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="1.75"
+        android:strokeLineCap="round"/>
+    <path
+        android:pathData="M17.6 4.4 H21.6 M19.6 2.4 V6.4"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="1.75"
+        android:strokeLineCap="round"/>
+</vector>
