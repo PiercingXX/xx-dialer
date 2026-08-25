@@ -8,6 +8,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.telecom.TelecomManager
+import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.piercingxx.xxphone.ServiceLocator
@@ -73,7 +74,11 @@ class MissedCallReceiver : BroadcastReceiver() {
 
         val notification = buildNotification(context, count, rawNumber ?: e164, logRow)
         // POST_NOTIFICATIONS may be ungranted; a refused card must not crash.
-        runCatching { NotificationManagerCompat.from(context).notify(NotifIds.MISSED, notification) }
+        try {
+            NotificationManagerCompat.from(context).notify(NotifIds.MISSED, notification)
+        } catch (se: SecurityException) {
+            Log.w(TAG, "missed-call post refused", se)
+        }
     }
 
     private fun buildNotification(
@@ -192,6 +197,7 @@ class MissedCallReceiver : BroadcastReceiver() {
         }.getOrNull()
 
     companion object {
+        private const val TAG = "MissedCallReceiver"
         private const val CHANNEL_ID = "missed_v1"
         private const val REQUEST_CONTENT = 1
         private const val REQUEST_CALL_BACK = 2

@@ -673,7 +673,13 @@ class RulesActivity : AppCompatActivity() {
     private fun toggleNeighborSpoof() {
         lifecycleScope.launch {
             val telephony = getSystemService(TelephonyManager::class.java)
-            val line = runCatching { telephony.line1Number }.getOrNull()
+            // line1Number wants READ_PHONE_NUMBERS on 30+; a refusal lands in
+            // the manual-entry fallback below, never a crash.
+            val line = try {
+                telephony.line1Number
+            } catch (_: SecurityException) {
+                null
+            }
             val draft = line?.let { E164.normalize(it)?.removePrefix("+") }
                 ?.let { MaskBuilder.neighborDraft(it) }
             if (draft == null) {

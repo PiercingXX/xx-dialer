@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- A dialer without telephony is nothing; required is honest. -->
+    <uses-feature android:name="android.hardware.telephony" android:required="true"/>
 
     <uses-permission android:name="android.permission.READ_CONTACTS"/>
     <uses-permission android:name="android.permission.READ_CALL_LOG"/>
@@ -54,12 +58,17 @@
         <activity android:name=".ui.InCallActivity" android:exported="false"/>
         <activity android:name=".ui.SetupActivity" android:exported="false"/>
 
-        <!-- Owns the ringer; no car-mode metadata, ever (§4.1 disqualifier). -->
+        <!-- Owns the ringer; no car-mode metadata, ever (§4.1 disqualifier).
+             ForegroundServicePermission suppressed: the phoneCall FGS type's
+             second requirement is satisfied by holding ROLE_DIALER at
+             runtime, not by MANAGE_OWN_CALLS (which is for self-managed
+             ConnectionServices this app never registers). -->
         <service
             android:name=".telecom.XxInCallService"
             android:exported="true"
             android:foregroundServiceType="phoneCall"
-            android:permission="android.telecom.BIND_INCALL_SERVICE">
+            android:permission="android.telecom.BIND_INCALL_SERVICE"
+            tools:ignore="ForegroundServicePermission">
             <intent-filter>
                 <action android:name="android.telecom.InCallService"/>
             </intent-filter>

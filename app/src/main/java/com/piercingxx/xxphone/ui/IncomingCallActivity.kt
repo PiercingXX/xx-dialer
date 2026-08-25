@@ -4,7 +4,6 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
-import android.telecom.TelecomManager
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.ViewGroup
@@ -31,8 +30,10 @@ import kotlinx.coroutines.launch
  * context-line / CNAP / tier extras; ANSWER and DECLINE arrive as bare
  * actions (see the companion contract below — the notification's
  * answer/decline PendingIntents pass no Call handle, and a telecom Call is
- * not parcelable). As ROLE_DIALER holder we settle via TelecomManager, the
- * platform-sanctioned path (§4.1).
+ * not parcelable). Settlement goes through CallGrid's live Call objects —
+ * the InCallService surface needs no permission, unlike the deprecated
+ * TelecomManager.acceptRingingCall()/endCall() pair, which requires
+ * ANSWER_PHONE_CALLS that this app neither declares nor requests (§4.1).
  */
 class IncomingCallActivity : AppCompatActivity() {
 
@@ -202,14 +203,15 @@ class IncomingCallActivity : AppCompatActivity() {
     }
 
     private fun answerCall() {
-        runCatching { telecom()?.acceptRingingCall() } // §4.1: valid for the ROLE_DIALER holder
+        // Holds any active call first, then answers the ringing one — the
+        // same path the call-waiting surface uses.
+        runCatching { CallGrid.answerWaiting() }
     }
 
     private fun declineCall() {
-        runCatching { telecom()?.endCall() }
+        // disconnect() on a RINGING call rejects it.
+        CallGrid.waitingCall()?.let(CallGrid::end)
     }
-
-    private fun telecom(): TelecomManager? = getSystemService(TelecomManager::class.java)
 
     private fun settings(): SettingsRepository = ServiceLocator.settings(this)
 

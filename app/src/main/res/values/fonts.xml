@@ -4,10 +4,11 @@
   JetBrains Mono for body/UI.
 
   Both faces now ship as real TTFs in res/font/ (§12.1 type ramp). The
-  indirection through strings stays: layouts reference font_display /
-  font_body, so swapping a face is a one-line change here.
+  indirection stays, as same-type font aliases: layouts reference
+  @font/font_display / @font/font_body, so swapping a face is a one-line
+  change here.
 -->
 <resources>
-    <string name="font_display" translatable="false">@font/spacemono_regular</string>
-    <string name="font_body" translatable="false">@font/jetbrainsmono_regular</string>
+    <item name="font_display" type="font">@font/spacemono_regular</item>
+    <item name="font_body" type="font">@font/jetbrainsmono_regular</item>
 </resources>

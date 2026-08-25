@@ -261,14 +261,18 @@ class MainActivity : AppCompatActivity() {
                 arrayOf("%${getString(R.string.test_contact_name)}%"),
                 null
             )?.use { cursor ->
+                // A missing column (index -1) is itself a probe answer: the
+                // targetSdk-37 tightening removes account columns from Data.
+                val accountNameIndex = cursor.getColumnIndex(COLUMN_ACCOUNT_NAME)
                 var accountNameRows = 0
                 while (cursor.moveToNext()) {
-                    if (!cursor.isNull(cursor.getColumnIndex(COLUMN_ACCOUNT_NAME))) accountNameRows++
+                    if (accountNameIndex >= 0 && !cursor.isNull(accountNameIndex)) accountNameRows++
                 }
                 ProbeLog.log(
                     "contacts_data",
                     "run" to runLabel,
                     "rows" to cursor.count,
+                    "account_name_column_present" to (accountNameIndex >= 0),
                     "account_name_non_null_rows" to accountNameRows,
                     "note" to "targetSdk35 today; provider tightening at targetSdk37 removes account columns from Data"
                 )

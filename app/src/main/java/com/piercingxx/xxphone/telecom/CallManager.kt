@@ -17,12 +17,16 @@ object CallManager {
     fun place(activity: Activity, e164: String): Boolean {
         val telecom = activity.getSystemService(Context.TELECOM_SERVICE) as? TelecomManager
             ?: return false // no telecom on this build: fail closed for placing, never crash
-        return runCatching {
+        return try {
             telecom.placeCall(Uri.fromParts("tel", e164, null), Bundle.EMPTY)
             true
+        } catch (se: SecurityException) {
+            Log.w(TAG, "placeCall refused — CALL_PHONE not granted", se)
+            false
+        } catch (t: Throwable) {
+            Log.w(TAG, "placeCall failed", t)
+            false
         }
-            .onFailure { Log.w(TAG, "placeCall failed", it) }
-            .getOrDefault(false)
     }
 
     private const val TAG = "CallManager"

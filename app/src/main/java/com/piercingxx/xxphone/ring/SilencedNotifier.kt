@@ -125,8 +125,11 @@ object SilencedNotifier {
                 .addAction(action(Kind.Block, context, number))
         }
         // POST_NOTIFICATIONS may be ungranted; a refused card must not crash (§15).
-        runCatching { androidx.core.app.NotificationManagerCompat.from(context).notify(NotifIds.SILENCED, builder.build()) }
-            .onFailure { Log.w(TAG, "post refused", it) }
+        try {
+            androidx.core.app.NotificationManagerCompat.from(context).notify(NotifIds.SILENCED, builder.build())
+        } catch (se: SecurityException) {
+            Log.w(TAG, "post refused", se)
+        }
     }
 
     /** "Silenced · Unknown, outside 09–17" — Reason.uiLabel carries the wording (R7). */

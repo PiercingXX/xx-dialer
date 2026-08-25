@@ -164,8 +164,12 @@ object CallGrid {
 
     fun waitingCall(): Call? = calls.firstOrNull { lineOf(it.state) == Line.WAITING }
 
-    private fun stableKey(call: Call): String =
-        call.details.id.ifEmpty { Integer.toHexString(System.identityHashCode(call)) }
+    private fun stableKey(call: Call): String {
+        // Details.id is public only from API 35; identity hash is stable for
+        // the lifetime of the Call object either way.
+        val id = if (Build.VERSION.SDK_INT >= 35) call.details.id else ""
+        return id.ifEmpty { Integer.toHexString(System.identityHashCode(call)) }
+    }
 
     /** Contact display name → carrier CNAP → number → withheld label (§6). */
     fun displayLabel(call: Call): String {

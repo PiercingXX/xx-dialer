@@ -318,7 +318,11 @@ class XxInCallService : InCallService() {
             .setContentTitle(displayName)
             .setContentText(contextLine)
             .setStyle(Notification.CallStyle.forIncomingCall(person, declineIntent(), answerIntent()))
-        if (notificationManager().canUseFullScreenIntent()) {
+        // canUseFullScreenIntent exists only from API 34; before that the
+        // manifest USE_FULL_SCREEN_INTENT grant is unconditional.
+        val fsiAllowed = android.os.Build.VERSION.SDK_INT < 34 ||
+            notificationManager().canUseFullScreenIntent()
+        if (fsiAllowed) {
             builder.setFullScreenIntent(show, true)
         } // else: high-importance channel gives the heads-up; Setup offers the grant (§15)
         notificationManager().notify(NotifIds.INCOMING, builder.build())

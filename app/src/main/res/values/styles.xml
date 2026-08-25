@@ -3,8 +3,9 @@
   XX-Phone type ramp + component styles (design.md §12.1).
 
   Contract for UI agents:
-  - fontFamily is ALWAYS set via the string indirection @string/font_display
-    (Space Mono) / @string/font_body (JetBrains Mono) — never @font directly.
+  - fontFamily is ALWAYS set via the alias indirection @font/font_display
+    (Space Mono) / @font/font_body (JetBrains Mono) — never a face resource
+    directly, so swapping a face stays a one-line change in fonts.xml.
   - Tabular figures ("tnum") on every role where digits can appear.
   - Reserved-white rule: body text caps at pxx_white_90; pure pxx_signal is
     the Answer block / active tab alone.
@@ -18,14 +19,14 @@
 
     <!-- Base: JetBrains Mono body face by default -->
     <style name="TextAppearance.Xx" parent="android:TextAppearance">
-        <item name="android:fontFamily">@string/font_body</item>
+        <item name="android:fontFamily">@font/font_body</item>
         <item name="android:textStyle">normal</item>
         <item name="android:fontFeatureSettings">tnum</item>
     </style>
 
     <!-- Incoming caller name. Space Mono 44sp -->
     <style name="TextAppearance.Xx.CallerName">
-        <item name="android:fontFamily">@string/font_display</item>
+        <item name="android:fontFamily">@font/font_display</item>
         <item name="android:textSize">44sp</item>
         <item name="android:lineHeight">48sp</item>
         <item name="android:textColor">@color/pxx_white_90</item>
@@ -33,21 +34,21 @@
 
     <!-- Keypad digits. Space Mono 34sp, tabular -->
     <style name="TextAppearance.Xx.KeypadDigit">
-        <item name="android:fontFamily">@string/font_display</item>
+        <item name="android:fontFamily">@font/font_display</item>
         <item name="android:textSize">34sp</item>
         <item name="android:textColor">@color/pxx_white_90</item>
     </style>
 
     <!-- Call duration / stat numerals. Space Mono 28sp, tabular -->
     <style name="TextAppearance.Xx.Duration">
-        <item name="android:fontFamily">@string/font_display</item>
+        <item name="android:fontFamily">@font/font_display</item>
         <item name="android:textSize">28sp</item>
         <item name="android:textColor">@color/pxx_white_90</item>
     </style>
 
     <!-- Screen titles. Space Mono 34sp -->
     <style name="TextAppearance.Xx.Display">
-        <item name="android:fontFamily">@string/font_display</item>
+        <item name="android:fontFamily">@font/font_display</item>
         <item name="android:textSize">34sp</item>
         <item name="android:lineHeight">40sp</item>
         <item name="android:textColor">@color/pxx_white_90</item>
@@ -82,7 +83,7 @@
     <!-- Bottom-nav tab item: mono label; active = Signal white via
          @color/xx_tab_text selector (icon tint uses the same selector). -->
     <style name="Widget.Xx.Tab" parent="">
-        <item name="android:fontFamily">@string/font_body</item>
+        <item name="android:fontFamily">@font/font_body</item>
         <item name="android:textSize">11sp</item>
         <item name="android:letterSpacing">0.08</item>
         <item name="android:textStyle">normal</item>
@@ -97,7 +98,7 @@
          invert (white bg, ink text) via Widget.Xx.Chip.Selected or by
          swapping bg_chip_selected + ink text per-view. -->
     <style name="Widget.Xx.Chip" parent="Widget.MaterialComponents.Chip.Action">
-        <item name="android:fontFamily">@string/font_body</item>
+        <item name="android:fontFamily">@font/font_body</item>
         <item name="android:textSize">11sp</item>
         <item name="android:letterSpacing">0.08</item>
         <item name="android:textStyle">normal</item>
@@ -124,7 +125,7 @@
     <!-- Primary action = the Answer block treatment: Signal-white block,
          ink text, display face. Inversion, not hue. -->
     <style name="Widget.Xx.ButtonPrimary" parent="Widget.MaterialComponents.Button.UnelevatedButton">
-        <item name="android:fontFamily">@string/font_display</item>
+        <item name="android:fontFamily">@font/font_display</item>
         <item name="android:textSize">15sp</item>
         <item name="android:letterSpacing">0.04</item>
         <item name="android:textStyle">normal</item>
@@ -142,7 +143,7 @@
     <!-- Secondary action = Decline treatment: hairline-outlined block,
          white_90 text, transparent fill. -->
     <style name="Widget.Xx.ButtonSecondary" parent="Widget.MaterialComponents.Button.OutlinedButton">
-        <item name="android:fontFamily">@string/font_display</item>
+        <item name="android:fontFamily">@font/font_display</item>
         <item name="android:textSize">13sp</item>
         <item name="android:letterSpacing">0.04</item>
         <item name="android:textStyle">normal</item>
