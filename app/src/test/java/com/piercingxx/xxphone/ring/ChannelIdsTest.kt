@@ -14,6 +14,41 @@ class ChannelIdsTest {
         assertEquals(1, ChannelIds.nextVersion(null), "null registry row ⇒ v1, the §10 table id")
     }
 
+    // --- baked default tone: ring_default's §10 id is the v2 floor ------------
+
+    @Test
+    fun `ring_default floor is v2 — the baked xx_ringtone channel`() {
+        // v1 shipped the system-ringtone indirection; sound is immutable after
+        // creation, so the baked tone MUST live under a fresh id (§4.3).
+        assertEquals(
+            "ring_default_v2",
+            ChannelIds.versioned(ChannelIds.PURPOSE_RING_DEFAULT, ChannelIds.RING_DEFAULT_FIRST_VERSION),
+        )
+        assertTrue(
+            ChannelIds.RING_DEFAULT_FIRST_VERSION > ChannelIds.FIRST_VERSION,
+            "a floor at or below v1 would never supersede the indirection channel",
+        )
+    }
+
+    @Test
+    fun `mint seeded at the floor lands on v2 for an empty registry`() {
+        // ChannelRegistry seeds nextFreeVersion at firstVersion - 1 so even a
+        // fresh install (no registry row) mints ring_default_v2, never a v1
+        // that the migration would immediately delete.
+        assertEquals(
+            ChannelIds.RING_DEFAULT_FIRST_VERSION,
+            ChannelIds.nextFreeVersion(ChannelIds.RING_DEFAULT_FIRST_VERSION - 1) { false },
+        )
+    }
+
+    @Test
+    fun `upgrade from registered v1 mints exactly v2`() {
+        // Registry row says v1 (the old indirection channel, still live) —
+        // the migration mint must land on the floor id and no higher.
+        assertEquals(2, ChannelIds.nextFreeVersion(1) { false })
+        assertEquals("ring_default_v2", ChannelIds.versioned(ChannelIds.PURPOSE_RING_DEFAULT, 2))
+    }
+
     @Test
     fun `successive mints never reuse an id`() {
         var version: Int? = null // registry starts empty (fresh install)
@@ -41,6 +76,9 @@ class ChannelIdsTest {
     @Test
     fun `versionOf round-trips and tolerates junk`() {
         assertEquals(3, ChannelIds.versionOf("ring_unknown_v3"))
+        assertEquals(2, ChannelIds.versionOf("ring_default_v2"))
+        // The RETIRED v1 id must still parse: the baked-tone migration decides
+        // "below the floor?" by reading exactly this version out of old rows.
         assertEquals(1, ChannelIds.versionOf("ring_default_v1"))
         assertNull(ChannelIds.versionOf("ongoing")) // no separator at all
         assertNull(ChannelIds.versionOf("ring_silent_vX"))

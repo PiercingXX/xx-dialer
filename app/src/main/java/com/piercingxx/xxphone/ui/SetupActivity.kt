@@ -332,7 +332,11 @@ class SetupActivity : AppCompatActivity() {
             val rolesHeld = roles?.isRoleHeld(RoleManager.ROLE_DIALER) == true &&
                 roles.isRoleHeld(RoleManager.ROLE_CALL_SCREENING)
             if (!rolesHeld) return false
-            if (!NotificationManagerCompat.from(context).areNotificationsEnabled()) return false
+            // Deliberately NOT gated on areNotificationsEnabled(): no Setup
+            // step surfaces or can grant it, so a false reading turned the
+            // §15 routing into a trap — "Done — open recents" bounced every
+            // tab screen straight back here with zero feedback. Notification
+            // health belongs to §15 warnings, never to routing.
             val channels = context.getSystemService(NotificationManager::class.java) ?: return false
             return CHANNEL_PURPOSES.all { purpose ->
                 channels.notificationChannels.any {

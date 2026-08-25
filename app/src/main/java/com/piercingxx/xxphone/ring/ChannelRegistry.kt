@@ -38,7 +38,12 @@ class ChannelRegistry(private val context: Context, private val dao: ChannelRegi
     private val unknownToneUri: Uri =
         Uri.parse("android.resource://${context.packageName}/raw/xx_unknown") // §10
 
-    /** Idempotent first-run creation of the four §10 channels. */
+    /**
+     * Idempotent first-run creation of the four §10 channels — and, on app
+     * update, the baked-tone floor migration (see [ensure]): a registered
+     * `ring_default_v1` still carrying the retired system-ringtone
+     * indirection is superseded by `ring_default_v2` here.
+     */
     suspend fun ensureAll() = SPECS(context.packageName).forEach { ensure(it) }
 
     /**
@@ -49,7 +54,9 @@ class ChannelRegistry(private val context: Context, private val dao: ChannelRegi
     suspend fun channelIdFor(purpose: String): String =
         runCatching { ensureLive(specFor(purpose)) }
             .onFailure { Log.w(TAG, "channelIdFor($purpose) failed", it) }
-            .getOrDefault(ChannelIds.versioned(purpose, ChannelIds.FIRST_VERSION))
+            // Fallback is the spec's FLOOR id, not blanket v1 — handing out a
+            // below-floor id would name a channel the migration deletes.
+            .getOrDefault(ChannelIds.versioned(purpose, specFor(purpose).firstVersion))
 
     /**
      * Per-call health check vs NotificationManager: muted/deleted channels
@@ -104,18 +111,42 @@ class ChannelRegistry(private val context: Context, private val dao: ChannelRegi
 
     private suspend fun ensure(spec: Spec) {
         val row = currentRowOrNull(spec.purpose)
-        val id = row?.channelId ?: ChannelIds.versioned(spec.purpose, ChannelIds.FIRST_VERSION)
+        // Baked-tone migration (§10): channel sound is immutable after
+        // creation, so a spec whose SHIPPED tone changed in an app update
+        // raises its [Spec.firstVersion] floor instead of editing anything.
+        // A registered channel below the floor still plays the superseded
+        // sound — mint a fresh id and GC the old one, exactly the §4.3
+        // tone-swap path. At or above the floor the channel is the user's to
+        // keep (§15): never re-minted, never rewritten.
+        if (row != null && row.version < spec.firstVersion) {
+            mint(spec)
+            return
+        }
+        val id = row?.channelId ?: ChannelIds.versioned(spec.purpose, spec.firstVersion)
         if (manager?.getNotificationChannel(id) == null) create(id, spec)
         if (row == null || row.channelId != id) adopt(spec, id)
+        // A DB wipe on an upgraded install can leave a below-floor channel
+        // live with no registry row naming it (mint's GC only sees the
+        // registered id). Sweeping ids below the floor is always safe: §4.3
+        // forbids ever REUSING a superseded id, and deleting a channel that
+        // does not exist is a system no-op.
+        for (v in ChannelIds.FIRST_VERSION until spec.firstVersion) {
+            runCatching { manager?.deleteNotificationChannel(ChannelIds.versioned(spec.purpose, v)) }
+        }
     }
 
     private suspend fun ensureLive(spec: Spec): String {
         val row = currentRowOrNull(spec.purpose)
         val id = row?.channelId
-        return if (id != null && manager?.getNotificationChannel(id) != null) {
+        // Below-floor ids are superseded (baked-tone migration, see [ensure])
+        // and never handed out — a ring-time lookup that races first-run
+        // bookkeeping still mints forward and rings on the current shipped tone.
+        return if (row != null && id != null && row.version >= spec.firstVersion &&
+            manager?.getNotificationChannel(id) != null
+        ) {
             id
         } else {
-            mint(spec) // unregistered or system-deleted → new versioned id, never resurrected
+            mint(spec) // unregistered, below-floor, or system-deleted → new versioned id, never resurrected
         }
     }
 
@@ -128,7 +159,13 @@ class ChannelRegistry(private val context: Context, private val dao: ChannelRegi
         // Bump past every id the system still holds (pure seam:
         // ChannelIds.nextFreeVersion), then GC the superseded channel exactly
         // like mintUnknownTone did (§4.3 append-only law).
-        val version = ChannelIds.nextFreeVersion(row?.version) { v ->
+        // Seed the walk at the spec's floor: nextVersion(firstVersion - 1) ==
+        // firstVersion, so even an EMPTY registry can never mint a below-floor
+        // id for a purpose whose shipped tone was superseded (baked-tone
+        // migration). For floor-1 purposes this is exactly the old
+        // nextFreeVersion(row?.version) behavior.
+        val seed = maxOf(row?.version ?: 0, spec.firstVersion - 1)
+        val version = ChannelIds.nextFreeVersion(seed) { v ->
             manager?.getNotificationChannel(ChannelIds.versioned(spec.purpose, v)) != null
         }
         val id = ChannelIds.versioned(spec.purpose, version)
@@ -142,7 +179,7 @@ class ChannelRegistry(private val context: Context, private val dao: ChannelRegi
 
     private suspend fun reconcileOne(spec: Spec): List<String> {
         val row = currentRowOrNull(spec.purpose)
-        val id = row?.channelId ?: ChannelIds.versioned(spec.purpose, ChannelIds.FIRST_VERSION)
+        val id = row?.channelId ?: ChannelIds.versioned(spec.purpose, spec.firstVersion)
         val channel = manager?.getNotificationChannel(id)
         return when {
             channel == null -> {
@@ -210,22 +247,20 @@ class ChannelRegistry(private val context: Context, private val dao: ChannelRegi
         val vibration: Boolean,
         val requiresSound: Boolean = false,
         val title: String = "XX-Phone",
+        /**
+         * Lowest version this spec will register or hand out. Raised (never
+         * lowered) when a SHIPPED tone changes in an app update — sound is
+         * immutable after creation, so the change must ride a §4.3 version
+         * bump; anything registered below the floor is superseded and
+         * re-minted by [ensure]/[ensureLive].
+         */
+        val firstVersion: Int = ChannelIds.FIRST_VERSION,
     ) {
         fun withTone(uri: Uri): Spec = copy(toneUri = uri)
     }
 
     companion object {
         private const val TAG = "ChannelRegistry"
-
-        /**
-         * §4.3 indirection — follows the user's system ringtone without
-         * churning channels. This IS Settings.System.DEFAULT_RINGTONE_URI;
-         * spelled literally because on compileSdk 35 the stub types that
-         * constant as Uri while channel creation needs the string form.
-         * FLAG for WS0 [VERIFY]: re-point at the constant if/when the
-         * project bumps to an sdk jar where it is a String again.
-         */
-        private const val DEFAULT_RINGTONE_INDIRECTION = "content://settings/system/ringtone"
 
         private val RING_ATTRIBUTES: AudioAttributes = AudioAttributes.Builder()
             .setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE) // rings on the ringer stream (§4.3)
@@ -235,11 +270,21 @@ class ChannelRegistry(private val context: Context, private val dao: ChannelRegi
         private fun SPECS(packageName: String): List<Spec> = listOf(
             Spec(
                 purpose = ChannelIds.PURPOSE_RING_DEFAULT,
-                toneUri = Uri.parse(DEFAULT_RINGTONE_INDIRECTION), // indirection — follows system (§4.3)
+                // Baked default tone (§10): shipped in res/raw, same shape as
+                // the unknown-caller tone below. v1 pointed at the
+                // system-ringtone indirection (content://settings/system/
+                // ringtone) so the channel followed the user's system pick;
+                // shipping our own default replaces that with a fixed app
+                // resource — and since channel sound is immutable after
+                // creation, the swap rides the firstVersion floor to
+                // ring_default_v2 (v1 is deleted, never edited, never reused,
+                // §4.3).
+                toneUri = Uri.parse("android.resource://$packageName/raw/xx_ringtone"),
                 importance = NotificationManager.IMPORTANCE_HIGH,
                 vibration = true,
                 requiresSound = true,
                 title = "Ringing · saved & starred",
+                firstVersion = ChannelIds.RING_DEFAULT_FIRST_VERSION,
             ),
             Spec(
                 purpose = ChannelIds.PURPOSE_RING_UNKNOWN,

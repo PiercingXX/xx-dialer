@@ -550,11 +550,18 @@ One notification channel per outcome, created at first run and registered in
 
 | Channel | Sound | Importance | Notes |
 |---|---|---|---|
-| `ring_default_v1` | `DEFAULT_RINGTONE_URI` (indirection — follows system setting) | high | starred, saved, in-window Business |
+| `ring_default_v2` | shipped tone `xx_ringtone.mp3` | high | starred, saved, in-window Business |
 | `ring_unknown_v1` | shipped tone `xx_unknown.ogg`, user-swappable | high | version bumps on tone change (§4.3) |
 | `ring_silent_v1` | none, no vibration | high (heads-up, no sound) | silenced calls — surfaced, answerable |
 | `ongoing_v1` | none | default | in-call, non-dismissable |
 
+- The default tier ships its own tone (`res/raw/xx_ringtone.mp3`).
+  `ring_default_v1` pointed at `DEFAULT_RINGTONE_URI` (indirection — followed
+  the system setting); channel sound being immutable, the baked tone rides a
+  §4.3 version bump: installs that still carry `v1` get `ring_default_v2`
+  minted at first channel bookkeeping and `v1` deleted. The Setup/§15
+  channel-health checks match by *purpose* (`ring_default_v*`), so they track
+  whichever version is live.
 - The unknown tone ships in `res/raw` as an original short tone — mono-ish,
   brand-adjacent, deliberately less urgent than a ringtone. Swapping it mints
   `ring_unknown_v2` and deletes `v1`.

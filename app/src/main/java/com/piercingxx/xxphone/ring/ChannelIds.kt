@@ -18,6 +18,17 @@ internal object ChannelIds {
     const val VERSION_SEPARATOR = "_v"
     const val FIRST_VERSION = 1
 
+    /**
+     * §10 floor for `ring_default`: v2 is the first id whose sound is the
+     * baked `res/raw/xx_ringtone` tone. v1 shipped the system-ringtone
+     * indirection (`content://settings/system/ringtone`), and channel sound
+     * is immutable after creation — so the swap is exactly a §4.3 tone
+     * change: bump the version, delete `_v1`, NEVER edit or reuse it.
+     * `ChannelRegistry` treats any registered version below this floor as
+     * superseded and re-mints at or above it.
+     */
+    const val RING_DEFAULT_FIRST_VERSION = 2
+
     /** `ring_unknown` + 2 → `ring_unknown_v2`. */
     fun versioned(purpose: String, version: Int): String =
         "$purpose$VERSION_SEPARATOR$version"
