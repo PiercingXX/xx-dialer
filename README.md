@@ -1,4 +1,4 @@
-# XX-Phone
+# XX-Dialer
 > The phone app that knows who is allowed to ring.
 
 A default dialer for GrapheneOS with a ring-policy engine: spam never rings,
@@ -7,7 +7,7 @@ says so — unknown numbers on their own ringtone, 9 to 5. All screening is loca
 The app declares no `INTERNET` permission, and the build fails if that ever
 changes.
 
-<img src="docs/images/screenshot.png" width="270" alt="XX-Phone Recents screen on a Pixel 6, AMOLED Night">
+<img src="docs/images/screenshot.png" width="270" alt="XX-Dialer Recents screen on a Pixel 6, AMOLED Night">
 
 **Status:** installed and holding both roles. `ROLE_DIALER` and
 `ROLE_CALL_SCREENING` are held on a Pixel 6 running GrapheneOS, verified
@@ -22,7 +22,7 @@ daily-driver gate (WS7), and the instrumented suites are all still open.
 
 **Spec:** [design.md](design.md) — the full design.
 **Build plan:** [todo.md](todo.md) — workstreams, gates, and the order to do them in.
-**Screens:** [design/xx-phone-screens.html](design/xx-phone-screens.html) — the mockup.
+**Screens:** [design/xx-dialer-screens.html](design/xx-dialer-screens.html) — the mockup.
 
 ---
 
@@ -55,20 +55,28 @@ enforcement on after the log has proven itself; it is never flipped for you.
 ## Why a whole dialer
 
 Because a call-screening app cannot change the ringtone — the system plays it.
-The only app allowed to own the ringer is the default dialer. So XX-Phone is the
+The only app allowed to own the ringer is the default dialer. So XX-Dialer is the
 default dialer: keypad, recents, contacts, in-call screen, and the policy engine
 that is the actual point.
 
 ## The ringtone 🔔
 
-XX-Phone ships its own: `app/src/main/res/raw/xx_ringtone.mp3` on channel
+XX-Dialer ships its own: `app/src/main/res/raw/xx_ringtone.mp3` on channel
 `ring_default_v2`. Unknown callers keep their own tone (`xx_unknown`) on their
 own channel, which is the whole reason a dialer was necessary.
 
 The `_v2` is load-bearing. Android freezes a notification channel's sound at
 creation and will not let you change it afterward, so a new tone means minting a
 successor channel id and deleting the predecessor — never editing, never
-reusing. Same rule applies every time the tone changes again.
+reusing. `ring_default_v1` was the system-ringtone indirection; v2 is the baked
+tone. Same rule applies every time the tone changes again.
+
+The v1 never existed under the current application id — the rename to
+`com.piercingxx.xxdialer` gave the app a new package and therefore an empty
+NotificationManager, so a first run mints `ring_default_v2` straight away and
+has nothing to supersede. The floor stays at 2 anyway: the number is an
+append-only counter, not an app version, and holding the line keeps a retired
+id retired.
 
 ## Two manifest bugs, since fixed 🐛
 
@@ -91,7 +99,7 @@ Notification health is a §15 warning, where it belongs.
 
 XX-Launcher broadcasts `xx.launcher.THEME_CHANGED` with the active theme's
 display name and its resolved background ARGB, targeted at each family app. All
-nine subscribe. XX-Phone's exported receiver resolves the name to a
+nine subscribe. XX-Dialer's exported receiver resolves the name to a
 `ThemePreset`, persists it to the ground store, and the UI repaints. Eight
 choices: AMOLED Night, Graphite, Forest Night, Ocean Drift, Burgundy, Paper,
 Mist, and Custom — Custom being the one that has no preset to resolve, so the
@@ -119,6 +127,13 @@ export ANDROID_HOME=$HOME/Android/Sdk
 ./gradlew :app:assembleDebug
 adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
+
+The application id is `com.piercingxx.xxdialer` (it was `com.piercingxx.xxphone`
+before the rename). Android keys everything off the package, so the two are
+unrelated apps to the system: uninstall the old one before installing this, and
+re-grant `ROLE_DIALER` and `ROLE_CALL_SCREENING` through Setup afterwards — the
+roles do not follow a package rename, and neither do the Room database, the
+notification channels, or the theme prefs.
 
 The WS0 probe builds separately: `./gradlew :probe:assembleDebug`, then follow
 [PROBE.md](PROBE.md).

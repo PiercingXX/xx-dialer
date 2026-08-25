@@ -26,7 +26,7 @@
         android:label="@string/app_name"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher_round"
-        android:theme="@style/Theme.XxPhone">
+        android:theme="@style/Theme.XxDialer">
 
         <!-- The dialer role needs one activity serving all three forms:
              ACTION_DIAL bare, ACTION_DIAL tel:, ACTION_VIEW tel: (§4.1). -->

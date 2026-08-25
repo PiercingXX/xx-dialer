@@ -20,6 +20,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "xx-phone"
+rootProject.name = "xx-dialer"
 
 include(":app", ":core", ":probe")

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  XX-Phone layout metrics (design §12). No FAB dimensions exist anywhere:
+  XX-Dialer layout metrics (design §12). No FAB dimensions exist anywhere:
   keypad is the center-tab IA, not a FAB (§12.2).
 -->
 <resources>

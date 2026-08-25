@@ -1,0 +1,445 @@
+<title>XX-Dialer Screen Spec</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=JetBrains+Mono:wght@300;400;500&display=swap">
+<style>
+
+/* ── PiercingXX tokens · piercingxx-branding/tokens/colors.json ───────────
+   Signal #FFFFFF is RESERVED. Body type caps at the 90% stop. One accent.
+   Single-theme by brand mandate: AMOLED black is the product. */
+:root{
+  --ink:#000000; --signal:#FFFFFF;
+  --emph-bg:#FFFFFF; --emph-fg:#000000;
+  --ink-raised:#09090B; --graphite:#131316; --slate:#18181B;
+  --line:rgba(255,255,255,.10);
+  --shade:rgba(255,255,255,.25);
+  --muted:rgba(255,255,255,.50);
+  --strong:rgba(255,255,255,.80);
+  --text:rgba(255,255,255,.90);
+  --warn:#FDBA74; --error:#FF6767;
+  --display:"Space Mono",ui-monospace,monospace;
+  --body:"JetBrains Mono",ui-monospace,SFMono-Regular,monospace;
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--ink); color:var(--strong);
+  font-family:var(--body); font-weight:400; font-size:15px; line-height:1.7;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1180px;margin:0 auto;padding:0 28px}
+
+.eyebrow{font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted);margin:0 0 14px}
+h1,h2,h3{font-family:var(--display);font-weight:400;color:var(--text);text-wrap:balance;margin:0}
+h1{font-size:clamp(34px,6vw,62px);line-height:1.02;letter-spacing:-.02em}
+h2{font-size:clamp(22px,3vw,30px);line-height:1.18;letter-spacing:-.01em}
+h3{font-size:16px}
+p{margin:0 0 16px;max-width:66ch}
+code{font-family:var(--body);font-size:.88em;color:var(--text);background:rgba(255,255,255,.07);padding:1px 5px;border-radius:3px}
+
+section{padding:76px 0;border-top:1px solid var(--line)}
+.sec-head{display:flex;flex-direction:column;gap:8px;margin-bottom:40px}
+.sec-head p{color:var(--muted);margin:0}
+
+/* ── hero ── */
+.hero{padding:84px 0 76px}
+.hero .lede{font-size:17px;color:var(--strong);max-width:56ch}
+.hero-meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:26px}
+.chip{font-size:11px;letter-spacing:.1em;text-transform:uppercase;border:1px solid var(--line);border-radius:2px;padding:5px 10px;color:var(--muted)}
+.chip.on{background:var(--emph-bg);color:var(--emph-fg);border-color:var(--emph-bg)}
+
+/* ── policy table ── */
+.polwrap{overflow-x:auto}
+.pol{width:100%;min-width:640px;border-collapse:collapse;font-size:13px}
+.pol th{font-weight:400;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);text-align:left;padding:0 14px 10px;border-bottom:1px solid var(--line)}
+.pol td{padding:11px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+.pol .n{color:var(--shade);font-variant-numeric:tabular-nums;width:2ch}
+.pol .cond{color:var(--text)}
+.pol .v{white-space:nowrap;font-family:var(--display)}
+.pol .v.ring{color:var(--signal)}
+.pol .v.sil{color:var(--muted)}
+.pol .v.blk{color:var(--error)}
+.pol .tone{color:var(--muted);white-space:nowrap}
+.pol .tone b{color:var(--text);font-weight:400}
+.polnote{font-size:12.5px;color:var(--muted);max-width:70ch;margin-top:18px}
+
+/* ── phone frames (xx-vitals rail conventions) ── */
+.rail{display:flex;gap:26px;overflow-x:auto;padding:4px 0 22px;scrollbar-width:thin}
+.dev{flex:none;width:288px;margin:0}
+.dev figcaption{margin-top:14px;font-size:12px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase}
+.dev figcaption b{color:var(--text);font-weight:400;font-family:var(--display);display:block;font-size:14px;letter-spacing:0;text-transform:none;margin-bottom:3px}
+.screen{width:288px;height:624px;background:var(--ink);border:1px solid var(--line);border-radius:22px;overflow:hidden;display:flex;flex-direction:column;position:relative}
+.sbar{display:flex;justify-content:space-between;padding:9px 15px 4px;font-size:9px;color:var(--muted);letter-spacing:.04em;font-variant-numeric:tabular-nums}
+.body{flex:1;overflow:hidden;display:flex;flex-direction:column}
+
+.nav{display:flex;border-top:1px solid var(--line);background:var(--ink)}
+.nav div{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 0 11px;color:var(--shade)}
+.nav div.on{color:var(--signal)}
+.nav small{font-size:8.5px;letter-spacing:.05em}
+.nav i{font-style:normal;font-size:13px;line-height:1}
+
+.apphead{padding:10px 15px 8px;display:flex;justify-content:space-between;align-items:baseline}
+.apphead b{font-family:var(--display);font-weight:400;font-size:15px;color:var(--text)}
+.apphead span{font-size:9px;color:var(--shade);letter-spacing:.1em;text-transform:uppercase}
+
+/* recents */
+.starstrip{display:flex;gap:10px;padding:6px 15px 12px;align-items:center}
+.starstrip .mono{width:34px;height:34px;border-radius:50%;background:var(--slate);border:1px solid var(--line);display:grid;place-items:center;font-family:var(--display);font-size:12px;color:var(--strong);flex:none}
+.starstrip .add{background:none;border:1px dashed var(--shade);color:var(--shade)}
+.starstrip em{font-style:normal;font-size:8px;color:var(--shade);margin-left:auto}
+.chips{display:flex;gap:6px;padding:0 15px 10px}
+.chips span{font-size:9px;letter-spacing:.07em;text-transform:uppercase;border:1px solid var(--line);border-radius:2px;padding:3px 8px;color:var(--muted)}
+.chips span.on{background:var(--emph-bg);color:var(--emph-fg);border-color:var(--emph-bg)}
+.log{flex:1;overflow:hidden;border-top:1px solid var(--line);background:var(--ink-raised)}
+.lrow{display:flex;gap:11px;padding:10px 15px;border-bottom:1px solid var(--line);align-items:flex-start}
+.lrow .g{width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.06);display:grid;place-items:center;flex:none;font-family:var(--display);font-size:11px;color:var(--strong)}
+.lrow .t{flex:1;min-width:0}
+.lrow .t b{display:block;color:var(--text);font-weight:400;font-size:12.5px}
+.lrow .t b.dim{color:var(--muted)}
+.lrow .t span{font-size:9.5px;color:var(--muted);display:block;margin-top:1px}
+.lrow .t span.sil{color:var(--muted)}
+.lrow .t span.blk{color:var(--error)}
+.lrow .when{font-size:9px;color:var(--shade);font-variant-numeric:tabular-nums;flex:none}
+
+/* keypad */
+.numline{padding:26px 15px 6px;text-align:center}
+.numline b{font-family:var(--display);font-weight:400;font-size:30px;letter-spacing:.04em;color:var(--text);font-variant-numeric:tabular-nums}
+.match{padding:0 15px 8px;text-align:center;font-size:10px;color:var(--muted)}
+.match b{color:var(--text);font-weight:400}
+.pad{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:8px 26px 4px}
+.key{aspect-ratio:1.35;display:flex;flex-direction:column;align-items:center;justify-content:center;border:1px solid var(--line);border-radius:10px}
+.key b{font-family:var(--display);font-weight:400;font-size:19px;color:var(--text)}
+.key span{font-size:6.5px;letter-spacing:.18em;color:var(--shade)}
+.dial{margin:12px 26px 16px;background:var(--emph-bg);color:var(--emph-fg);border-radius:12px;padding:12px 0;text-align:center;font-family:var(--display);font-size:14px}
+
+/* incoming */
+.inc{flex:1;display:flex;flex-direction:column;padding:0 20px}
+.inc .kind{margin-top:64px;font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted)}
+.inc .who{font-family:var(--display);font-weight:400;font-size:31px;line-height:1.1;color:var(--text);margin-top:10px;letter-spacing:-.01em;overflow-wrap:anywhere}
+.inc .why{font-size:11px;color:var(--muted);margin-top:12px}
+.inc .why b{color:var(--text);font-weight:400}
+.inc .why .star{color:var(--signal)}
+.inc .fill{flex:1}
+.answer{background:var(--emph-bg);color:var(--emph-fg);border-radius:12px;padding:15px 0;text-align:center;font-family:var(--display);font-size:15px}
+.decline{border:1px solid var(--shade);color:var(--strong);border-radius:12px;padding:13px 0;text-align:center;font-family:var(--display);font-size:13px;margin-top:10px}
+.reply{text-align:center;font-size:10px;color:var(--muted);padding:16px 0 22px}
+
+/* in-call */
+.grid2{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;padding:0 20px}
+.cbtn{border:1px solid var(--line);border-radius:10px;padding:14px 0;text-align:center;font-size:11px;color:var(--strong)}
+.cbtn.on{background:var(--emph-bg);color:var(--emph-fg);border-color:var(--emph-bg)}
+.endcall{margin:14px 20px 20px;border:1px solid var(--error);color:var(--error);border-radius:12px;padding:13px 0;text-align:center;font-family:var(--display);font-size:13px}
+
+/* rules */
+.rsec{padding:12px 15px 4px;font-size:8.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
+.rrow{display:flex;gap:9px;padding:7px 15px;font-size:10.5px;align-items:baseline;border-bottom:1px solid var(--line)}
+.rrow i{font-style:normal;color:var(--shade);font-variant-numeric:tabular-nums;width:2ch;flex:none}
+.rrow b{color:var(--text);font-weight:400;flex:1}
+.rrow span{color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums}
+.rrow .rr{color:var(--signal)}
+.rrow .rs{color:var(--muted)}
+.rrow .rb{color:var(--error)}
+.tester{margin:12px 15px;border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.tester em{font-style:normal;font-size:8.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);display:block}
+.tester b{font-family:var(--display);font-weight:400;font-size:13px;color:var(--text);display:block;margin-top:4px;font-variant-numeric:tabular-nums}
+.tester span{font-size:10px;color:var(--muted);display:block;margin-top:3px}
+
+/* people */
+.psec{padding:12px 15px 4px;font-size:8.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
+.prow{display:flex;gap:11px;padding:9px 15px;align-items:center;border-bottom:1px solid var(--line)}
+.prow .mono{width:30px;height:30px;border-radius:50%;background:var(--slate);border:1px solid var(--line);display:grid;place-items:center;font-family:var(--display);font-size:11px;color:var(--strong);flex:none}
+.prow b{font-weight:400;font-size:12px;color:var(--text);flex:1}
+.prow em{font-style:normal;font-size:8.5px;color:var(--shade);letter-spacing:.06em;text-transform:uppercase}
+.prow .st{color:var(--signal);font-size:11px}
+
+/* setup */
+.setrow{display:flex;gap:10px;padding:11px 15px;border-bottom:1px solid var(--line);align-items:flex-start;font-size:11px}
+.setrow i{font-style:normal;flex:none;width:2ch}
+.setrow .ok{color:var(--text)}
+.setrow .warn{color:var(--warn)}
+.setrow .off{color:var(--shade)}
+.setrow .t{flex:1}
+.setrow .t b{display:block;color:var(--text);font-weight:400;font-size:11.5px}
+.setrow .t span{font-size:9.5px;color:var(--muted)}
+
+/* notes under sections */
+.notes{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin-top:34px}
+.note{background:var(--ink-raised);border:1px solid var(--line);border-radius:10px;padding:16px 18px}
+.note h3{font-size:13px;margin-bottom:6px}
+.note p{font-size:12.5px;color:var(--muted);margin:0}
+.note p b{color:var(--text);font-weight:400}
+
+footer{padding:44px 0 64px;border-top:1px solid var(--line);font-size:12px;color:var(--shade)}
+footer .wrap{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap}
+</style>
+
+<div class="wrap hero">
+  <p class="eyebrow">PiercingXX · design/xx-dialer-screens.html · spec, nothing built</p>
+  <h1>XX-Dialer</h1>
+  <p class="lede" style="margin-top:20px">The phone app that knows who is allowed to ring. A default dialer
+  for GrapheneOS with a ring-policy engine: spam never rings, starred always
+  rings, everyone else rings only inside their window — unknown numbers on
+  their own ringtone, 9&nbsp;to&nbsp;5.</p>
+  <div class="hero-meta">
+    <span class="chip on">AMOLED black</span>
+    <span class="chip">no INTERNET permission</span>
+    <span class="chip">Pixel 9 Pro · GrapheneOS · SDK 37</span>
+    <span class="chip">Space Mono + JetBrains Mono</span>
+  </div>
+</div>
+
+<section>
+  <div class="wrap">
+    <div class="sec-head">
+      <p class="eyebrow">01 · The ring policy</p>
+      <h2>First match wins, and the order is printed in the app</h2>
+      <p>This table renders verbatim on the Rules screen. The precedence is the
+      documentation.</p>
+    </div>
+    <div class="polwrap"><table class="pol">
+      <tr><th></th><th>Condition</th><th>Verdict</th><th>Tone</th></tr>
+      <tr><td class="n">1</td><td class="cond">Emergency callback window</td><td class="v ring">Ring</td><td class="tone">default</td></tr>
+      <tr><td class="n">2</td><td class="cond">Contact set to Send to voicemail</td><td class="v sil">→ voicemail</td><td class="tone">—</td></tr>
+      <tr><td class="n">3</td><td class="cond">Blocklist or pattern rule</td><td class="v blk">✗ Block</td><td class="tone">—</td></tr>
+      <tr><td class="n">4</td><td class="cond">STIR/SHAKEN failed — forged caller ID</td><td class="v blk">✗ Block</td><td class="tone">—</td></tr>
+      <tr><td class="n">5</td><td class="cond">★ Starred contact</td><td class="v ring">Ring · any time</td><td class="tone">default</td></tr>
+      <tr><td class="n">6</td><td class="cond">Business contact, 09:00–19:00</td><td class="v ring">Ring</td><td class="tone">default</td></tr>
+      <tr><td class="n">7</td><td class="cond">Business contact, outside window</td><td class="v sil">→ Silence</td><td class="tone">—</td></tr>
+      <tr><td class="n">8</td><td class="cond">Saved contact</td><td class="v ring">Ring · any time</td><td class="tone">default</td></tr>
+      <tr><td class="n">9</td><td class="cond">Unknown you dialed in the last 48 h</td><td class="v ring">Ring · any time</td><td class="tone"><b>unknown tone</b></td></tr>
+      <tr><td class="n">10</td><td class="cond">Silence pattern (neighbor-spoof preset)</td><td class="v sil">→ Silence</td><td class="tone">—</td></tr>
+      <tr><td class="n">11</td><td class="cond">Unknown, 09:00–17:00</td><td class="v ring">Ring</td><td class="tone"><b>unknown tone</b></td></tr>
+      <tr><td class="n">12</td><td class="cond">Unknown, outside window</td><td class="v sil">→ Silence</td><td class="tone">—</td></tr>
+    </table></div>
+    <p class="polnote">Overrides: a <em style="color:var(--text);font-style:normal">repeat caller</em> (15 min)
+    pierces any Silence, never a Block. <em style="color:var(--text);font-style:normal">Expecting a call</em>
+    turns every Silence into a ring for a bounded 2 h, then expires on its own.
+    In <em style="color:var(--text);font-style:normal">observe mode</em> — the first-week default — every
+    call rings normally while the log records what would have happened.</p>
+    <p class="polnote">Silence means surfaced, not vanished: the call lands in Recents with the
+    rule that fired, still answerable while it rings out. Blocks come only from
+    explicit signals — a heuristic can silence a call, never eat one. Every
+    failure path resolves to <em style="color:var(--text);font-style:normal">the phone rings</em>.</p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-head">
+      <p class="eyebrow">02 · Screens</p>
+      <h2>Four tabs, two call surfaces, one setup flow</h2>
+      <p>Views + viewBinding. Monochrome plus the one Signal-white accent —
+      the Answer block is the accent.</p>
+    </div>
+
+    <div class="rail">
+
+      <figure class="dev">
+        <div class="screen">
+          <div class="sbar"><span>09:41</span><span>▲ ▽ ■</span></div>
+          <div class="apphead"><b>Recents</b><span>xx-dialer</span></div>
+          <div class="starstrip">
+            <div class="mono">MG</div><div class="mono">JA</div><div class="mono">RS</div>
+            <div class="mono add">+</div><em>★ collapse</em>
+          </div>
+          <div class="chips"><span class="on">All</span><span>Missed</span><span>Silenced</span><span>Blocked</span></div>
+          <div class="body log">
+            <div class="lrow"><div class="g">MG</div><div class="t"><b>Margaret Adams</b><span>✓ ★ starred · 4 min</span></div><div class="when">08:52</div></div>
+            <div class="lrow"><div class="g">?</div><div class="t"><b class="dim">+1 425 555 0143</b><span class="sil">→ Silenced · Unknown, outside 09–17</span></div><div class="when">07:14</div></div>
+            <div class="lrow"><div class="g">DR</div><div class="t"><b>Dr. Reyes (office)</b><span>✓ Business · in window · 2 min</span></div><div class="when">yest</div></div>
+            <div class="lrow"><div class="g">✗</div><div class="t"><b class="dim">+1 425 555 0100</b><span class="blk">✗ Blocked · pattern 425-555-XXXX</span></div><div class="when">yest</div></div>
+            <div class="lrow"><div class="g">?</div><div class="t"><b class="dim">+1 206 555 0177</b><span>✓ Unknown · you called them Tue</span></div><div class="when">yest</div></div>
+            <div class="lrow"><div class="g">JA</div><div class="t"><b>Jal</b><span>✓ saved · missed</span></div><div class="when">Thu</div></div>
+            <div class="lrow"><div class="g">?</div><div class="t"><b class="dim">Hidden number</b><span class="sil">→ Silenced · hidden-caller policy</span></div><div class="when">Thu</div></div>
+          </div>
+          <div class="nav">
+            <div class="on"><i>≡</i><small>Recents</small></div>
+            <div><i>⌗</i><small>Keypad</small></div>
+            <div><i>◎</i><small>People</small></div>
+            <div><i>§</i><small>Rules</small></div>
+          </div>
+        </div>
+        <figcaption><b>Recents</b>every screened call explains itself</figcaption>
+      </figure>
+
+      <figure class="dev">
+        <div class="screen">
+          <div class="sbar"><span>09:41</span><span>▲ ▽ ■</span></div>
+          <div class="apphead"><b>Keypad</b><span>xx-dialer</span></div>
+          <div class="body">
+            <div class="numline"><b>425 555 01</b></div>
+            <div class="match"><b>Dr. Reyes (office)</b> · +1 425 555 0134</div>
+            <div class="pad">
+              <div class="key"><b>1</b><span>&nbsp;</span></div><div class="key"><b>2</b><span>ABC</span></div><div class="key"><b>3</b><span>DEF</span></div>
+              <div class="key"><b>4</b><span>GHI</span></div><div class="key"><b>5</b><span>JKL</span></div><div class="key"><b>6</b><span>MNO</span></div>
+              <div class="key"><b>7</b><span>PQRS</span></div><div class="key"><b>8</b><span>TUV</span></div><div class="key"><b>9</b><span>WXYZ</span></div>
+              <div class="key"><b>＊</b><span>&nbsp;</span></div><div class="key"><b>0</b><span>+</span></div><div class="key"><b>#</b><span>&nbsp;</span></div>
+            </div>
+            <div class="dial">Call</div>
+          </div>
+          <div class="nav">
+            <div><i>≡</i><small>Recents</small></div>
+            <div class="on"><i>⌗</i><small>Keypad</small></div>
+            <div><i>◎</i><small>People</small></div>
+            <div><i>§</i><small>Rules</small></div>
+          </div>
+        </div>
+        <figcaption><b>Keypad</b>center tab · Space Mono digits · T9 match</figcaption>
+      </figure>
+
+      <figure class="dev">
+        <div class="screen">
+          <div class="sbar"><span>11:02</span><span>▲ ▽ ■</span></div>
+          <div class="body inc">
+            <p class="kind">Incoming call</p>
+            <p class="who">+1 206 555 0177</p>
+            <p class="why"><b>Unknown</b> · rings 9–17 on unknown tone · carrier says: EVERGREEN DENTAL</p>
+            <div class="fill"></div>
+            <div class="answer">Answer</div>
+            <div class="decline">Decline</div>
+            <p class="reply">Reply · "Can't talk now"</p>
+          </div>
+        </div>
+        <figcaption><b>Incoming · unknown</b>the tone is the label — no spam banner</figcaption>
+      </figure>
+
+      <figure class="dev">
+        <div class="screen">
+          <div class="sbar"><span>22:36</span><span>▲ ▽ ■</span></div>
+          <div class="body inc">
+            <p class="kind">Incoming call</p>
+            <p class="who">Margaret Adams</p>
+            <p class="why"><span class="star">★ Starred</span> · always rings</p>
+            <div class="fill"></div>
+            <div class="answer">Answer</div>
+            <div class="decline">Decline</div>
+            <p class="reply">Reply · "Call me later?"</p>
+          </div>
+        </div>
+        <figcaption><b>Incoming · starred</b>22:36 and it rings anyway — that's the point</figcaption>
+      </figure>
+
+      <figure class="dev">
+        <div class="screen">
+          <div class="sbar"><span>11:03</span><span>▲ ▽ ■</span></div>
+          <div class="body inc">
+            <p class="kind">On call · 04:12</p>
+            <p class="who" style="font-size:26px">Dr. Reyes (office)</p>
+            <p class="why">Business · SIM 1</p>
+            <div class="fill"></div>
+            <div class="grid2">
+              <div class="cbtn">Keypad</div><div class="cbtn on">Mute</div>
+              <div class="cbtn">Speaker</div><div class="cbtn">More ⋯</div>
+            </div>
+            <div class="endcall">End call</div>
+          </div>
+        </div>
+        <figcaption><b>In-call</b>tabular timer · overflow: hold, add call</figcaption>
+      </figure>
+
+      <figure class="dev">
+        <div class="screen">
+          <div class="sbar"><span>09:41</span><span>▲ ▽ ■</span></div>
+          <div class="apphead"><b>Rules</b><span>xx-dialer</span></div>
+          <div class="body" style="overflow:hidden">
+            <div class="rrow"><b>Enforcing</b><span class="rr">on · observed 1 week ✓</span></div>
+            <div class="rrow"><b>Expecting a call</b><span>off · rings all for 2 h</span></div>
+            <div class="rsec">Evaluation order · live</div>
+            <div class="rrow"><i>3</i><b>Blocklist · patterns</b><span class="rb">✗ blocks</span></div>
+            <div class="rrow"><i>5</i><b>★ Starred</b><span class="rr">any time</span></div>
+            <div class="rrow"><i>6</i><b>Business</b><span>09:00–19:00</span></div>
+            <div class="rrow"><i>9</i><b>You called, 48 h</b><span class="rr">any time</span></div>
+            <div class="rrow"><i>11</i><b>Unknown</b><span>09:00–17:00 · own tone</span></div>
+            <div class="rsec">Test a number</div>
+            <div class="tester">
+              <em>right now · Sat 22:41</em>
+              <b>+1 425 555 0134</b>
+              <span>→ Silenced · Business, outside 09:00–19:00</span>
+            </div>
+            <div class="rsec">Settings</div>
+            <div class="rrow"><b>Repeat caller pierces silence</b><span class="rr">on · 15 min</span></div>
+            <div class="rrow"><b>Silenced-call notifications</b><span>immediately</span></div>
+            <div class="rrow"><b>Failed caller-ID check</b><span class="rb">block</span></div>
+            <div class="rsec">This week</div>
+            <div class="rrow"><b>Screened 14 · silenced 5 · blocked 3</b><span>&nbsp;</span></div>
+          </div>
+          <div class="nav">
+            <div><i>≡</i><small>Recents</small></div>
+            <div><i>⌗</i><small>Keypad</small></div>
+            <div><i>◎</i><small>People</small></div>
+            <div class="on"><i>§</i><small>Rules</small></div>
+          </div>
+        </div>
+        <figcaption><b>Rules</b>the product — precedence, windows, tester</figcaption>
+      </figure>
+
+      <figure class="dev">
+        <div class="screen">
+          <div class="sbar"><span>09:41</span><span>▲ ▽ ■</span></div>
+          <div class="apphead"><b>People</b><span>xx-dialer</span></div>
+          <div class="body" style="overflow:hidden">
+            <div class="psec">★ Starred — always ring</div>
+            <div class="prow"><div class="mono">MG</div><b>Margaret Adams</b><span class="st">★</span></div>
+            <div class="prow"><div class="mono">JA</div><b>Jal</b><span class="st">★</span></div>
+            <div class="psec">Business — ring 09:00–19:00</div>
+            <div class="prow"><div class="mono">DR</div><b>Dr. Reyes (office)</b><em>business</em></div>
+            <div class="prow"><div class="mono">SY</div><b>Synology vendor</b><em>business</em></div>
+            <div class="psec">Everyone</div>
+            <div class="prow"><div class="mono">AL</div><b>Alex Chen</b><em>&nbsp;</em></div>
+            <div class="prow"><div class="mono">RS</div><b>Roscoe</b><span class="st">★</span></div>
+            <div class="prow"><div class="mono">NA</div><b>Nagatha</b><em>&nbsp;</em></div>
+          </div>
+          <div class="nav">
+            <div><i>≡</i><small>Recents</small></div>
+            <div><i>⌗</i><small>Keypad</small></div>
+            <div class="on"><i>◎</i><small>People</small></div>
+            <div><i>§</i><small>Rules</small></div>
+          </div>
+        </div>
+        <figcaption><b>People</b>tier assignment lives here — the OS has no label UI</figcaption>
+      </figure>
+
+      <figure class="dev">
+        <div class="screen">
+          <div class="sbar"><span>09:41</span><span>▲ ▽ ■</span></div>
+          <div class="apphead"><b>Setup</b><span>xx-dialer</span></div>
+          <div class="body" style="overflow:hidden">
+            <div class="setrow"><i class="ok">✓</i><div class="t"><b>Default phone app</b><span>role held and verified</span></div></div>
+            <div class="setrow"><i class="ok">✓</i><div class="t"><b>Caller ID &amp; spam app</b><span>screening role held</span></div></div>
+            <div class="setrow"><i class="warn">⚠</i><div class="t"><b>Restricted settings</b><span>App info → ⋮ → Allow restricted settings, then retry</span></div></div>
+            <div class="setrow"><i class="ok">✓</i><div class="t"><b>Ring channels</b><span>default · unknown · silent created</span></div></div>
+            <div class="setrow"><i class="warn">⚠</i><div class="t"><b>Contacts</b><span>Contact Scopes: 12 contacts granted — everyone else classifies as unknown</span></div></div>
+            <div class="setrow"><i class="ok">✓</i><div class="t"><b>Full-screen incoming call</b><span>allowed</span></div></div>
+            <div class="setrow"><i class="off">·</i><div class="t"><b>Upstream blocking</b><span>no "block callers not in contacts" rejections seen</span></div></div>
+            <div class="setrow"><i class="ok">✓</i><div class="t"><b>Network</b><span>no INTERNET permission — nothing to audit</span></div></div>
+          </div>
+        </div>
+        <figcaption><b>Setup</b>each step shows its real state — never claim protection that isn't running</figcaption>
+      </figure>
+
+    </div>
+
+    <div class="notes">
+      <div class="note"><h3>Reserved white</h3><p>Body text caps at 90%. The Answer block, the active tab, and the ★
+      are the Signal moments — <b>the accent is inversion, not hue</b>.</p></div>
+      <div class="note"><h3>Glyph-first status</h3><p><b>✓ rang · → silenced · ✗ blocked.</b> Only ✗ may use error red —
+      a blocked call is the one loud state. Spam gets no orange badge; the
+      absence of a ring is the feature.</p></div>
+      <div class="note"><h3>Tabular everything</h3><p>Keypad digits, timers, timestamps — <b>Space Mono, tabular figures</b>.
+      A reflowing call timer is the tell of an unconsidered dialer.</p></div>
+      <div class="note"><h3>Answer interaction</h3><p>Two-button tap by default; horizontal pill slider as the setting.
+      Vertical swipe is the gesture Google publicly abandoned as error-prone.</p></div>
+      <div class="note"><h3>Observe first</h3><p>The first week silences nothing: every call rings while the log
+      records what <b>would have</b> happened. A phone app earns trust before
+      it's allowed to eat a ring — and enforcement is offered, never flipped.</p></div>
+      <div class="note"><h3>Recovery on the notification</h3><p>A silenced call's quiet card carries <b>Call back · Ring next
+      time · Block</b> inline. Bursts batch ("3 silenced calls"); the whole
+      category is set to immediately, daily summary, or never.</p></div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <span>XX-Dialer · PiercingXX · spec only, nothing built</span>
+    <span>tokens: piercingxx-branding · type: Space Mono / JetBrains Mono</span>
+  </div>
+</footer>

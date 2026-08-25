@@ -4,7 +4,7 @@
   parent; the accent is inversion, not hue — Signal white does the work.
 -->
 <resources>
-    <style name="Theme.XxPhone" parent="Theme.Material3.Dark.NoActionBar">
+    <style name="Theme.XxDialer" parent="Theme.Material3.Dark.NoActionBar">
         <item name="android:windowBackground">@color/pxx_ink</item>
         <item name="android:statusBarColor">#000000</item>
         <item name="android:navigationBarColor">#000000</item>

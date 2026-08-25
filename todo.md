@@ -1,4 +1,4 @@
-# XX-Phone — Build Plan
+# XX-Dialer — Build Plan
 
 Spec: [design.md](design.md). Target: Pixel 9 Pro (`caiman`), GrapheneOS,
 Android 17 / SDK 37.
@@ -89,7 +89,7 @@ tone change mints a new versioned channel ID (`ring_unknown_v2`). The
 `channel_registry` table exists for exactly this; there is no shortcut.
 
 **4. Hold both roles.** Default dialer alone is not enough — if any other
-app holds `ROLE_CALL_SCREENING`, XX-Phone's screener is silently never
+app holds `ROLE_CALL_SCREENING`, XX-Dialer's screener is silently never
 invoked. Setup claims both and detects the conflict (design §4.1).
 
 **5. The pure core carries the correctness burden.** `RingPolicy`, `Windows`,

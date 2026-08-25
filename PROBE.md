@@ -1,7 +1,7 @@
 # PROBE.md — WS0 on-device procedure
 
 Target: Pixel 9 Pro (`caiman`), GrapheneOS. The probe APK
-(`com.piercingxx.xxphone.probe`) is a throwaway that answers four platform
+(`com.piercingxx.xxdialer.probe`) is a throwaway that answers four platform
 questions before anything else is trusted on them.
 
 ## Why WS0 exists
@@ -60,8 +60,8 @@ Expected shapes when all is well:
 ```
 [roles] role=android.app.role.DIALER request_result=RESULT_OK held_after_request=true
 [roles] outcome=granted role=android.app.role.DIALER
-[audit] role=android.app.role.DIALER held=true available=true holders=com.piercingxx.xxphone.probe
-[audit] default_dialer_package=com.piercingxx.xxphone.probe ...
+[audit] role=android.app.role.DIALER held=true available=true holders=com.piercingxx.xxdialer.probe
+[audit] default_dialer_package=com.piercingxx.xxdialer.probe ...
 ```
 
 **The refusal signature to watch for** (the gate this test exists for):
@@ -185,11 +185,11 @@ Two transports, both offline:
 
 - On-device: press **Share probe_log.txt (offline ACTION_SEND)** — share
   sheet via FileProvider
-  (`[export] event=share_uri_issued authority=com.piercingxx.xxphone.probe.fileprovider bytes=... transport=ACTION_SEND chooser; app holds no INTERNET permission`).
+  (`[export] event=share_uri_issued authority=com.piercingxx.xxdialer.probe.fileprovider bytes=... transport=ACTION_SEND chooser; app holds no INTERNET permission`).
 - Over USB:
 
   ```
-  adb shell run-as com.piercingxx.xxphone.probe cat files/probe_log.txt
+  adb shell run-as com.piercingxx.xxdialer.probe cat files/probe_log.txt
   ```
 
 Paste verbatim blocks into design.md §4.x — the lines are self-contained by
@@ -200,7 +200,7 @@ design.
 1. Uninstall the probe — both roles release automatically:
 
    ```
-   adb uninstall com.piercingxx.xxphone.probe
+   adb uninstall com.piercingxx.xxdialer.probe
    ```
 
 2. Restore the stock dialer (AOSP Dialer, `com.android.dialer`, per §4.5):

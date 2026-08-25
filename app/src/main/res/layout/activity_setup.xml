@@ -36,7 +36,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="6dp"
-                android:text="xx-phone · each step shows its real state"
+                android:text="xx-dialer · each step shows its real state"
                 android:textAppearance="@style/TextAppearance.Xx.Chip"/>
 
             <!-- Step 1 (§4.1): default-dialer role, held-state verified AFTER
@@ -405,7 +405,7 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="4dp"
-                            android:text="For the first week every call rings normally while XX-Phone records what it would have done. Enforcement is offered after the log proves itself — never flipped for you."
+                            android:text="For the first week every call rings normally while XX-Dialer records what it would have done. Enforcement is offered after the log proves itself — never flipped for you."
                             android:textAppearance="@style/TextAppearance.Xx.BodySmall"/>
 
                         <TextView

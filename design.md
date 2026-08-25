@@ -1,4 +1,4 @@
-# XX-Phone — Design Specification
+# XX-Dialer — Design Specification
 
 Android default dialer for GrapheneOS. A ring-policy engine wearing a phone
 app: spam never rings, starred contacts always ring, everyone else rings only
@@ -7,12 +7,12 @@ when their window says so — unknown numbers on their own ringtone, 9 to 5.
 The dialer exists because the policy needs it: only the default dialer is
 allowed to own the ringer, and owning the ringer is the only way to give
 unknown callers a different ringtone. A screening-only app cannot do it
-(§4.3). So XX-Phone is the whole phone: keypad, recents, contacts, in-call —
+(§4.3). So XX-Dialer is the whole phone: keypad, recents, contacts, in-call —
 and the rules engine that is the actual point.
 
 **Status:** specification only. Nothing built.
 **Build plan:** [todo.md](todo.md) — workstreams, gates, and the order to do them in.
-**Screens:** [design/xx-phone-screens.html](design/xx-phone-screens.html) — the mockup.
+**Screens:** [design/xx-dialer-screens.html](design/xx-dialer-screens.html) — the mockup.
 **Research:** [design/research.md](design/research.md) — sourced findings behind this spec.
 **Target:** Pixel 9 Pro (`caiman`), GrapheneOS, Android 17 / SDK 37.
 
@@ -79,13 +79,13 @@ it must never eat a real call.
 **R10.** Emergency calls are never screened. After an outgoing emergency call,
 all screening is disabled for 24 hours (the iOS rule, adopted verbatim).
 **R11.** Enforcement has an **observe mode**: every call rings normally while
-the log records what XX-Phone *would have* done. Setup defaults to observe
+the log records what XX-Dialer *would have* done. Setup defaults to observe
 for the first week — a phone app earns trust before it silences anything.
 The switch doubles as the troubleshooting escape hatch, with evidence intact.
 
 ### Non-goals
 
-- SMS/MMS. XX-Phone never takes the SMS role.
+- SMS/MMS. XX-Dialer never takes the SMS role.
 - Visual voicemail. Carrier VVM needs IMAP over the network — R8 forbids it.
   Dial-in voicemail works like it's 2004. GrapheneOS itself hasn't solved VVM;
   deferring is defensible.
@@ -112,15 +112,15 @@ The switch doubles as the troubleshooting escape hatch, with evidence intact.
 | D1 | **Full default dialer, not a screening add-on** | `CallScreeningService` alone cannot change what tone plays — the system rings. Only the default dialer may declare it plays its own ringtone (§4.3). R4 is impossible any other way. |
 | D2 | **Ringing = a CallStyle notification on a per-tier notification channel** | The documented mechanism for dialer-owned ringing. Channels give per-tier tone/vibration, and DND, ringer mode, and volume are honored **by the platform**, not by our code. The app never touches `MediaPlayer` to ring — that path would bypass DND and Nope-Mode's zen rule, and is the trust failure this app exists to avoid. |
 | D3 | **Policy is pure and evaluated at call time** | `decide(now, facts, rules)` — no alarms, no accumulated state, nothing to reconcile after a reboot. Windows are checked when the call arrives, on the wall clock. |
-| D4 | **Tier data is app-local, keyed by `LOOKUP_KEY`** | The "Business" label cannot live in `ContactsContract.Groups`: AOSP Contacts won't create groups for local (account-free) contacts, and GrapheneOS Contact Scopes blocks all contact writes. Only `STARRED`, saved-ness, and `CUSTOM_RINGTONE` are read from the provider; everything XX-Phone owns lives in Room. |
+| D4 | **Tier data is app-local, keyed by `LOOKUP_KEY`** | The "Business" label cannot live in `ContactsContract.Groups`: AOSP Contacts won't create groups for local (account-free) contacts, and GrapheneOS Contact Scopes blocks all contact writes. Only `STARRED`, saved-ness, and `CUSTOM_RINGTONE` are read from the provider; everything XX-Dialer owns lives in Room. |
 | D5 | **Only explicit signals block; heuristics silence at worst** | The block verdict is reserved for the user's blocklist, the user's pattern rules, and STIR/SHAKEN `FAILED` (configurable). Everything else degrades to silence, which is recoverable. This is R9 as an invariant. |
-| D6 | **System `BlockedNumberContract` is the blocklist store** | The platform rejects those numbers upstream of everything, the data survives XX-Phone losing the role, and `createManageBlockedNumbersIntent()` gives a system-owned management UI. Pattern rules layer on top in Room. |
+| D6 | **System `BlockedNumberContract` is the blocklist store** | The platform rejects those numbers upstream of everything, the data survives XX-Dialer losing the role, and `createManageBlockedNumbersIntent()` gives a system-owned management UI. Pattern rules layer on top in Room. |
 | D7 | **Kotlin + Views, no Compose** | Family default (Launcher, Nope-Mode). XX-Vitals went Compose by operator ruling, app-specifically. A dialer's incoming-call surface wants the cheapest possible cold inflate. **Open to operator override, same as Vitals D4** — if overruled, nothing else in this spec changes. |
 | D8 | **No `INTERNET` permission** | R8. On GrapheneOS this is stronger than "network revoked" — the permission simply doesn't exist on the app, and the community can verify it from the manifest. |
 | D9 | **The user tier is "Business" in the UI, never in the code** | Android 15 added `CallLog.Calls.IS_BUSINESS_CALL` / `Call.EXTRA_IS_BUSINESS_CALL` — a *carrier-asserted* "the caller is a business" flag with opposite semantics to our user-assigned tier. Internally the tier is `TIER_BIZ`; the platform extra is consumed only as an input signal when classifying unknown callers. Colliding names here would ship a feature that silently disagrees with a platform flag. |
 | D10 | **Repeat-caller override pierces *every* Silence verdict** — on by default, 15 minutes | A second call from the same number inside the window rings through any silence: unknown out-of-window, Business after hours, hidden-caller policy, a silence-pattern. The override is an urgency signal, and urgency doesn't care which rule silenced the first call. It never pierces a Block. 15 min matches Android DND's convention (iOS uses 3); a missed genuine emergency is worse than one unwanted ring — same call Nope-Mode made. Configurable. |
 | D11 | **Per-contact `CUSTOM_RINGTONE` beats the tier tone; `SEND_TO_VOICEMAIL` is honored** | Both are existing per-contact routing primitives the user may already have set. Samsung documents the precedence rule ("the ringtone of a contact is preferred") and it's correct — the more specific setting wins. |
-| D12 | **Room + Gson, shared debug keystore, `com.piercingxx.xxphone`** | Same stack as the family; backup JSON conventions carry over. |
+| D12 | **Room + Gson, shared debug keystore, `com.piercingxx.xxdialer`** | Same stack as the family; backup JSON conventions carry over. |
 | D13 | **Observe mode is the default for the first week** | R11. The verdict path runs identically in both modes — observe differs only at the final gate, so a week of observation exercises the real code. The only thing observe cannot show is system-blocklist rejections: the platform enforces those upstream and they never reach us (§4.4). |
 | D14 | **Recent-outgoing callback window: an unknown number dialed in the last 48 h rings through** | The biggest false-positive class in the research is the callback — the pharmacy, plumber, or delivery driver returning *your* call from a direct line. iOS ships this inside Silence Unknown Callers. One `CallLog` outgoing query; 48 h default, configurable. |
 | D15 | **"Expecting a call" is a bounded bypass, Nope-Mode-break style** | Unknown and silenced callers ring for the next 2 h, then it expires on its own. There is no indefinite variant, by construction — the family already learned that an unbounded off-switch turns policy into a suggestion. Optional QS tile. |
@@ -152,10 +152,10 @@ sets (`READ_CALL_LOG`, `READ_CONTACTS`, `POST_NOTIFICATIONS`, …) — no
 separate prompt cascade. Disabling the InCallService component at runtime
 revokes the role and kills the app; don't.
 
-**XX-Phone holds two roles.** Telecom runs exactly one app screener: the
+**XX-Dialer holds two roles.** Telecom runs exactly one app screener: the
 `ROLE_CALL_SCREENING` holder if one exists and differs from the default
 dialer, else the default dialer. If another app (SpamBlocker, say) holds the
-screening role, XX-Phone's screener is silently never invoked. So Setup
+screening role, XX-Dialer's screener is silently never invoked. So Setup
 claims `ROLE_CALL_SCREENING` too — vacant on stock GrapheneOS — and detects
 the conflict when it isn't.
 
@@ -231,7 +231,7 @@ Channel mechanics that shape the design:
   on the target build.
 - Because ringing goes through the notification pipeline, **DND, ringer mode,
   per-channel user overrides, and Nope-Mode's `AutomaticZenRule` all apply
-  natively.** XX-Phone contains no "should I be quiet?" logic at all — that
+  natively.** XX-Dialer contains no "should I be quiet?" logic at all — that
   is the platform's job, and taking it over is how a dialer becomes malware
   with a keypad. Two belt-and-suspenders reads exist if ever needed:
   `Call.EXTRA_IS_SUPPRESSED_BY_DO_NOT_DISTURB` (API 34, stamped on the call
@@ -257,12 +257,12 @@ by falling back to the heads-up presentation and deep-linking the grant screen.
   **[VERIFY]**.
 - **`BlockedNumberContract`:** readable/writable by the default dialer;
   matching calls are rejected by the platform upstream of screening and
-  survive XX-Phone losing the role. Management UI via
+  survive XX-Dialer losing the role. Management UI via
   `TelecomManager.createManageBlockedNumbersIntent()` rather than a
   hand-rolled screen.
 - Blocked-number matching runs in the platform's filter graph **before** the
   carrier screener, our screener, or any ringing — a blocked call never
-  reaches XX-Phone at all. The platform also suppresses its own blocking for
+  reaches XX-Dialer at all. The platform also suppresses its own blocking for
   2 hours after an emergency call (`KEY_DURATION_BLOCKING_DISABLED_AFTER_EMERGENCY_INT`,
   AOSP default 7200 s) — independent of, and weaker than, R10's 24 h.
 - Two upstream user settings can starve the policy engine, and Setup must
@@ -281,7 +281,7 @@ by falling back to the heads-up presentation and deep-linking the grant screen.
 
 - Stock dialer is the **AOSP Dialer fork** (`com.android.dialer`, plus call
   recording). Its spam framework is wired to a `SpamStub` that answers
-  "not spam" to everything — the gap XX-Phone fills is structural, not an
+  "not spam" to everything — the gap XX-Dialer fills is structural, not an
   oversight. GrapheneOS's role policy and Telecom fork are unpatched in this
   area; third-party default dialers are permitted and work (forum-documented).
   The remaining on-device unknown is the Restricted Settings gate (§4.1),
@@ -289,7 +289,7 @@ by falling back to the heads-up presentation and deep-linking the grant screen.
 - **Contact Scopes:** the app *believes* it has Contacts permission while
   reads return a user-chosen subset — possibly empty, photos withheld under
   single-contact grants, account identity always hidden, and **all writes
-  blocked**. XX-Phone must render a partial or empty address book without
+  blocked**. XX-Dialer must render a partial or empty address book without
   crashing or re-prompting, never assume a contact write succeeded (there are
   none in v1 — D4 exists partly for this), and fall back to deterministic
   monogram avatars. Whether Scopes also filters `PhoneLookup` at call time is
@@ -525,11 +525,11 @@ The Room mirror (refreshed by a `ContactsContract` observer plus an
 on-foreground sweep) serves the screener's 5-second budget and the People
 tab, and is the fallback when a live lookup fails.
 
-**Owned by XX-Phone in Room:** the Business tier — a set of `LOOKUP_KEY`s
+**Owned by XX-Dialer in Room:** the Business tier — a set of `LOOKUP_KEY`s
 assigned in-app from a contact's detail sheet ("Add to Business"). This is a
 real feature, not a workaround: on an account-free GrapheneOS device the
 stock Contacts app offers **no way at all** to put a contact in a group, so
-XX-Phone's tier UI is the only label-assignment surface the user has.
+XX-Dialer's tier UI is the only label-assignment surface the user has.
 
 Staleness consequences are asymmetric by design: a stale mirror can play the
 wrong tone or ring outside a window — it can never block, because blocks
@@ -557,11 +557,18 @@ One notification channel per outcome, created at first run and registered in
 
 - The default tier ships its own tone (`res/raw/xx_ringtone.mp3`).
   `ring_default_v1` pointed at `DEFAULT_RINGTONE_URI` (indirection — followed
-  the system setting); channel sound being immutable, the baked tone rides a
-  §4.3 version bump: installs that still carry `v1` get `ring_default_v2`
-  minted at first channel bookkeeping and `v1` deleted. The Setup/§15
-  channel-health checks match by *purpose* (`ring_default_v*`), so they track
-  whichever version is live.
+  the system setting); channel sound being immutable, the baked tone rode a
+  §4.3 version bump to `v2`. That bump happened under the old
+  `com.piercingxx.xxphone` application id. The rename to
+  `com.piercingxx.xxdialer` makes this a new package with an empty
+  NotificationManager, so **no install of this app can carry `v1`** — first
+  run mints `ring_default_v2` directly (`ChannelRegistry` seeds its mint walk
+  at `firstVersion - 1`) and the below-floor supersede path finds nothing to
+  do. The floor is deliberately *not* reset to 1: channel versions are
+  append-only counters rather than app versions, a retired id stays retired,
+  and the floor machinery is what the next tone change will ride. The
+  Setup/§15 channel-health checks match by *purpose* (`ring_default_v*`), so
+  they track whichever version is live.
 - The unknown tone ships in `res/raw` as an original short tone — mono-ish,
   brand-adjacent, deliberately less urgent than a ringtone. Swapping it mints
   `ring_unknown_v2` and deletes `v1`.
@@ -570,11 +577,11 @@ One notification channel per outcome, created at first run and registered in
   feature) — noted, not built.
 - Incoming presentation: full-screen intent on the lock screen, heads-up
   when the device is in use. Both are the same CallStyle notification.
-- **Nope-Mode interplay, in full:** none required. XX-Phone rings through
+- **Nope-Mode interplay, in full:** none required. XX-Dialer rings through
   the notification pipeline; Nope-Mode's `AutomaticZenRule` (starred-only
   calls) filters that pipeline. When Nope-Mode is active, an in-window
-  unknown caller is silenced by DND even though XX-Phone said Ring — correct,
-  by layering: XX-Phone decides *whether this call deserves a ring*,
+  unknown caller is silenced by DND even though XX-Dialer said Ring — correct,
+  by layering: XX-Dialer decides *whether this call deserves a ring*,
   DND decides *whether the phone is accepting rings at all*. The one rule is
   D2's: never ring outside the pipeline.
 - Dual-SIM: per-`PhoneAccount` ringtones (API 37) are honored for the
@@ -709,7 +716,7 @@ The rules that bite here:
   ring is the feature.
 - **Tabular figures everywhere digits live:** keypad, durations, timestamps,
   counters. A reflowing call timer is the fitness-ring tell of dialers.
-- XX-Phone claims no product signal color; family white stands. Rare colors
+- XX-Dialer claims no product signal color; family white stands. Rare colors
   stay unused (a Rare Green moment on "0 spam rings this month" was
   considered and rejected — it would be weekly, which is the rule's test for
   wrong).
@@ -746,7 +753,7 @@ Components: `XxInCallService` (`BIND_INCALL_SERVICE`, exported, metadata
 metadata — §4.1), `XxCallScreeningService` (`BIND_SCREENING_SERVICE`
 exactly), dial activities handling `ACTION_DIAL` / `ACTION_VIEW tel:` (with
 and without data — role eligibility), a receiver for
-`TelecomManager.ACTION_SHOW_MISSED_CALLS_NOTIFICATION` so XX-Phone owns the
+`TelecomManager.ACTION_SHOW_MISSED_CALLS_NOTIFICATION` so XX-Dialer owns the
 missed-call notification and can annotate it with the reason string,
 `XxTileService` for the Expecting-a-call tile (manual shade placement, as
 ever), the four tab activities, incoming/in-call activities, setup.
@@ -762,7 +769,7 @@ as Nope-Mode. Keep it true forever; it is checkable with
 ## 14. Package layout
 
 ```
-com.piercingxx.xxphone
+com.piercingxx.xxdialer
 ├── core/       RingPolicy, Windows, Verdict, CallerFacts, Reason   ← pure JVM
 ├── telecom/    XxInCallService, XxCallScreeningService, CallManager,
 │               EmergencyMarker
@@ -783,19 +790,19 @@ com.piercingxx.xxphone
 |---|---|
 | Screening service slow or crashed | Platform times out at 5 s and the call proceeds — fail open (R9). Never extend work past the deadline; verdicts come from warm data or not at all. |
 | Contact mirror empty or stale (Contact Scopes, first run) | Caller classifies as unknown → rings 9–17 on the unknown tone. Wrong tone possible; blocked call impossible (D5). |
-| Dialer role revoked / never granted | XX-Phone degrades to a screening-only app if it holds that role, else inert; Setup shows exactly which tier of function is live. Never claim protection that isn't running (the Nope-Mode R8 rule). |
+| Dialer role revoked / never granted | XX-Dialer degrades to a screening-only app if it holds that role, else inert; Setup shows exactly which tier of function is live. Never claim protection that isn't running (the Nope-Mode R8 rule). |
 | Restricted Settings refusal on role request | Detected (role absent after request) → Setup walks through App Info → *Allow restricted settings*, then re-requests. |
 | `canUseFullScreenIntent()` false | Heads-up presentation only + a Setup line offering the grant screen. Calls still ring. |
 | User deletes/mutes a ring channel in system settings | Detected on reconcile-at-call; surfaced on Setup as a warning ("unknown-caller ring is muted at the system level"). The user's system-settings choice is respected, not fought. |
 | System ringtone changed | Default channel uses the indirection URI — follows automatically. If [VERIFY] fails, fall back to versioned channels on detected change. |
 | Unknown-tone change requested | New channel ID, old deleted (§4.3). Registry keeps the mapping. |
-| Nope-Mode window active / any DND | The notification pipeline filters the ring. XX-Phone logs its own verdict as computed; Recents shows the call. No fighting, no detection needed. |
+| Nope-Mode window active / any DND | The notification pipeline filters the ring. XX-Dialer logs its own verdict as computed; Recents shows the call. No fighting, no detection needed. |
 | Starred number is also blocked | Blocked wins; log entry flagged `⚠ starred number blocked` (§6). |
 | Second call while in-call | Heads-up only, no FSI over the active call; hold-and-answer on accept. The documented third-party weak spot on Pixels — first-class test target (§16). |
 | Reboot mid-anything | Nothing to recover — policy is stateless (D3). Channels persist; the mirror refreshes on next use. |
 | Clock/timezone change | Next call evaluates against the new wall clock. The emergency 24 h marker stores elapsed-realtime alongside wall time; the stricter reading wins. |
 | Outgoing emergency call | `emergency_marker` set → all screening and silencing bypassed for 24 h (R10). The platform independently bypasses its whole filter graph for emergency-mode calls and suppresses blocking for 2 h (source-verified) — belt and suspenders, ours is the longer belt. |
-| Another app takes `ROLE_CALL_SCREENING` | XX-Phone's screener silently stops running (§4.1). Detected on foreground; Setup names the app and offers the role request. Never show spam protection as active while the role is held elsewhere. |
+| Another app takes `ROLE_CALL_SCREENING` | XX-Dialer's screener silently stops running (§4.1). Detected on foreground; Setup names the app and offers the role request. Never show spam protection as active while the role is held elsewhere. |
 | InCallService component disabled somehow | Platform revokes the role and closes the app; Setup on next launch starts from the role step. |
 | Second call while another is already ringing | Platform auto-misses it (`MAXIMUM_RINGING_CALLS = 1`) — logged, not ours to handle. |
 | Withheld number | Never reaches the screener; ring-time hidden-caller policy applies (§6). If the platform's own "block Unknown" setting is on, it never reaches us at all — Setup detects and says so. |

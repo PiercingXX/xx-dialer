@@ -4,11 +4,11 @@ plugins {
 }
 
 android {
-    namespace = "com.piercingxx.xxphone.probe"
+    namespace = "com.piercingxx.xxdialer.probe"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.piercingxx.xxphone.probe"
+        applicationId = "com.piercingxx.xxdialer.probe"
         minSdk = 31
         targetSdk = 35
         versionCode = 1
@@ -43,7 +43,7 @@ kotlin {
 // dumps the debug APK's declared permissions via aapt2, and fails the build if
 // android.permission.INTERNET appears (case-insensitive). The detection logic
 // is mirrored verbatim by
-// app/src/test/java/com/piercingxx/xxphone/util/NoInternetGuardTest.kt —
+// app/src/test/java/com/piercingxx/xxdialer/util/NoInternetGuardTest.kt —
 // keep the two in sync.
 // ---------------------------------------------------------------------------
 

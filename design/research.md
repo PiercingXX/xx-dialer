@@ -1,4 +1,4 @@
-# XX-Phone — Research Notes
+# XX-Dialer — Research Notes
 
 Findings behind [design.md](../design.md), from two research passes
 (2026-08-23): platform mechanics (Android docs + AOSP `android17-release`

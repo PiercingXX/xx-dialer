@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">XX-Phone</string>
+    <string name="app_name">XX-Dialer</string>
     <string name="tile_expecting_label">Expecting a call</string>
 
     <!-- Tab labels (§12) -->

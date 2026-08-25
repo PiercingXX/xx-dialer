@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  XX-Phone type ramp + component styles (design.md §12.1).
+  XX-Dialer type ramp + component styles (design.md §12.1).
 
   Contract for UI agents:
   - fontFamily is ALWAYS set via the alias indirection @font/font_display
