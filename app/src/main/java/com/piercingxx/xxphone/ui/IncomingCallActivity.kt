@@ -79,10 +79,13 @@ class IncomingCallActivity : AppCompatActivity() {
 
     private fun renderCaller(intent: Intent?) {
         val number = intent?.getStringExtra(EXTRA_NUMBER_E164)
+        val displayName = intent?.getStringExtra(EXTRA_DISPLAY_NAME)?.takeIf { it.isNotBlank() }
         val rawLine = intent?.getCharSequenceExtra(EXTRA_CONTEXT_LINE)?.toString().orEmpty()
         val cnapExtra = intent?.getStringExtra(EXTRA_CNAP)
 
-        binding.tvName.text = number ?: WITHHELD_LABEL
+        // §12: the resolved name huge; the raw number joins the context line
+        // below whenever the name isn't just the number itself.
+        binding.tvName.text = displayName ?: number ?: WITHHELD_LABEL
 
         // Producer joins "tier · reason · carrier says: X" with SEPARATOR
         // (XxInCallService.contextLine); design §12 gives CNAP its own line,
@@ -90,7 +93,9 @@ class IncomingCallActivity : AppCompatActivity() {
         val segments = rawLine.split(SEPARATOR).filter { it.isNotBlank() }
         val cnapClause = segments.firstOrNull { it.startsWith(CNAP_PREFIX) }
             ?: cnapExtra?.let { CNAP_PREFIX + it }
-        val whyLine = segments.filterNot { it.startsWith(CNAP_PREFIX) }.joinToString(SEPARATOR)
+        val whyBits = segments.filterNot { it.startsWith(CNAP_PREFIX) }.toMutableList()
+        if (displayName != null && number != null && displayName != number) whyBits.add(0, number)
+        val whyLine = whyBits.joinToString(SEPARATOR)
 
         binding.tvCnap.text = cnapClause.orEmpty()
         binding.tvCnap.isVisible = !cnapClause.isNullOrEmpty()
@@ -203,14 +208,25 @@ class IncomingCallActivity : AppCompatActivity() {
     }
 
     private fun answerCall() {
-        // Holds any active call first, then answers the ringing one — the
-        // same path the call-waiting surface uses.
-        runCatching { CallGrid.answerWaiting() }
+        // Prefer the call matching this surface's number — two calls can
+        // ring at once and the shared card only presents one (B2).
+        val target = CallGrid.ringingCallFor(intent?.getStringExtra(EXTRA_NUMBER_E164))
+        runCatching {
+            if (target != null) CallGrid.answer(target) else CallGrid.answerWaiting()
+        }
+        // The answered call needs its surface NOW (§12 in-call) — this
+        // activity is foreground, so the launch is never background-blocked.
+        startActivity(
+            Intent(this, InCallActivity::class.java)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP),
+        )
     }
 
     private fun declineCall() {
         // disconnect() on a RINGING call rejects it.
-        CallGrid.waitingCall()?.let(CallGrid::end)
+        val target = CallGrid.ringingCallFor(intent?.getStringExtra(EXTRA_NUMBER_E164))
+            ?: CallGrid.waitingCall()
+        target?.let(CallGrid::end)
     }
 
     private fun settings(): SettingsRepository = ServiceLocator.settings(this)
@@ -294,6 +310,7 @@ class IncomingCallActivity : AppCompatActivity() {
          */
         const val ACTION_ANSWER = "com.piercingxx.xxphone.action.ANSWER_CALL"
         const val ACTION_DECLINE = "com.piercingxx.xxphone.action.DECLINE_CALL"
+        const val EXTRA_DISPLAY_NAME = "com.piercingxx.xxphone.extra.DISPLAY_NAME"
         const val EXTRA_NUMBER_E164 = "com.piercingxx.xxphone.extra.NUMBER_E164"
         const val EXTRA_CONTEXT_LINE = "com.piercingxx.xxphone.extra.CONTEXT_LINE"
         const val EXTRA_CNAP = "com.piercingxx.xxphone.extra.CNAP"

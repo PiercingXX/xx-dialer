@@ -27,4 +27,17 @@ object Intents {
 
     /** E.164 handed to CallbackTrampolineActivity for a placeCall() callback (§4.1). */
     const val EXTRA_CALLBACK_E164 = "com.piercingxx.xxphone.extra.CALLBACK_E164"
+
+    /**
+     * Ring-next-time star write (§12), executed by the NON-EXPORTED sibling
+     * receiver (BlockActionsReceiver, B3) — same self-addressed-only
+     * discipline as the block write.
+     */
+    const val ACTION_RING_NEXT_TIME = "com.piercingxx.xxphone.action.RING_NEXT_TIME"
+
+    /** E.164 payload of [ACTION_RING_NEXT_TIME]. */
+    const val EXTRA_RING_NEXT_E164 = "com.piercingxx.xxphone.extra.RING_NEXT_E164"
+
+    /** Notification id the action rode in on — cancelled when the write lands. */
+    const val EXTRA_CANCEL_NOTIF_ID = "com.piercingxx.xxphone.extra.CANCEL_NOTIF_ID"
 }

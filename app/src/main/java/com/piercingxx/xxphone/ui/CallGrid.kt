@@ -8,6 +8,7 @@ import android.telecom.CallAudioState
 import android.telecom.CallEndpoint
 import android.telecom.InCallService
 import android.telecom.VideoProfile
+import com.piercingxx.xxphone.util.E164
 import java.util.concurrent.CopyOnWriteArrayList
 
 /**
@@ -90,9 +91,9 @@ object CallGrid {
     @Volatile var onChange: (() -> Unit)? = null
 
     /**
-     * GAP (telecom owner): XxInCallService must forward onCallAdded /
-     * onCallRemoved here and register this object as its service handle —
-     * see report. Until then the grid renders empty and commands no-op.
+     * Set by XxInCallService.onCreate; it forwards onCallAdded/onCallRemoved
+     * and the endpoint callbacks here. Null only before the service first
+     * binds, when the grid correctly renders empty and commands no-op.
      */
     @Volatile var service: InCallService? = null
 
@@ -164,6 +165,28 @@ object CallGrid {
 
     fun waitingCall(): Call? = calls.firstOrNull { lineOf(it.state) == Line.WAITING }
 
+    /**
+     * The RINGING call carrying this number — disambiguates when two calls
+     * ring at once (the shared INCOMING card can only present one). Null for
+     * a withheld number or no match; callers fall back to [waitingCall].
+     */
+    fun ringingCallFor(number: String?): Call? {
+        val want = number?.let { E164.normalize(it) ?: it } ?: return null
+        return calls.firstOrNull { call ->
+            lineOf(call.state) == Line.WAITING &&
+                call.details.handle?.schemeSpecificPart
+                    ?.let { raw -> E164.normalize(raw) ?: raw } == want
+        }
+    }
+
+    /** Hold-and-answer for a SPECIFIC ringing call (§12 call waiting). */
+    fun answer(call: Call): Boolean {
+        if (lineOf(call.state) != Line.WAITING) return false
+        calls.firstOrNull { lineOf(it.state) == Line.ACTIVE }?.let(::hold)
+        runCatching { call.answer(VideoProfile.STATE_AUDIO_ONLY) }
+        return true
+    }
+
     private fun stableKey(call: Call): String {
         // Details.id is public only from API 35; identity hash is stable for
         // the lifetime of the Call object either way.
@@ -207,12 +230,7 @@ object CallGrid {
      * Hold-and-answer (§12 call waiting): park the active call, then answer
      * the waiting one audio-only. Telecom enforces the actual transition.
      */
-    fun answerWaiting(): Boolean {
-        val waiting = waitingCall() ?: return false
-        calls.firstOrNull { lineOf(it.state) == Line.ACTIVE }?.let(::hold)
-        runCatching { waiting.answer(VideoProfile.STATE_AUDIO_ONLY) }
-        return true
-    }
+    fun answerWaiting(): Boolean = waitingCall()?.let(::answer) ?: false
 
     fun endActive(): Boolean {
         val target = calls.firstOrNull { lineOf(it.state) == Line.ACTIVE }

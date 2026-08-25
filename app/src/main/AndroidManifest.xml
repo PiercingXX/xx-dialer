@@ -6,6 +6,10 @@
     <uses-feature android:name="android.hardware.telephony" android:required="true"/>
 
     <uses-permission android:name="android.permission.READ_CONTACTS"/>
+    <!-- Ring-next-time stars the provider contact (§12 recovery affordance,
+         People sheet star ↔ provider). Same contacts permission set the
+         dialer role auto-grants (§4.1) — no extra prompt. -->
+    <uses-permission android:name="android.permission.WRITE_CONTACTS"/>
     <uses-permission android:name="android.permission.READ_CALL_LOG"/>
     <uses-permission android:name="android.permission.WRITE_CALL_LOG"/>
     <uses-permission android:name="android.permission.READ_PHONE_STATE"/>
@@ -118,10 +122,13 @@
             android:noHistory="true"
             android:theme="@android:style/Theme.NoDisplay"/>
 
-        <!-- Expecting-a-call tile (D15); manual shade placement. -->
+        <!-- Expecting-a-call tile (D15); manual shade placement. icon+label
+             are REQUIRED for the tile to appear in the QS picker at all. -->
         <service
             android:name=".ring.XxTileService"
             android:exported="true"
+            android:icon="@drawable/ic_tile_expecting"
+            android:label="@string/tile_expecting_label"
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
             <intent-filter>
                 <action android:name="android.service.quicksettings.action.QS_TILE"/>

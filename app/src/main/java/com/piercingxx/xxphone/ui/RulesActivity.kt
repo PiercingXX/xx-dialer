@@ -10,6 +10,7 @@ import android.net.Uri
 import android.os.Bundle
 import android.os.SystemClock
 import android.provider.BlockedNumberContract
+import android.provider.CallLog
 import android.telecom.TelecomManager
 import android.telephony.TelephonyManager
 import android.text.format.DateUtils
@@ -202,6 +203,7 @@ class RulesActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityRulesBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        TabBar.bind(this, Tab.RULES)
         paintStaticCopy()
 
         binding.enforceSwitch.setOnCheckedChangeListener { _, checked ->
@@ -243,6 +245,11 @@ class RulesActivity : AppCompatActivity() {
         load()
     }
 
+    override fun onStart() {
+        super.onStart()
+        TabBar.onTabScreenStart(this, Tab.RULES)
+    }
+
     override fun onResume() {
         super.onResume()
         load()
@@ -272,6 +279,18 @@ class RulesActivity : AppCompatActivity() {
         binding.chipNotifImmediate.text = NOTIF_IMMEDIATE.uppercase()
         binding.chipNotifDaily.text = NOTIF_DAILY.uppercase()
         binding.chipNotifNever.text = NOTIF_NEVER.uppercase()
+        binding.answerLabel.text = "Answer interaction on the incoming screen"
+        binding.chipAnswerTap.text = "TAP"
+        binding.chipAnswerSlide.text = "SLIDE"
+        binding.bypassLabel.text = "Expecting-a-call duration (§7.1)"
+        binding.chipBypass30.text = "30 MIN"
+        binding.chipBypass2h.text = "2 H"
+        binding.chipBypass8h.text = "8 H"
+        binding.groupRecentsLabel.text = "Group consecutive same-number calls in Recents"
+        binding.tabsLabel.text = "Hide tabs (Rules stays)"
+        binding.chipTabRecents.text = "RECENTS"
+        binding.chipTabKeypad.text = "KEYPAD"
+        binding.chipTabPeople.text = "PEOPLE"
         binding.patternsEyebrow.text = "PATTERN RULES"
         binding.exemptionNote.text =
             "Every pattern rule carries the contacts exemption, non-optionally: " +
@@ -332,6 +351,51 @@ class RulesActivity : AppCompatActivity() {
             syncPolicyControls(settings, rules)
             renderWeek()
             renderLog()
+            renderUpstreamWarning()
+        }
+    }
+
+    /**
+     * §4.4/WS10 upstream-setting detection: platform-blocked CallLog rows
+     * whose BLOCK_REASON says the OS's own "block callers not in contacts" /
+     * "block unknown" toggles ate the call before this app's policy ever saw
+     * it. Empirical — no hidden-settings API needed; unreadable log ⇒ no
+     * warning (never cry wolf on a permissions hiccup).
+     */
+    private fun renderUpstreamWarning() {
+        lifecycleScope.launch(Dispatchers.IO) {
+            val starving = runCatching {
+                contentResolver.query(
+                    CallLog.Calls.CONTENT_URI,
+                    arrayOf(CallLog.Calls.BLOCK_REASON),
+                    "${CallLog.Calls.TYPE} = ?",
+                    arrayOf(CallLog.Calls.BLOCKED_TYPE.toString()),
+                    "${CallLog.Calls.DATE} DESC LIMIT 50",
+                )?.use { c ->
+                    var found = false
+                    val idx = c.getColumnIndex(CallLog.Calls.BLOCK_REASON)
+                    while (idx >= 0 && c.moveToNext()) {
+                        when (c.getInt(idx)) {
+                            CallLog.Calls.BLOCK_REASON_NOT_IN_CONTACTS,
+                            CallLog.Calls.BLOCK_REASON_PAY_PHONE,
+                            CallLog.Calls.BLOCK_REASON_RESTRICTED_NUMBER,
+                            CallLog.Calls.BLOCK_REASON_UNKNOWN_NUMBER,
+                            -> { found = true }
+                        }
+                        if (found) break
+                    }
+                    found
+                } ?: false
+            }.getOrDefault(false)
+            withContext(Dispatchers.Main) {
+                binding.upstreamWarning.isVisible = starving
+                if (starving) {
+                    binding.upstreamWarning.text =
+                        "⚠ The OS's own call blocking (e.g. \"block callers not in contacts\") " +
+                            "recently ate calls before this policy saw them — check the system " +
+                            "Phone/blocking settings, or those callers can never ring here."
+                }
+            }
         }
     }
 
@@ -553,6 +617,49 @@ class RulesActivity : AppCompatActivity() {
                 if (checked) "1" else "0",
             )
         }
+        binding.answerGroup.setOnCheckedStateChangeListener { group, _ ->
+            if (suppressPolicies) return@setOnCheckedStateChangeListener
+            restyleGroup(group)
+            persistSetting(
+                SettingsRepository.KEY_ANSWER_INTERACTION,
+                if (group.checkedChipId == R.id.chipAnswerSlide) ANSWER_SLIDER else ANSWER_TAP,
+            )
+        }
+        binding.bypassGroup.setOnCheckedStateChangeListener { group, _ ->
+            if (suppressPolicies) return@setOnCheckedStateChangeListener
+            restyleGroup(group)
+            persistSetting(
+                SettingsRepository.KEY_BYPASS_DURATION_MINUTES,
+                when (group.checkedChipId) {
+                    R.id.chipBypass30 -> "30"
+                    R.id.chipBypass8h -> "480"
+                    else -> "120"
+                },
+            )
+        }
+        binding.groupRecentsSwitch.setOnCheckedChangeListener { _, checked ->
+            if (suppressPolicies) return@setOnCheckedChangeListener
+            persistSetting(
+                SettingsRepository.KEY_GROUP_RECENTS,
+                if (checked) "1" else "0",
+            )
+        }
+        // Multi-select: checked chip = hidden tab. Rules itself is absent by
+        // construction — the setting can always be reached to undo itself.
+        listOf(binding.chipTabRecents, binding.chipTabKeypad, binding.chipTabPeople).forEach { chip ->
+            chip.setOnCheckedChangeListener { _, _ ->
+                if (suppressPolicies) return@setOnCheckedChangeListener
+                val hidden = buildSet {
+                    if (binding.chipTabRecents.isChecked) add("recents")
+                    if (binding.chipTabKeypad.isChecked) add("keypad")
+                    if (binding.chipTabPeople.isChecked) add("people")
+                }
+                lifecycleScope.launch {
+                    runCatching { ServiceLocator.settings(this@RulesActivity).setHiddenTabs(hidden) }
+                    TabBar.onTabScreenStart(this@RulesActivity, Tab.RULES)
+                }
+            }
+        }
     }
 
     private fun syncPolicyControls(settings: SettingsRepository, rules: Rules) {
@@ -582,7 +689,28 @@ class RulesActivity : AppCompatActivity() {
                     else -> R.id.chipNotifImmediate
                 },
             )
-            listOf(binding.hiddenPolicyGroup, binding.stirGroup, binding.notifGroup)
+            val answer = runCatching { settings.getString(SettingsRepository.KEY_ANSWER_INTERACTION) }
+                .getOrNull().orEmpty()
+            binding.answerGroup.check(
+                if (answer == ANSWER_SLIDER) R.id.chipAnswerSlide else R.id.chipAnswerTap,
+            )
+            val bypassMinutes = runCatching { settings.bypassDurationMinutes() }.getOrDefault(120)
+            binding.bypassGroup.check(
+                when (bypassMinutes) {
+                    30 -> R.id.chipBypass30
+                    480 -> R.id.chipBypass8h
+                    else -> R.id.chipBypass2h
+                },
+            )
+            binding.groupRecentsSwitch.isChecked =
+                runCatching { settings.getString(SettingsRepository.KEY_GROUP_RECENTS) }
+                    .getOrNull() != "0"
+            val hiddenTabs = runCatching { settings.hiddenTabs() }.getOrDefault(emptySet())
+            binding.chipTabRecents.isChecked = "recents" in hiddenTabs
+            binding.chipTabKeypad.isChecked = "keypad" in hiddenTabs
+            binding.chipTabPeople.isChecked = "people" in hiddenTabs
+            listOf(binding.hiddenPolicyGroup, binding.stirGroup, binding.notifGroup,
+                binding.answerGroup, binding.bypassGroup)
                 .forEach(::restyleGroup)
             suppressPolicies = false
         }
@@ -739,6 +867,9 @@ class RulesActivity : AppCompatActivity() {
             if (maskedTail > max.coerceAtLeast(1)) maskedTail = max.coerceAtLeast(1)
             builder.patternMask.progress = maskedTail - 1
             val draft = all?.let { MaskBuilder.build(it, maskedTail) }
+            builder.patternMaskLabel.text =
+                if (max >= 1) "$maskedTail trailing digit${if (maskedTail == 1) "" else "s"} masked"
+                else "Type a longer number to mask digits"
             builder.patternPreview.text = draft?.let(MaskBuilder::preview) ?: "—"
             builder.patternSave.isEnabled = draft != null
             builder.patternHint.text = when {
@@ -967,6 +1098,8 @@ class RulesActivity : AppCompatActivity() {
         const val PRESET_NEIGHBOR_SPOOF = "neighbor_spoof"
 
         const val NOTIF_IMMEDIATE = "immediate"
+        const val ANSWER_TAP = "tap"
+        const val ANSWER_SLIDER = "slider" // IncomingCallActivity.MODE_SLIDER literal
         const val NOTIF_DAILY = "daily"
         const val NOTIF_NEVER = "never"
     }

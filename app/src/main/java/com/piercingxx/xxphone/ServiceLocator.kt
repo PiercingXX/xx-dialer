@@ -1,6 +1,7 @@
 package com.piercingxx.xxphone
 
 import android.content.Context
+import com.piercingxx.xxphone.data.ContactMirror
 import com.piercingxx.xxphone.data.PatternRuleDao
 import com.piercingxx.xxphone.data.RulesProvider
 import com.piercingxx.xxphone.data.SettingDao
@@ -22,6 +23,7 @@ object ServiceLocator {
     @Volatile private var rulesInstance: RulesProvider? = null
     @Volatile private var emergencyMarkerInstance: EmergencyMarker? = null
     @Volatile private var channelRegistryInstance: ChannelRegistry? = null
+    @Volatile private var contactMirrorInstance: ContactMirror? = null
 
     fun db(context: Context): XxDatabase =
         dbInstance ?: synchronized(this) {
@@ -49,6 +51,17 @@ object ServiceLocator {
         emergencyMarkerInstance ?: synchronized(this) {
             emergencyMarkerInstance ?: EmergencyMarker(db(context))
                 .also { emergencyMarkerInstance = it }
+        }
+
+    /**
+     * ONE mirror engine per process (§9): the observer registration and its
+     * debounce state live on this instance, so throwaway constructions would
+     * silently drop the observer with them.
+     */
+    fun contactMirror(context: Context): ContactMirror =
+        contactMirrorInstance ?: synchronized(this) {
+            contactMirrorInstance ?: ContactMirror(context.applicationContext, db(context))
+                .also { contactMirrorInstance = it }
         }
 
     fun channelRegistry(context: Context): ChannelRegistry =

@@ -77,9 +77,20 @@ object T9 {
  */
 object Monograms {
 
+    /**
+     * ONE monogram rule for every avatar surface (Recents strip, People
+     * rows): letters-only words, two leading initials, a single-word name
+     * keeps its first two letters, and blank yields "#".
+     */
     fun initials(displayName: String?): String {
-        val parts = displayName?.trim()?.split(Regex("\\s+"))?.filter { it.isNotEmpty() }.orEmpty()
-        val taken = parts.take(2).mapNotNull { it.firstOrNull()?.uppercaseChar() }
-        return if (taken.isEmpty()) "?" else String(taken.toCharArray())
+        val words = displayName?.trim()?.split(WHITESPACE)?.filter { it.isNotEmpty() }.orEmpty()
+        val letters = words.filter { it.first().isLetter() }
+        return when {
+            letters.isEmpty() -> "#"
+            letters.size == 1 -> letters[0].take(2).uppercase()
+            else -> (letters[0].first().toString() + letters[1].first()).uppercase()
+        }
     }
+
+    private val WHITESPACE = Regex("\\s+")
 }

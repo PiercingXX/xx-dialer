@@ -49,6 +49,20 @@ class SettingsRepository(private val dao: SettingDao) {
             ?: DEFAULT_NOTIF_POLICY
 
     /**
+     * Tab-hiding (§12: "this audience loves removing what they don't use").
+     * Stored as a comma list of lowercase Tab names; garbage entries are
+     * ignored so a corrupt value hides nothing.
+     */
+    suspend fun hiddenTabs(): Set<String> =
+        dao.get(KEY_HIDDEN_TABS).orEmpty()
+            .split(',')
+            .map { it.trim().lowercase() }
+            .filterTo(mutableSetOf()) { it.isNotEmpty() }
+
+    suspend fun setHiddenTabs(names: Set<String>) =
+        dao.put(KEY_HIDDEN_TABS, names.joinToString(",") { it.lowercase() })
+
+    /**
      * Enforcement is *offered*, never flipped silently (§15 observe-week-end):
      * true only while still observing and past the seeded week boundary.
      */
@@ -75,6 +89,7 @@ class SettingsRepository(private val dao: SettingDao) {
         const val KEY_SILENCED_NOTIF_POLICY = "silence_notif_policy"
         const val KEY_ANSWER_INTERACTION = "answer_interaction"
         const val KEY_GROUP_RECENTS = "group_recents"
+        const val KEY_HIDDEN_TABS = "hidden_tabs"
 
         private val gson = Gson()
         private const val DEFAULT_BYPASS_MINUTES = 120

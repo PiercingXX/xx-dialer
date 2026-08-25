@@ -58,6 +58,13 @@ class XxInCallService : InCallService() {
         var entity: ScreenLogEntity?,
         var verdictName: String,
         var answered: Boolean,
+        /**
+         * What actually happened after the observe gate (D13): in observe
+         * mode the raw verdict says Silence while the phone rang — the
+         * silenced-call card must follow THIS, or observe changes more than
+         * the gate (todo rule #6).
+         */
+        var effectiveName: String = verdictName,
     )
 
     /** What id INCOMING currently presents, and for which call (B2 cancel discipline). */
@@ -102,7 +109,9 @@ class XxInCallService : InCallService() {
             Call.STATE_RINGING -> {
                 if (call.details.extras?.getBoolean(Call.EXTRA_SILENT_RINGING_REQUESTED) == true) {
                     // §4.3 obligation: a silent-ringing call must not ring at all.
-                    entries[call] = Entry(logId = -1, entity = null, verdictName = VERDICT_NONE, answered = false)
+                    val entry = Entry(logId = -1, entity = null, verdictName = VERDICT_NONE, answered = false)
+                    entries[call] = entry
+                    logPlatformSilenced(call, entry) // R7: even this call explains itself
                     return
                 }
                 entries[call] = Entry(logId = -1, entity = null, verdictName = "", answered = false)
@@ -235,9 +244,23 @@ class XxInCallService : InCallService() {
         val verdict = RingPolicy.decide(now, facts, rules)
         val mode = ServiceLocator.settings(this).enforcementMode()
 
+        // Observed-block dedup (§11 tallies): in observe mode the screener
+        // already logged this call's would-block row seconds ago and allowed
+        // it through to us; inserting a twin here would double-count the call.
+        val screenerRow = if (number != null && mode == Mode.OBSERVING) {
+            runCatching { db.screenLogDao().latestFor(number) }.getOrNull()
+                ?.takeIf {
+                    it.verdict == VERDICT_BLOCK &&
+                        it.mode == LogRows.modeName(Mode.OBSERVING) &&
+                        nowEpoch - it.at <= SCREENER_CORRELATION_MS
+                }
+        } else {
+            null
+        }
+
         // Write the log NOW: the verdict must survive a crash mid-ring (R7).
         val reason = LogRows.reason(verdict, facts, rules, now)
-        val row = ScreenLogEntity(
+        val row = screenerRow ?: ScreenLogEntity(
             id = 0,
             at = nowEpoch,
             e164 = number,
@@ -250,7 +273,7 @@ class XxInCallService : InCallService() {
             mode = LogRows.modeName(mode),
             answered = false,
         )
-        val logId = runCatching { db.screenLogDao().insert(row) }
+        val logId = screenerRow?.id ?: runCatching { db.screenLogDao().insert(row) }
             .onFailure { Log.w(TAG, "screen-log write failed", it) }
             .getOrDefault(-1L)
 
@@ -270,6 +293,7 @@ class XxInCallService : InCallService() {
             entry.logId = logId
             entry.entity = row
             entry.verdictName = verdict::class.simpleName.orEmpty()
+            entry.effectiveName = effective::class.simpleName.orEmpty()
             if (call.state == Call.STATE_ACTIVE) entry.answered = true
         }
 
@@ -286,14 +310,33 @@ class XxInCallService : InCallService() {
                     registry.channelIdFor(PURPOSE_RING_SILENT),
                     displayName, line, number, cnap, LogRows.tier(facts),
                 ) // Silence is still surfaced and answerable (§6, R7)
-            RingRouter.Choice.None ->
-                Log.i(TAG, "no presentation for verdict=$effective (Block here is defensive)") // §5 stage table
+            RingRouter.Choice.None -> {
+                // §5 stage table: a Block that only surfaces here (screener
+                // failed open or ran minimal-fact) must still DISPOSE of the
+                // call — this app owns the ringer, so an unpresented call
+                // would otherwise sit silent and undead until the caller
+                // gives up. reject() on a RINGING call declines it.
+                if (effective is Verdict.Block) {
+                    runCatching { call.reject(false, null) }
+                        .onFailure { Log.w(TAG, "ring-time block reject failed", it) }
+                    Log.i(TAG, "rejected at ring time: $reason")
+                } else {
+                    Log.i(TAG, "no presentation for verdict=$effective (Block here is defensive)")
+                }
+            }
         }
 
         if (entry == null) {
             scope.launch {
                 runCatching {
-                    finalize(Entry(logId, row, verdict::class.simpleName.orEmpty(), call.state == Call.STATE_ACTIVE))
+                    finalize(
+                        Entry(
+                            logId, row,
+                            verdictName = verdict::class.simpleName.orEmpty(),
+                            answered = call.state == Call.STATE_ACTIVE,
+                            effectiveName = effective::class.simpleName.orEmpty(),
+                        ),
+                    )
                 }
             }
         }
@@ -309,7 +352,7 @@ class XxInCallService : InCallService() {
         tier: String?,
     ) {
         val person = Person.Builder().setName(displayName).setImportant(true).build()
-        val show = showIntent(e164, contextLine, cnap, tier)
+        val show = showIntent(displayName, e164, contextLine, cnap, tier)
         val builder = Notification.Builder(this, channelId)
             .setSmallIcon(R.mipmap.ic_launcher)
             .setCategory(Notification.CATEGORY_CALL)
@@ -336,7 +379,9 @@ class XxInCallService : InCallService() {
         if (entry.logId >= 0) {
             runCatching { dao.updateAnswered(entry.logId, entry.answered) }
                 .onFailure { Log.w(TAG, "answered update failed", it) }
-            if (!entry.answered && entry.verdictName == VERDICT_SILENCE && entry.entity != null) {
+            // Gate on what ACTUALLY happened (D13): in observe mode the raw
+            // verdict says Silence but the phone rang — no card.
+            if (!entry.answered && entry.effectiveName == VERDICT_SILENCE && entry.entity != null) {
                 runCatching { SilencedNotifier.postSilenced(entry.entity!!) }
                     .onFailure { Log.w(TAG, "silenced notification failed", it) }
             }
@@ -416,7 +461,7 @@ class XxInCallService : InCallService() {
         if (number == null) return null
         return runCatching {
             withTimeoutOrNull(LIVE_LOOKUP_BUDGET_MS) {
-                withContext(Dispatchers.IO) { ContactMirror(this@XxInCallService, db).liveLookup(number) }
+                withContext(Dispatchers.IO) { ServiceLocator.contactMirror(this@XxInCallService).liveLookup(number) }
             }
         }.onFailure { Log.w(TAG, "mirror re-read failed", it) }
             .getOrNull()
@@ -434,6 +479,38 @@ class XxInCallService : InCallService() {
         }
     }
 
+    /**
+     * R7 for the platform-silenced path (§4.3): the call never rings by
+     * platform request, but it still gets a screen_log row saying so —
+     * async, and the entry is updated in place when the insert lands so
+     * finalize's answered-update targets the right row.
+     */
+    private fun logPlatformSilenced(call: Call, entry: Entry) {
+        val details = call.details
+        val presentation = details.handlePresentation
+        val number = if (DetailsCodec.isWithheld(presentation)) null else DetailsCodec.numberE164(details.handle?.schemeSpecificPart)
+        val row = ScreenLogEntity(
+            id = 0,
+            at = System.currentTimeMillis(),
+            e164 = number,
+            presentation = presentation,
+            verdict = VERDICT_SILENCE,
+            reason = REASON_PLATFORM_SILENCED,
+            tier = null,
+            stir = DetailsCodec.stirLabel(details.callerNumberVerificationStatus),
+            cnapName = DetailsCodec.cnapName(details.callerDisplayName, details.callerDisplayNamePresentation),
+            mode = "platform",
+            answered = false,
+        )
+        scope.launch {
+            runCatching {
+                val id = ServiceLocator.db(this@XxInCallService).screenLogDao().insert(row)
+                entry.logId = id
+                entry.entity = row
+            }.onFailure { Log.w(TAG, "platform-silenced log failed", it) }
+        }
+    }
+
     private fun contextLine(tier: String?, reason: Reason?, cnap: String?): CharSequence {
         val bits = mutableListOf<String>()
         if (tier != null) bits += tier
@@ -442,17 +519,18 @@ class XxInCallService : InCallService() {
         return bits.joinToString(" · ").ifEmpty { getString(R.string.app_name) }
     }
 
-    private fun callExtras(e164: String?, contextLine: CharSequence, cnap: String?, tier: String?): Bundle = Bundle().apply {
+    private fun callExtras(displayName: String, e164: String?, contextLine: CharSequence, cnap: String?, tier: String?): Bundle = Bundle().apply {
+        putString(EXTRA_DISPLAY_NAME, displayName)
         putString(EXTRA_NUMBER_E164, e164)
         putCharSequence(EXTRA_CONTEXT_LINE, contextLine)
         putString(EXTRA_CNAP, cnap)
         putString(EXTRA_TIER, tier)
     }
 
-    private fun showIntent(e164: String?, contextLine: CharSequence, cnap: String?, tier: String?): PendingIntent =
+    private fun showIntent(displayName: String, e164: String?, contextLine: CharSequence, cnap: String?, tier: String?): PendingIntent =
         PendingIntent.getActivity(
             this, RC_SHOW,
-            incomingIntent(ACTION_SHOW_INCOMING, e164, contextLine, cnap, tier),
+            incomingIntent(ACTION_SHOW_INCOMING, displayName, e164, contextLine, cnap, tier),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
 
@@ -479,11 +557,11 @@ class XxInCallService : InCallService() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
 
-    private fun incomingIntent(action: String, e164: String?, contextLine: CharSequence, cnap: String?, tier: String?): Intent =
+    private fun incomingIntent(action: String, displayName: String, e164: String?, contextLine: CharSequence, cnap: String?, tier: String?): Intent =
         Intent(this, IncomingCallActivity::class.java)
             .setAction(action)
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            .putExtras(callExtras(e164, contextLine, cnap, tier))
+            .putExtras(callExtras(displayName, e164, contextLine, cnap, tier))
 
     private fun notificationManager(): NotificationManager =
         getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
@@ -493,13 +571,19 @@ class XxInCallService : InCallService() {
         const val PURPOSE_RING_SILENT = "ring_silent"
         const val PURPOSE_ONGOING = "ongoing"
         const val VERDICT_SILENCE = "Silence"
+        const val VERDICT_BLOCK = "Block"
         const val VERDICT_NONE = "None"
+        /** Raw reason token for §4.3 platform-requested silence; UI falls back to the raw string. */
+        const val REASON_PLATFORM_SILENCED = "PLATFORM_SILENCED"
+        /** Observed screener Block row within this window is the SAME call, not a twin. */
+        const val SCREENER_CORRELATION_MS = 10_000L
         const val WITHHELD_LABEL = "Unknown caller"
         const val LIVE_LOOKUP_BUDGET_MS = 1500L // M2: bound the live PhoneLookup hop
 
         const val ACTION_SHOW_INCOMING = "com.piercingxx.xxphone.action.SHOW_INCOMING"
         const val ACTION_ANSWER = "com.piercingxx.xxphone.action.ANSWER_CALL"
         const val ACTION_DECLINE = "com.piercingxx.xxphone.action.DECLINE_CALL"
+        const val EXTRA_DISPLAY_NAME = "com.piercingxx.xxphone.extra.DISPLAY_NAME"
         const val EXTRA_NUMBER_E164 = "com.piercingxx.xxphone.extra.NUMBER_E164"
         const val EXTRA_CONTEXT_LINE = "com.piercingxx.xxphone.extra.CONTEXT_LINE"
         const val EXTRA_CNAP = "com.piercingxx.xxphone.extra.CNAP"

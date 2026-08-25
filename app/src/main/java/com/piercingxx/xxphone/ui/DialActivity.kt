@@ -40,9 +40,8 @@ class DialActivity : AppCompatActivity() {
     }
 
     /**
-     * PREFILL CONTRACT (gap for the Keypad owner): the number rides the
-     * standard EXTRA_PHONE_NUMBER extra. KeypadActivity reads no intent
-     * today — until it consumes this extra the prefill is inert.
+     * PREFILL CONTRACT: the number rides the standard EXTRA_PHONE_NUMBER
+     * extra; KeypadActivity consumes it in onCreate.
      */
     private fun keypadIntent(prefillE164: String): Intent =
         Intent(this, KeypadActivity::class.java)

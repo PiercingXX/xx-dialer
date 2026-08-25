@@ -109,13 +109,18 @@ class T9Test {
     }
 
     @Test
-    fun single_word_yields_one_letter() {
-        assertEquals("R", Monograms.initials("Roscoe"))
+    fun single_word_keeps_its_first_two_letters() {
+        assertEquals("RO", Monograms.initials("Roscoe"))
     }
 
     @Test
-    fun blank_names_degrade_to_question_mark() {
-        assertEquals("?", Monograms.initials(null))
-        assertEquals("?", Monograms.initials("   "))
+    fun non_letter_words_are_skipped() {
+        assertEquals("MA", Monograms.initials("2nd Margaret Adams"))
+    }
+
+    @Test
+    fun blank_names_degrade_to_hash() {
+        assertEquals("#", Monograms.initials(null))
+        assertEquals("#", Monograms.initials("   "))
     }
 }

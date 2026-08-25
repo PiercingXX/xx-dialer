@@ -39,6 +39,10 @@ class EmergencyMarker(db: XxDatabase) {
 
         fun isEmergency(number: String?): Boolean =
             !number.isNullOrBlank() &&
-                runCatching { PhoneNumberUtils.isEmergencyNumber(number) }.getOrDefault(false)
+                runCatching { PhoneNumberUtils.isEmergencyNumber(number) }
+                    // R10 is a law: a throwing telephony stack silently
+                    // disabling the 24 h window must at least say so.
+                    .onFailure { Log.w(TAG, "isEmergencyNumber threw — R10 window cannot arm", it) }
+                    .getOrDefault(false)
     }
 }

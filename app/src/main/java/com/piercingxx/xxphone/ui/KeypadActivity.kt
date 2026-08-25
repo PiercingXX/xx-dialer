@@ -41,6 +41,7 @@ class KeypadActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityKeypadBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        TabBar.bind(this, Tab.KEYPAD)
 
         wireKeys()
 
@@ -59,6 +60,11 @@ class KeypadActivity : AppCompatActivity() {
             digits.append(prefill)
             refresh()
         }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        TabBar.onTabScreenStart(this, Tab.KEYPAD)
     }
 
     override fun onResume() {
@@ -95,12 +101,11 @@ class KeypadActivity : AppCompatActivity() {
                 append(digit)
             }
         }
-        // Long-press 1 dials voicemail. PLACEHOLDER: carriers keep real voicemail
-        // numbers out of public APIs; "1" is the standard speed-dial form and is
-        // dialed as-is until a per-carrier setting exists (documented deviation).
+        // Long-press 1 dials voicemail via the voicemail: scheme — Telecom
+        // resolves the carrier's number from the PhoneAccount (§12).
         binding.key1.setOnLongClickListener {
             haptic(binding.key1)
-            placeCall(VOICEMAIL_PLACEHOLDER)
+            if (!CallManager.placeVoicemail(this)) toast("Couldn't reach voicemail")
             true
         }
         // Long-press 0 yields '+'.
@@ -249,12 +254,6 @@ class KeypadActivity : AppCompatActivity() {
         Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
 
     private companion object {
-        /**
-         * Long-press 1 target. Real voicemail numbers are carrier-private; the
-         * universal speed-dial "1" is dialed verbatim (documented placeholder).
-         */
-        const val VOICEMAIL_PLACEHOLDER = "1"
-
         const val MAX_MATCHES = 6
         const val DISABLED_ALPHA = 0.38f
     }

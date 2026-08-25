@@ -9,7 +9,11 @@ import com.piercingxx.xxphone.core.Mode
 import com.piercingxx.xxphone.core.RingPolicy
 import com.piercingxx.xxphone.core.Verdict
 import com.piercingxx.xxphone.data.ScreenLogEntity
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import java.time.LocalDateTime
 
@@ -28,30 +32,31 @@ class XxCallScreeningService : CallScreeningService() {
 
     private data class Outcome(val block: Boolean, val row: ScreenLogEntity)
 
+    /** Off-main screening: respondToCall is legal until the platform's 5 s deadline. */
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+    override fun onDestroy() {
+        // An in-flight screen dies unresponded ⇒ the platform allows at its
+        // own deadline — the same R9 fail-open as a timeout.
+        scope.cancel()
+        super.onDestroy()
+    }
+
     override fun onScreenCall(details: Call.Details) {
-        var responded = false
-        fun respond(builderResponse: CallScreeningService.CallResponse) {
-            if (!responded) {
-                responded = true // respondToCall must be called exactly once
-                respondToCall(details, builderResponse)
-            }
-        }
-        try {
+        // onScreenCall arrives on the process main thread — the same looper
+        // that must post the CallStyle notification moments later — so the
+        // DB-touching decision work runs off it and responds asynchronously.
+        scope.launch {
             // Any crash or 4.5 s timeout ⇒ null ⇒ ALLOW: the platform would
             // have allowed us at 5 s anyway; failing open early keeps the log
             // write out of the critical path (R9).
             val outcome = runCatching {
-                runBlocking { withTimeoutOrNull(SCREEN_BUDGET_MS) { screenAndLog(details) } }
+                withTimeoutOrNull(SCREEN_BUDGET_MS) { screenAndLog(details) }
             }.onFailure { Log.w(TAG, "screening failed; allowing", it) }.getOrNull()
 
-            when {
-                outcome == null -> respond(allow())
-                outcome.block -> respond(block())
-                else -> respond(allow())
-            }
-        } catch (t: Throwable) {
-            Log.w(TAG, "screening threw; allowing", t)
-            respond(allow())
+            val response = if (outcome?.block == true) block() else allow()
+            runCatching { respondToCall(details, response) } // once per call, this sole site
+                .onFailure { Log.w(TAG, "respond failed; platform deadline allows", it) }
         }
     }
 

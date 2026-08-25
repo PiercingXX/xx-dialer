@@ -38,9 +38,11 @@ object SilencedNotifier {
     private const val POLICY_DAILY = "daily"
     private const val POLICY_NEVER = "never"
 
-    /** Daily-summary stasher key; flushed by the Rules screen later (WS9). */
+    /** Daily-summary stasher key; drained by [flushDailyDigestIfDue]. */
     private const val KEY_DAILY_DIGEST = "daily_silence_digest"
+    private const val KEY_DIGEST_LAST_FLUSH = "daily_silence_digest_flushed_at"
     private const val DIGEST_CAP = 200
+    private const val DIGEST_PERIOD_MS = 24L * 60 * 60 * 1000
 
     // In-memory burst state (§12): last-post time + running count.
     private val lock = Any()
@@ -96,17 +98,62 @@ object SilencedNotifier {
         runCatching { ServiceLocator.settings(context).silencedNotifPolicy() }.getOrDefault(POLICY_IMMEDIATE)
 
     private suspend fun stashDaily(context: Context, entry: ScreenLogEntity) {
-        val current = runCatching {
-            gson.fromJson(
-                ServiceLocator.settings(context).getString(KEY_DAILY_DIGEST),
-                Array<DigestEntry>::class.java,
-            )?.toList()
-        }.getOrNull().orEmpty()
+        val settings = ServiceLocator.settings(context)
+        val current = readDigest(context)
         val appended = (current + DigestEntry(at = entry.at, e164 = entry.e164, reason = entry.reason))
             .takeLast(DIGEST_CAP)
-        runCatching { ServiceLocator.settings(context).setString(KEY_DAILY_DIGEST, gson.toJson(appended)) }
+        runCatching { settings.setString(KEY_DAILY_DIGEST, gson.toJson(appended)) }
             .onFailure { Log.w(TAG, "daily digest write failed", it) }
+        // First stash starts the 24 h clock so the summary lands a day later.
+        if (runCatching { settings.getString(KEY_DIGEST_LAST_FLUSH) }.getOrNull().isNullOrBlank()) {
+            runCatching { settings.setString(KEY_DIGEST_LAST_FLUSH, System.currentTimeMillis().toString()) }
+        }
+        maybeFlushDigest(context)
     }
+
+    /**
+     * Daily-summary drain (§12 three-state policy, D3: no alarms — flushed
+     * opportunistically on each new silenced call and on every app
+     * foreground). One card, "N silenced calls", then the stash clears.
+     */
+    fun flushDailyDigestIfDue() {
+        val context = AppContextHolder.appContext ?: return
+        scope.launch {
+            runCatching { maybeFlushDigest(context.applicationContext) }
+                .onFailure { Log.w(TAG, "digest flush failed", it) }
+        }
+    }
+
+    private suspend fun maybeFlushDigest(context: Context) {
+        val settings = ServiceLocator.settings(context)
+        val entries = readDigest(context)
+        if (entries.isEmpty()) return
+        val now = System.currentTimeMillis()
+        val lastFlush = runCatching { settings.getString(KEY_DIGEST_LAST_FLUSH) }
+            .getOrNull()?.toLongOrNull() ?: 0L
+        if (now - lastFlush < DIGEST_PERIOD_MS) return
+        val newest = entries.maxBy { it.at }
+        post(
+            context,
+            entries.size,
+            ScreenLogEntity(
+                id = 0, at = newest.at, e164 = newest.e164,
+                verdict = "Silence", reason = newest.reason.orEmpty(),
+                stir = "", mode = "digest",
+            ),
+        )
+        runCatching {
+            settings.setString(KEY_DAILY_DIGEST, "")
+            settings.setString(KEY_DIGEST_LAST_FLUSH, now.toString())
+        }.onFailure { Log.w(TAG, "digest clear failed", it) }
+    }
+
+    private suspend fun readDigest(context: Context): List<DigestEntry> = runCatching {
+        gson.fromJson(
+            ServiceLocator.settings(context).getString(KEY_DAILY_DIGEST),
+            Array<DigestEntry>::class.java,
+        )?.toList()
+    }.getOrNull().orEmpty()
 
     private suspend fun post(context: Context, count: Int, newest: ScreenLogEntity) {
         ensureChannel(context)
@@ -182,13 +229,15 @@ object SilencedNotifier {
                 )
             }.getOrNull()
             Kind.RingNextTime -> runCatching {
-                // HONEST STOPGAP (documented): per §12 this action stars the contact;
-                // from a notification that needs a star-write path Recents doesn't
-                // expose yet. Opens Recents pre-filtered to the number until WS8/9 lands it.
-                PendingIntent.getActivity(
+                // §12: one tap stars the contact so the next call rings —
+                // routed to the NON-EXPORTED sibling receiver (B3), same
+                // self-addressed discipline as Block.
+                PendingIntent.getBroadcast(
                     context, RC_RING_NEXT_TIME,
-                    Intent(context, RecentsActivity::class.java)
-                        .putExtra(Intents.EXTRA_FILTER_E164, e164),
+                    Intent(context, BlockActionsReceiver::class.java)
+                        .setAction(Intents.ACTION_RING_NEXT_TIME)
+                        .putExtra(Intents.EXTRA_RING_NEXT_E164, e164)
+                        .putExtra(Intents.EXTRA_CANCEL_NOTIF_ID, NotifIds.SILENCED),
                     PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
                 )
             }.getOrNull()
@@ -200,7 +249,8 @@ object SilencedNotifier {
                     context, RC_BLOCK,
                     Intent(context, BlockActionsReceiver::class.java)
                         .setAction(Intents.ACTION_BLOCK_NUMBER)
-                        .putExtra(Intents.EXTRA_BLOCK_NUMBER, e164),
+                        .putExtra(Intents.EXTRA_BLOCK_NUMBER, e164)
+                        .putExtra(Intents.EXTRA_CANCEL_NOTIF_ID, NotifIds.SILENCED),
                     PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
                 )
             }.getOrNull()

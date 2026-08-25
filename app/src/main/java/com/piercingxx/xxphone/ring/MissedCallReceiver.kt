@@ -57,6 +57,9 @@ class MissedCallReceiver : BroadcastReceiver() {
 
     private suspend fun postMissedNotification(context: Context, intent: Intent) {
         // §12 three-state policy; "never" means this card never exists.
+        // DELIBERATE: "daily" posts immediately here — this card is a call
+        // that actually RANG and was missed (wanted by construction); only
+        // the silenced category batches into the daily digest.
         val policy = runCatching {
             ServiceLocator.settings(context).silencedNotifPolicy()
         }.getOrDefault(POLICY_IMMEDIATE)
@@ -125,7 +128,7 @@ class MissedCallReceiver : BroadcastReceiver() {
 
     private fun NotificationCompat.Builder.addActionsFor(context: Context, e164: String) {
         addAction(buildIconlessAction(callBackPendingIntent(context, e164), "Call back"))
-        addAction(buildIconlessAction(rulesPendingIntent(context), "Ring next time"))
+        addAction(buildIconlessAction(ringNextTimePendingIntent(context, e164), "Ring next time"))
         addAction(buildIconlessAction(blockPendingIntent(context, e164), "Block"))
     }
 
@@ -146,15 +149,19 @@ class MissedCallReceiver : BroadcastReceiver() {
         }.getOrNull()
 
     /**
-     * "Ring next time (stars)" lives on the Rules screen until wave 2 wires
-     * the star write from notifications; opening Rules is the honest stopgap.
+     * "Ring next time (★)" stars the contact in one tap (§12) — routed to
+     * the NON-EXPORTED sibling receiver (B3), same self-addressed
+     * discipline as Block.
      */
-    private fun rulesPendingIntent(context: Context): PendingIntent? =
+    private fun ringNextTimePendingIntent(context: Context, e164: String): PendingIntent? =
         runCatching {
-            PendingIntent.getActivity(
+            PendingIntent.getBroadcast(
                 context,
                 REQUEST_RING_NEXT_TIME,
-                Intent(context, RecentsActivity::class.java),
+                Intent(context, BlockActionsReceiver::class.java)
+                    .setAction(Intents.ACTION_RING_NEXT_TIME)
+                    .putExtra(Intents.EXTRA_RING_NEXT_E164, e164)
+                    .putExtra(Intents.EXTRA_CANCEL_NOTIF_ID, NotifIds.MISSED),
                 PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
             )
         }.getOrNull()
@@ -167,6 +174,7 @@ class MissedCallReceiver : BroadcastReceiver() {
                 REQUEST_BLOCK,
                 Intent(context, BlockActionsReceiver::class.java)
                     .setAction(Intents.ACTION_BLOCK_NUMBER)
+                    .putExtra(Intents.EXTRA_CANCEL_NOTIF_ID, NotifIds.MISSED)
                     .putExtra(Intents.EXTRA_BLOCK_NUMBER, e164),
                 PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
             )

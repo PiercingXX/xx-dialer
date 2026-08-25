@@ -46,6 +46,7 @@ import com.piercingxx.xxphone.ui.RecentsMerge.Filter
 import com.piercingxx.xxphone.ui.RecentsMerge.Grouped
 import com.piercingxx.xxphone.ui.VerdictLines.Glyph
 import com.piercingxx.xxphone.util.E164
+import com.piercingxx.xxphone.util.StarContact
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -73,13 +74,12 @@ class RecentsActivity : AppCompatActivity() {
     private var deepLinkE164: String? = null
     private val expandedGroups = mutableSetOf<String>()
     private var groupingOn = true
-    private var groupingSettingRaw: String? = null
     private var merged: List<RecentsMerge.MergedCall> = emptyList()
     private var lines: Map<Long, VerdictLines.Line> = emptyMap()
     private var loadJob: Job? = null
 
     private var starredCollapsed = false
-    private var starredNames: List<String> = emptyList()
+    private var starredNames: List<Starred> = emptyList()
 
     private val callLogObserver = object : ContentObserver(Handler(Looper.getMainLooper())) {
         override fun onChange(selfChange: Boolean, uri: Uri?) = reload()
@@ -89,6 +89,7 @@ class RecentsActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityRecentsBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        TabBar.bind(this, Tab.RECENTS)
 
         adapter = RecentAdapter(
             onItemClick = ::callBack,
@@ -133,6 +134,7 @@ class RecentsActivity : AppCompatActivity() {
 
     override fun onStart() {
         super.onStart()
+        TabBar.onTabScreenStart(this, Tab.RECENTS)
         runCatching {
             contentResolver.registerContentObserver(CallLog.Calls.CONTENT_URI, true, callLogObserver)
         }
@@ -201,7 +203,7 @@ class RecentsActivity : AppCompatActivity() {
         val starred = mirror.asSequence()
             .filter { it.starred }
             .distinctBy { it.lookupKey }
-            .map { it.displayName }
+            .map { Starred(it.displayName, it.e164) }
             .toList()
         return Loaded(mergedCalls, linesById, starred, groupingRaw != "0")
     }
@@ -293,11 +295,11 @@ class RecentsActivity : AppCompatActivity() {
     private class Loaded(
         val merged: List<RecentsMerge.MergedCall>,
         val lines: Map<Long, VerdictLines.Line>,
-        val starredNames: List<String>,
+        val starredNames: List<Starred>,
         val groupingOn: Boolean,
     )
 
-    private fun renderStarStrip(names: List<String>) {
+    private fun renderStarStrip(names: List<Starred>) {
         starredNames = names
         val strip = binding.recentsStarStrip
         strip.removeAllViews()
@@ -311,8 +313,12 @@ class RecentsActivity : AppCompatActivity() {
         if (!starredCollapsed) names.forEach { strip.addView(monogramView(it)) }
     }
 
+    /** One starred-strip avatar: display name + number behind it. */
+    private data class Starred(val name: String, val e164: String)
+
     /** Deterministic monogram avatar (§12.1): initials on a pxx_slate circle. */
-    private fun monogramView(name: String): TextView {
+    private fun monogramView(person: Starred): TextView {
+        val name = person.name
         val density = resources.displayMetrics.density
         val size = (AVATAR_DP * density).toInt()
         return TextView(this).apply {
@@ -332,6 +338,13 @@ class RecentsActivity : AppCompatActivity() {
                 marginEnd = (10 * density).toInt()
             }
             contentDescription = name
+            // §12.1: the strip is an entry point, not decoration — tap
+            // filters Recents to this person (same deep-link path the
+            // silenced card uses); safe, never an accidental call.
+            setOnClickListener {
+                deepLinkE164 = person.e164
+                rerender()
+            }
         }
     }
 
@@ -462,17 +475,10 @@ class RecentsActivity : AppCompatActivity() {
     /** Stars via ContactsContract STARRED=1 — best-effort under Scopes (D4). */
     private fun ringNextTime(e164: String) {
         lifecycleScope.launch(Dispatchers.IO) {
-            val mirror = mirrorFor(e164)
-            val ok = mirror != null && runCatching {
-                contentResolver.update(
-                    ContactsContract.Contacts.CONTENT_URI,
-                    ContentValues().apply { put(ContactsContract.Contacts.STARRED, 1) },
-                    "${ContactsContract.Contacts.LOOKUP_KEY} = ?",
-                    arrayOf(mirror.lookupKey),
-                ) > 0
-            }.getOrDefault(false)
+            val ok = StarContact.ringNextTime(applicationContext, e164)
             withContext(Dispatchers.Main) {
                 toast(if (ok) "Will ring next time ★" else "Couldn't star — contact write refused")
+                if (ok) reload()
             }
         }
     }

@@ -34,6 +34,21 @@
         android:textColor="@color/pxx_emphasis_fg"
         android:visibility="gone" />
 
+    <!-- §4.4/WS10: upstream starve-the-policy detection (e.g. GrapheneOS
+         "block callers not in contacts") — visible only when evidence shows. -->
+    <TextView
+        android:id="@+id/upstreamWarning"
+        style="@style/TextAppearance.Xx.BodySmall"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="@dimen/xx_gutter"
+        android:layout_marginRight="@dimen/xx_gutter"
+        android:layout_marginTop="8dp"
+        android:paddingTop="8dp"
+        android:paddingBottom="8dp"
+        android:textColor="@color/pxx_signal"
+        android:visibility="gone" />
+
     <ScrollView
         android:id="@+id/rulesScroll"
         android:layout_width="match_parent"
@@ -369,6 +384,122 @@
                         style="@style/Widget.Xx.Chip"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content" />
+                </com.google.android.material.chip.ChipGroup>
+
+                <TextView
+                    android:id="@+id/answerLabel"
+                    style="@style/TextAppearance.Xx.BodySmall"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:paddingTop="14dp" />
+
+                <com.google.android.material.chip.ChipGroup
+                    android:id="@+id/answerGroup"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    app:singleSelection="true">
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chipAnswerTap"
+                        style="@style/Widget.Xx.Chip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chipAnswerSlide"
+                        style="@style/Widget.Xx.Chip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" />
+                </com.google.android.material.chip.ChipGroup>
+
+                <TextView
+                    android:id="@+id/bypassLabel"
+                    style="@style/TextAppearance.Xx.BodySmall"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:paddingTop="14dp" />
+
+                <com.google.android.material.chip.ChipGroup
+                    android:id="@+id/bypassGroup"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    app:singleSelection="true">
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chipBypass30"
+                        style="@style/Widget.Xx.Chip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chipBypass2h"
+                        style="@style/Widget.Xx.Chip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chipBypass8h"
+                        style="@style/Widget.Xx.Chip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" />
+                </com.google.android.material.chip.ChipGroup>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:paddingTop="14dp">
+
+                    <TextView
+                        android:id="@+id/groupRecentsLabel"
+                        style="@style/TextAppearance.Xx.BodySmall"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1" />
+
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/groupRecentsSwitch"
+                        style="@style/Widget.Xx.Switch"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" />
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/tabsLabel"
+                    style="@style/TextAppearance.Xx.BodySmall"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:paddingTop="14dp" />
+
+                <com.google.android.material.chip.ChipGroup
+                    android:id="@+id/tabsGroup"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp">
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chipTabRecents"
+                        style="@style/Widget.Xx.Chip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:checkable="true" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chipTabKeypad"
+                        style="@style/Widget.Xx.Chip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:checkable="true" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chipTabPeople"
+                        style="@style/Widget.Xx.Chip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:checkable="true" />
                 </com.google.android.material.chip.ChipGroup>
             </LinearLayout>
 

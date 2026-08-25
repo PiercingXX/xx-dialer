@@ -44,14 +44,26 @@ class PeopleActivity : AppCompatActivity() {
     /** Cached for section headers ("Business — ring 09:00–19:00"). */
     private var businessWindowText: String = "09:00–19:00"
 
+    /** Last mirror snapshot; the sheet derives a contact's full number list from it (§12.3). */
+    private var lastRows: List<ContactMirrorEntity> = emptyList()
+
+    /** Guards the sheet switches against listener re-entry from paint(). */
+    private var suppressSheet = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityPeopleBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        TabBar.bind(this, Tab.PEOPLE)
         binding.emptyGrantWhy.text = EMPTY_GRANT_COPY
         binding.peopleList.layoutManager = LinearLayoutManager(this)
         binding.peopleList.adapter = adapter
         load()
+    }
+
+    override fun onStart() {
+        super.onStart()
+        TabBar.onTabScreenStart(this, Tab.PEOPLE)
     }
 
     override fun onResume() {
@@ -77,6 +89,7 @@ class PeopleActivity : AppCompatActivity() {
      * contact appears exactly once (the mockup's Roscoe-under-Everyone case).
      */
     private fun render(rows: List<ContactMirrorEntity>, bizKeys: Set<String>) {
+        lastRows = rows
         binding.emptyGrantCard.isVisible = rows.isEmpty()
         val items = mutableListOf<PeopleItem>()
         if (rows.isNotEmpty()) {
@@ -114,7 +127,13 @@ class PeopleActivity : AppCompatActivity() {
         var current = person
 
         sheet.sheetName.text = current.displayName.ifEmpty { "(unnamed)" }
-        sheet.sheetNumber.text = current.e164
+        // §12.3: number(s) — every mirrored number behind this lookup key.
+        sheet.sheetNumber.text = lastRows
+            .filter { it.lookupKey == current.lookupKey }
+            .map { it.e164 }
+            .distinct()
+            .ifEmpty { listOf(current.e164) }
+            .joinToString("\n")
         sheet.sheetStarLabel.text = "★ Starred — rings any time"
         sheet.sheetBizLabel.text = "Business tier — rings $businessWindowText"
         sheet.sheetRingtoneNote.isVisible = current.customRingtone != null
@@ -128,13 +147,19 @@ class PeopleActivity : AppCompatActivity() {
             )
             sheet.sheetStarIcon.imageTintList =
                 ColorStateList.valueOf(ContextCompat.getColor(this, R.color.pxx_signal))
+            // A refused write leaves state unchanged; without the guard the
+            // isChecked rollback here re-fires the listener into a second
+            // spurious write (the suppressPolicies pattern from Rules).
+            suppressSheet = true
             sheet.sheetStarSwitch.isChecked = current.starred
             sheet.sheetBizSwitch.isChecked = current.bizTier
+            suppressSheet = false
         }
 
         paint()
 
         sheet.sheetStarSwitch.setOnCheckedChangeListener { _, want ->
+            if (suppressSheet) return@setOnCheckedChangeListener
             lifecycleScope.launch {
                 val (actual, verified) = writeStarred(current, want)
                 if (actual != null) current = current.copy(starred = actual)
@@ -149,6 +174,7 @@ class PeopleActivity : AppCompatActivity() {
         }
 
         sheet.sheetBizSwitch.setOnCheckedChangeListener { _, want ->
+            if (suppressSheet) return@setOnCheckedChangeListener
             lifecycleScope.launch {
                 val db = ServiceLocator.db(this@PeopleActivity)
                 // Room-owned tier (D4): always writable, unlike the provider.
@@ -201,7 +227,7 @@ class PeopleActivity : AppCompatActivity() {
             .getOrDefault(false)
 
         val truth = runCatching {
-            ContactMirror(applicationContext, ServiceLocator.db(this))
+            ServiceLocator.contactMirror(applicationContext)
                 .liveLookup(E164.normalize(person.e164) ?: person.e164)
         }.onFailure { android.util.Log.w(TAG, "post-write verification failed", it) }
             .getOrNull()
@@ -280,7 +306,7 @@ class PeopleActivity : AppCompatActivity() {
 
         fun bind(person: ContactMirrorEntity) {
             row.avatar.background = circleAvatar()
-            row.avatar.text = Monogram.initials(person.displayName)
+            row.avatar.text = Monograms.initials(person.displayName)
             row.name.text = person.displayName.ifEmpty { "(unnamed)" }
             row.number.text = person.e164
             row.starBadge.isVisible = person.starred
@@ -302,20 +328,6 @@ class PeopleActivity : AppCompatActivity() {
     }
 
     /** Deterministic initials (§4.5): no photos under Scopes, ever. */
-    internal object Monogram {
-        fun initials(name: String): String {
-            val words = name.trim().split(WHITESPACE).filter { it.isNotEmpty() }
-            val letters = words.filter { it.first().isLetter() }
-            return when {
-                letters.isEmpty() -> "#"
-                letters.size == 1 -> letters[0].take(2).uppercase()
-                else -> (letters[0].first().toString() + letters[1].first()).uppercase()
-            }
-        }
-
-        private val WHITESPACE = Regex("\\s+")
-    }
-
     private companion object {
         const val TAG = "PeopleActivity"
         const val TYPE_HEADER = 0

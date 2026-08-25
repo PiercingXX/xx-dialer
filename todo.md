@@ -3,7 +3,35 @@
 Spec: [design.md](design.md). Target: Pixel 9 Pro (`caiman`), GrapheneOS,
 Android 17 / SDK 37.
 
-## Status ledger — 2026-08-23
+## Status ledger — 2026-08-25 (functional-completeness pass)
+
+A two-agent audit against design.md found and closed the gaps below; all
+device gates remain OPEN pending `caiman`. Full `./gradlew build` green
+(lint + lintVitalRelease + R8), 484 JVM tests pass, no INTERNET.
+
+- **Mirror engine armed** (WS4 was code-complete but never WIRED): singleton
+  via ServiceLocator, initial `refreshAll()` + observer at boot, foreground
+  sweep + daily-digest flush via ActivityLifecycleCallbacks.
+- **Tab navigation wired** — `TabBar.bind` was never called from any screen;
+  now bound in all four tabs, plus the §12 tab-hiding setting (Rules row).
+- **Ring-time Block disposes the call** — `Choice.None` with a Block verdict
+  now rejects instead of leaving an undead silent call.
+- **Observe-gate integrity (D13)**: the silenced-call card follows the
+  EFFECTIVE verdict, and observed screener-blocks no longer double-log
+  (tallies were double-counting).
+- **In-call surface auto-launches** on answer and on outgoing place; the
+  incoming screen shows the resolved display name; decline/answer target
+  the exact ringing call.
+- **Screener off main thread** — async respondToCall replaces the 4.5 s
+  `runBlocking` on the main looper.
+- **Ring-next-time is real**: WRITE_CONTACTS declared (role auto-grants),
+  one-tap star from both notification cards, Recents/People writes land.
+- **Settings that existed only as keys got UI**: answer interaction,
+  Recents grouping, Expecting-a-call duration (30 m/2 h/8 h); daily
+  notification digest actually flushes; QS tile got its icon+label
+  (was un-addable); §4.4 upstream-blocking detection warns on Rules;
+  enforcement offer now posts its notification; voicemail long-press uses
+  the `voicemail:` scheme; E164 region follows the SIM.
 
 Code-complete at the JVM level; nothing device-proven. This ledger
 supersedes the stale "Status: nothing built" line kept below.

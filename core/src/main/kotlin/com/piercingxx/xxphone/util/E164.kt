@@ -13,7 +13,16 @@ object E164 {
 
     private val util: PhoneNumberUtil = PhoneNumberUtil.getInstance()
 
-    fun normalize(raw: String?, defaultRegion: String = "US"): String? {
+    /**
+     * Region for national-format parsing. XxApplication sets it once from the
+     * SIM at boot; "US" only covers the interval before that (and the JVM
+     * suite, which pins regions explicitly anyway). A wrong region can only
+     * fail a number to null → the caller classifies unknown — noisy, never
+     * lossy (§15).
+     */
+    @Volatile var defaultRegion: String = "US"
+
+    fun normalize(raw: String?, defaultRegion: String = this.defaultRegion): String? {
         if (raw.isNullOrBlank()) return null
         return try {
             val parsed = util.parse(liftDoubleZeroPrefix(raw), defaultRegion)

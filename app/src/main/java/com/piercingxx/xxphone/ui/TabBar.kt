@@ -3,7 +3,11 @@ package com.piercingxx.xxphone.ui
 import android.app.Activity
 import android.content.Intent
 import android.view.View
+import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import com.piercingxx.xxphone.R
+import com.piercingxx.xxphone.ServiceLocator
+import kotlinx.coroutines.launch
 
 /**
  * Shared bottom tab shell (design §12 IA): Recents · Keypad · People ·
@@ -38,7 +42,41 @@ object TabBar {
         }
     }
 
+    /**
+     * Tab-hiding setting (§12). The current tab always survives — a screen
+     * the user is standing on never loses its own marker — and Rules is
+     * unhideable so the setting can always be reached to undo itself.
+     */
+    fun applyHidden(activity: Activity, current: Tab, hiddenNames: Set<String>) {
+        Tab.entries.forEach { tab ->
+            val hide = tab != current && tab != Tab.RULES &&
+                tab.name.lowercase() in hiddenNames
+            activity.findViewById<View>(tab.itemId)?.visibility =
+                if (hide) View.GONE else View.VISIBLE
+        }
+    }
+
     private fun View.isVisibleWhen(visible: Boolean) {
         visibility = if (visible) View.VISIBLE else View.INVISIBLE
+    }
+
+    /**
+     * Call from every tab screen's onStart. Two duties: §15 routing — a lost
+     * role or dead channel reopens Setup first, so no screen ever renders
+     * fully-functional-looking over a disarmed policy — and re-applying the
+     * hidden-tab set, which may have changed on the Rules screen since this
+     * instance was last in front.
+     */
+    fun onTabScreenStart(activity: AppCompatActivity, current: Tab) {
+        if (!SetupActivity.isFullyConfigured(activity)) {
+            activity.startActivity(Intent(activity, SetupActivity::class.java))
+            return
+        }
+        activity.lifecycleScope.launch {
+            val hidden = runCatching {
+                ServiceLocator.settings(activity).hiddenTabs()
+            }.getOrDefault(emptySet())
+            applyHidden(activity, current, hidden)
+        }
     }
 }

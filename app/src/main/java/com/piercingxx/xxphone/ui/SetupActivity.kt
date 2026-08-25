@@ -179,6 +179,11 @@ class SetupActivity : AppCompatActivity() {
         lifecycleScope.launch {
             val settings = ServiceLocator.settings(this@SetupActivity)
             val mode = settings.enforcementMode()
+            // The glyph shows its actual state like every other step (§12):
+            // ✓ once a week boundary exists or enforcement was flipped.
+            val seeded = mode == Mode.ENFORCING || settings.observeWeekEndMillis() != null
+            binding.glyphObserve.text = if (seeded) GLYPH_OK else GLYPH_WARN
+            binding.glyphObserve.setTextColor(glyphColor(ok = seeded))
             binding.dateObserve.text = when {
                 mode == Mode.ENFORCING -> "enforcement active — flipped by you"
                 else -> settings.observeWeekEndMillis()
