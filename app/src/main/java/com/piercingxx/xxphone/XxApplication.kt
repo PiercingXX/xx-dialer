@@ -12,6 +12,7 @@ import android.telephony.TelephonyManager
 import android.util.Log
 import com.piercingxx.xxphone.data.SettingsRepository
 import com.piercingxx.xxphone.ring.SilencedNotifier
+import com.piercingxx.xxphone.theme.ThemeGroundApplier
 import com.piercingxx.xxphone.ui.RulesActivity
 import com.piercingxx.xxphone.util.E164
 import kotlinx.coroutines.CoroutineScope
@@ -59,6 +60,14 @@ class XxApplication : Application() {
             }
         }
         registerActivityLifecycleCallbacks(object : ActivityLifecycleCallbacksAdapter() {
+            override fun onActivityResumed(activity: Activity) {
+                // Family theme sync (BRAND-GUIDE §3.3): repaint the ground
+                // from the persisted launcher broadcast on every resume, so a
+                // theme change landing while backgrounded shows on return.
+                // No-op until a broadcast has ever landed.
+                runCatching { ThemeGroundApplier.apply(activity) }
+            }
+
             override fun onActivityStarted(activity: Activity) {
                 if (startedActivities++ == 0) {
                     applicationScope.launch {

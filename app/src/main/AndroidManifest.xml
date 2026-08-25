@@ -107,6 +107,20 @@
             </intent-filter>
         </receiver>
 
+        <!-- Family theme sync (BRAND-GUIDE §3.3): xx-launcher broadcasts its
+             active background preset, explicitly targeted at this package
+             (Intent.setPackage — required for a manifest receiver on O+).
+             Exported because the sender is another app; B3-safe: the payload
+             is a theme name and a color, so the worst a forged broadcast can
+             do is recolor the UI — no privileged action is reachable. -->
+        <receiver
+            android:name=".theme.ThemeSyncReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="xx.launcher.THEME_CHANGED"/>
+            </intent-filter>
+        </receiver>
+
         <!-- B3: BlockedNumberContract writes are dialer-privileged; this
              receiver is deliberately NON-exported so only this app's own
              notification PendingIntents can trigger a block. -->
