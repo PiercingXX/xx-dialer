@@ -419,26 +419,70 @@ class RecentsActivity : AppCompatActivity() {
         val number = dialable(call)
         if (number != null) {
             item(ID_CALL_BACK, getString(R.string.call_back))
+            item(ID_MESSAGE, SEND_MESSAGE)
             item(ID_ADD_CONTACTS, ADD_TO_CONTACTS)
+            item(ID_COPY, COPY_NUMBER)
             item(ID_BLOCK, getString(R.string.block))
         }
         if (call.glyph == Glyph.SILENCED && call.e164 != null) {
             item(ID_RING_NEXT_TIME, RING_NEXT_TIME)
             item(ID_ADD_BUSINESS, ADD_TO_BUSINESS)
         }
-        if (order == 0) return
+        item(ID_DELETE, DELETE_CALL)
 
         popup.setOnMenuItemClickListener { mi ->
             when (mi.itemId) {
                 ID_CALL_BACK -> number?.let(::place)
+                ID_MESSAGE -> number?.let(::sendMessage)
                 ID_ADD_CONTACTS -> number?.let(::addToContacts)
+                ID_COPY -> number?.let(::copyNumber)
                 ID_BLOCK -> number?.let(::blockNumber)
                 ID_RING_NEXT_TIME -> ringNextTime(call.e164!!)
                 ID_ADD_BUSINESS -> addToBusiness(call.e164!!)
+                ID_DELETE -> deleteCall(call)
             }
             true
         }
         popup.show()
+    }
+
+    /** SMS handoff to the default messaging app — this app sends nothing itself (R8). */
+    private fun sendMessage(number: String) {
+        runCatching {
+            startActivity(Intent(Intent.ACTION_SENDTO, Uri.parse("smsto:$number")))
+        }.onFailure { toast("No messaging app available") }
+    }
+
+    private fun copyNumber(number: String) {
+        runCatching {
+            val clipboard = getSystemService(android.content.ClipboardManager::class.java)
+            clipboard.setPrimaryClip(android.content.ClipData.newPlainText("number", number))
+        }
+        toast("Copied $number")
+    }
+
+    /**
+     * Deletes THIS CallLog row (key = platform _ID; WRITE_CALL_LOG rides the
+     * dialer role). The screen_log row stays — R7's reason record is a
+     * policy audit, cleared only from Rules, not a call-history mirror.
+     */
+    private fun deleteCall(call: RecentsMerge.MergedCall) {
+        lifecycleScope.launch(Dispatchers.IO) {
+            val ok = try {
+                contentResolver.delete(
+                    CallLog.Calls.CONTENT_URI,
+                    "${CallLog.Calls._ID} = ?",
+                    arrayOf(call.key.toString()),
+                ) > 0
+            } catch (t: Throwable) {
+                Log.w(TAG, "call-log delete refused", t)
+                false
+            }
+            withContext(Dispatchers.Main) {
+                toast(if (ok) "Deleted from history" else "Couldn't delete — call log refused")
+                if (ok) reload()
+            }
+        }
     }
 
     private fun addToContacts(number: String) {
@@ -648,11 +692,18 @@ class RecentsActivity : AppCompatActivity() {
         const val RING_NEXT_TIME = "Ring next time ★"
         const val ADD_TO_BUSINESS = "Add to Business"
 
+        const val SEND_MESSAGE = "Send message"
+        const val COPY_NUMBER = "Copy number"
+        const val DELETE_CALL = "Delete from history"
+
         const val ID_CALL_BACK = 1
         const val ID_ADD_CONTACTS = 2
         const val ID_BLOCK = 3
         const val ID_RING_NEXT_TIME = 4
         const val ID_ADD_BUSINESS = 5
+        const val ID_MESSAGE = 6
+        const val ID_COPY = 7
+        const val ID_DELETE = 8
 
         const val TYPE_ITEM = 0
         const val TYPE_HEADER = 1

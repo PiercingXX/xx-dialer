@@ -237,6 +237,8 @@ class RulesActivity : AppCompatActivity() {
         binding.importButton.setOnClickListener {
             importDoc.launch(arrayOf("application/json", "text/plain", "application/octet-stream"))
         }
+        binding.clearHistoryButton.setOnClickListener { confirmClearHistory() }
+        binding.clearLogButton.setOnClickListener { confirmClearLog() }
         binding.importBlocklistButton.setOnClickListener {
             importBlocklistDoc.launch(arrayOf("text/plain"))
         }
@@ -311,6 +313,8 @@ class RulesActivity : AppCompatActivity() {
         binding.exportButton.text = "Export backup"
         binding.importButton.text = "Import backup"
         binding.importBlocklistButton.text = "Import blocklist"
+        binding.clearHistoryButton.text = "Clear call history"
+        binding.clearLogButton.text = "Clear screening log"
     }
 
     // ---- load / render -----------------------------------------------------------
@@ -353,6 +357,51 @@ class RulesActivity : AppCompatActivity() {
             renderLog()
             renderUpstreamWarning()
         }
+    }
+
+    // ---- privacy wipes ---------------------------------------------------------
+
+    /** Deletes every platform CallLog row (WRITE_CALL_LOG rides the role). Irreversible. */
+    private fun confirmClearHistory() {
+        MaterialAlertDialogBuilder(this)
+            .setTitle("Clear call history?")
+            .setMessage("Deletes every call from the system call log. This cannot be undone.")
+            .setNegativeButton("Cancel", null)
+            .setPositiveButton("Clear") { _, _ ->
+                lifecycleScope.launch(Dispatchers.IO) {
+                    val ok = runCatching {
+                        contentResolver.delete(CallLog.Calls.CONTENT_URI, null, null)
+                    }.isSuccess
+                    withContext(Dispatchers.Main) {
+                        toast(if (ok) "Call history cleared" else "Couldn't clear — call log refused")
+                    }
+                }
+            }
+            .show()
+    }
+
+    /** Wipes the R7 reason store. The platform call log is untouched. */
+    private fun confirmClearLog() {
+        MaterialAlertDialogBuilder(this)
+            .setTitle("Clear screening log?")
+            .setMessage(
+                "Deletes every screening reason and the weekly tallies. " +
+                    "The system call log keeps its own entries.",
+            )
+            .setNegativeButton("Cancel", null)
+            .setPositiveButton("Clear") { _, _ ->
+                lifecycleScope.launch {
+                    runCatching { ServiceLocator.db(this@RulesActivity).screenLogDao().deleteAll() }
+                        .fold(
+                            onSuccess = {
+                                toast("Screening log cleared")
+                                load()
+                            },
+                            onFailure = { toast("Couldn't clear the log") },
+                        )
+                }
+            }
+            .show()
     }
 
     /**

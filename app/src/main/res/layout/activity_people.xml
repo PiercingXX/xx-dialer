@@ -32,6 +32,22 @@
             android:text="@string/tab_people" />
     </LinearLayout>
 
+    <!-- Live filter over name and number; empty query shows everyone. -->
+    <EditText
+        android:id="@+id/peopleSearch"
+        style="@style/TextAppearance.Xx.Body"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="@dimen/xx_gutter"
+        android:layout_marginRight="@dimen/xx_gutter"
+        android:layout_marginBottom="6dp"
+        android:hint="Search name or number"
+        android:textColorHint="@color/pxx_white_25"
+        android:inputType="text"
+        android:imeOptions="actionSearch"
+        android:maxLines="1"
+        android:importantForAutofill="no" />
+
     <LinearLayout
         android:id="@+id/emptyGrantCard"
         style="@style/Widget.Xx.Card"

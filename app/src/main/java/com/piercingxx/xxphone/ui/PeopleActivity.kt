@@ -12,6 +12,7 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
+import androidx.core.widget.doAfterTextChanged
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -50,6 +51,12 @@ class PeopleActivity : AppCompatActivity() {
     /** Guards the sheet switches against listener re-entry from paint(). */
     private var suppressSheet = false
 
+    /** Live search query; blank shows everyone. */
+    private var query: String = ""
+
+    /** Last biz-key snapshot so the query re-render skips the DB. */
+    private var lastBizKeys: Set<String> = emptySet()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityPeopleBinding.inflate(layoutInflater)
@@ -58,6 +65,10 @@ class PeopleActivity : AppCompatActivity() {
         binding.emptyGrantWhy.text = EMPTY_GRANT_COPY
         binding.peopleList.layoutManager = LinearLayoutManager(this)
         binding.peopleList.adapter = adapter
+        binding.peopleSearch.doAfterTextChanged { text ->
+            query = text?.toString().orEmpty()
+            render(lastRows, lastBizKeys)
+        }
         load()
     }
 
@@ -80,6 +91,7 @@ class PeopleActivity : AppCompatActivity() {
             val bizKeys = runCatching { db.tierMemberDao().bizKeys() }
                 .getOrDefault(emptyList())
                 .toSet()
+            lastBizKeys = bizKeys
             render(rows, bizKeys)
         }
     }
@@ -88,9 +100,15 @@ class PeopleActivity : AppCompatActivity() {
      * Section assignment priority: ★ Starred > Business > Everyone — every
      * contact appears exactly once (the mockup's Roscoe-under-Everyone case).
      */
-    private fun render(rows: List<ContactMirrorEntity>, bizKeys: Set<String>) {
-        lastRows = rows
-        binding.emptyGrantCard.isVisible = rows.isEmpty()
+    private fun render(allRows: List<ContactMirrorEntity>, bizKeys: Set<String>) {
+        lastRows = allRows
+        // The empty-grant card explains an EMPTY MIRROR (§4.5), never an
+        // unmatched search.
+        binding.emptyGrantCard.isVisible = allRows.isEmpty()
+        val needle = query.trim().lowercase()
+        val rows = if (needle.isEmpty()) allRows else allRows.filter {
+            it.displayName.lowercase().contains(needle) || it.e164.contains(needle)
+        }
         val items = mutableListOf<PeopleItem>()
         if (rows.isNotEmpty()) {
             val sorted = rows.sortedBy { it.displayName.lowercase() }
@@ -195,6 +213,14 @@ class PeopleActivity : AppCompatActivity() {
             if (!CallManager.place(this, current.e164)) {
                 toast("could not place the call")
             }
+        }
+        sheet.sheetMessage.setOnClickListener {
+            // SMS handoff to the default messaging app — this app sends nothing (R8).
+            runCatching {
+                startActivity(
+                    Intent(Intent.ACTION_SENDTO, android.net.Uri.parse("smsto:${current.e164}")),
+                )
+            }.onFailure { toast("No messaging app available") }
         }
         sheet.sheetHistory.setOnClickListener {
             runCatching {

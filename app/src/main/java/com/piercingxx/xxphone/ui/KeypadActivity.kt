@@ -60,6 +60,25 @@ class KeypadActivity : AppCompatActivity() {
             digits.append(prefill)
             refresh()
         }
+
+        // Long-press the entry pastes a number from the clipboard — the
+        // standard dialer affordance for numbers copied out of other apps.
+        binding.keypadEntry.setOnLongClickListener {
+            val pasted = runCatching {
+                getSystemService(android.content.ClipboardManager::class.java)
+                    ?.primaryClip?.getItemAt(0)?.coerceToText(this)?.toString()
+            }.getOrNull()
+            // Keep only dialable characters; garbage clipboards paste nothing.
+            val cleaned = pasted.orEmpty().filter { it.isDigit() || it in "+*#" }
+            if (cleaned.isEmpty()) {
+                toast("Nothing dialable on the clipboard")
+            } else {
+                haptic(binding.keypadEntry)
+                digits.append(cleaned)
+                refresh()
+            }
+            true
+        }
     }
 
     override fun onStart() {
@@ -153,8 +172,33 @@ class KeypadActivity : AppCompatActivity() {
         val query = digits.toString()
         val hits = if (query.isEmpty()) emptyList() else rankMatches(query)
         renderMatches(hits)
+        // No match on a real-length number: offer the save (standard dialer
+        // affordance) instead of a dead empty overlay.
+        val offerSave = hits.isEmpty() && query.count(Char::isDigit) >= MIN_SAVE_DIGITS
+        if (offerSave) binding.keypadMatches.addView(addContactRow(query))
         binding.keypadMatchScroll.visibility =
-            if (hits.isEmpty()) View.GONE else View.VISIBLE
+            if (hits.isEmpty() && !offerSave) View.GONE else View.VISIBLE
+    }
+
+    private fun addContactRow(raw: String): View {
+        val number = E164.normalize(raw) ?: raw
+        return TextView(this).apply {
+            text = "＋ Save $number to contacts"
+            TextViewCompat.setTextAppearance(this, R.style.TextAppearance_Xx_Body)
+            setPadding(0, 24, 0, 24)
+            isClickable = true
+            isFocusable = true
+            setOnClickListener {
+                runCatching {
+                    startActivity(
+                        Intent(
+                            android.provider.ContactsContract.Intents.Insert.ACTION,
+                            android.provider.ContactsContract.Contacts.CONTENT_URI,
+                        ).putExtra(android.provider.ContactsContract.Intents.Insert.PHONE, number),
+                    )
+                }.onFailure { toast("No contacts app available") }
+            }
+        }
     }
 
     private data class Match(val mirror: ContactMirrorEntity, val hit: T9.Hit)
@@ -255,6 +299,7 @@ class KeypadActivity : AppCompatActivity() {
 
     private companion object {
         const val MAX_MATCHES = 6
+        const val MIN_SAVE_DIGITS = 3
         const val DISABLED_ALPHA = 0.38f
     }
 }

@@ -51,4 +51,8 @@ interface ScreenLogDao {
         """,
     )
     suspend fun pruneTo1000()
+
+    /** Privacy control (Rules screen): wipe the reason store entirely. */
+    @Query("DELETE FROM screen_log")
+    suspend fun deleteAll()
 }
