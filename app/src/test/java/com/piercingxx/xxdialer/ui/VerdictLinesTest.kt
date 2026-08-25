@@ -96,9 +96,20 @@ class VerdictLinesTest {
     }
 
     @Test
-    fun observe_mode_is_part_of_the_record() {
+    fun observe_mode_is_part_of_the_record_and_says_the_call_rang() {
+        // The suffix has to contradict the glyph on purpose: in observe mode
+        // the rule matched but the phone rang anyway, and a row that only
+        // said "Silenced" would be a lie about what the user's phone did.
         val line = VerdictLines.annotate(e164, "Silence", "HIDDEN_POLICY", true, rules)
-        assertEquals("→ Silenced · hidden-caller policy · observed", line.text)
+        assertEquals("→ Silenced · hidden-caller policy · watching — it rang", line.text)
+    }
+
+    @Test
+    fun enforcing_rows_carry_no_mode_suffix() {
+        // Only the watching state needs the disclaimer; once silencing is on
+        // the glyph and the words already agree with what the phone did.
+        val line = VerdictLines.annotate(e164, "Silence", "HIDDEN_POLICY", false, rules)
+        assertEquals("→ Silenced · hidden-caller policy", line.text)
     }
 
     @Test

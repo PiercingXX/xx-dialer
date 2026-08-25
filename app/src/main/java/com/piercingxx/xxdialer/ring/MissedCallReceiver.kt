@@ -13,6 +13,7 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.piercingxx.xxdialer.ServiceLocator
 import com.piercingxx.xxdialer.data.ScreenLogEntity
+import com.piercingxx.xxdialer.telecom.LogRows
 import com.piercingxx.xxdialer.ui.RecentsActivity
 import com.piercingxx.xxdialer.util.E164
 import kotlinx.coroutines.CoroutineScope
@@ -113,17 +114,10 @@ class MissedCallReceiver : BroadcastReceiver() {
     private fun bigTextFor(count: Int, number: String?, row: ScreenLogEntity?): String {
         if (count > 1 || number == null) return "Tap to open Recents"
         if (row == null || row.reason.isNullOrBlank()) return number // plain missed call
-        val verdictWord = verdictWord(row.verdict)
+        // The log stores the verdict token; LogRows owns the display word so
+        // this notification and the Rules screen cannot drift apart.
+        val verdictWord = LogRows.dispositionWord(row.verdict)
         return listOfNotNull(number, verdictWord, row.reason.trim()).joinToString(" · ")
-    }
-
-    /** Log stores the verdict token; the display word follows §6's printed wording. */
-    private fun verdictWord(verdictToken: String?): String? = when {
-        verdictToken == null -> null
-        verdictToken.startsWith("silence", ignoreCase = true) -> "Silenced"
-        verdictToken.startsWith("block", ignoreCase = true) -> "Blocked"
-        verdictToken.startsWith("ring", ignoreCase = true) -> "Rang"
-        else -> null
     }
 
     private fun NotificationCompat.Builder.addActionsFor(context: Context, e164: String) {

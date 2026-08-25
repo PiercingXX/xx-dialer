@@ -156,7 +156,7 @@ class PeopleActivity : AppCompatActivity() {
         sheet.sheetBizLabel.text = "Business tier — rings $businessWindowText"
         sheet.sheetRingtoneNote.isVisible = current.customRingtone != null
         sheet.sheetRingtoneNote.text =
-            "custom ringtone set — plays over any tier tone (D11)"
+            "custom ringtone set — plays over any tier tone"
 
         fun paint() {
             sheet.sheetStarIcon.setImageResource(

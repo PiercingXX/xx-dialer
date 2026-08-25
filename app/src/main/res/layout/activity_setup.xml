@@ -366,8 +366,10 @@
                     style="@style/Widget.Xx.ButtonSecondary"/>
             </LinearLayout>
 
-            <!-- Step 6 (§15 observe week): plain statement; enforcement is
-                 OFFERED after the log proves itself, never flipped silently. -->
+            <!-- Step 6 (§15 observe week): plain statement; silencing is
+                 OFFERED after the log proves itself, never flipped silently.
+                 The copy is shared with the Rules switch via strings.xml so
+                 the promise made here is the one that screen keeps. -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -398,14 +400,14 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Observe first"
+                            android:text="@string/setup_watch_title"
                             android:textAppearance="@style/TextAppearance.Xx.Body"/>
 
                         <TextView
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="4dp"
-                            android:text="For the first week every call rings normally while XX-Dialer records what it would have done. Enforcement is offered after the log proves itself — never flipped for you."
+                            android:text="@string/setup_watch_body"
                             android:textAppearance="@style/TextAppearance.Xx.BodySmall"/>
 
                         <TextView

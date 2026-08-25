@@ -16,4 +16,63 @@
     <string name="answer">Answer</string>
     <string name="decline">Decline</string>
     <string name="expecting_a_call">Expecting a call</string>
+
+    <!--
+         Screening state (§15). One vocabulary for the one question a user
+         actually asks — "is it silencing spam calls yet, or only watching?" —
+         spoken from three places that must never disagree: the Rules switch,
+         Setup's last step, and the observe-week offer notification. The
+         internal names (Mode.ENFORCING / Mode.OBSERVING, enforcement_mode,
+         enforce_offer_v1) are untouched on purpose; they are state-machine
+         and storage vocabulary, and this is what the state machine says out
+         loud. The §15 guarantee — offered, never flipped silently — is load
+         bearing here: nothing below may read as though calls are already
+         being silenced while the app is only watching.
+    -->
+    <string name="watch_banner">Watching only — every call still rings</string>
+    <string name="silencing_switch_label">Silence and block calls</string>
+    <string name="silencing_caption_on">On. Silenced calls stay quiet, blocked calls never ring. Every call is still logged with the reason.</string>
+    <string name="silencing_caption_off">Off. Every call rings while the log records what would have been silenced or blocked.</string>
+    <string name="silencing_offer_button">A week of watching is done — start silencing?</string>
+    <string name="silencing_confirm_title">Start silencing calls?</string>
+    <string name="silencing_confirm_body">Until now every call rang while the log recorded what would have happened. Turn this on and the rules act: silenced calls stay quiet, blocked calls are rejected before the phone rings. Every call is still logged with its reason, and you can switch back anytime.</string>
+    <string name="silencing_confirm_yes">Start silencing</string>
+    <string name="silencing_confirm_no">Keep watching</string>
+
+    <!-- Offer notification (§15). The channel name is what the user reads in
+         system notification settings, so it names the offer, not the flag. -->
+    <string name="silencing_offer_channel">Ready to start silencing</string>
+    <string name="silencing_offer_title">A week of watching is done</string>
+    <string name="silencing_offer_body">Every call rang and the log recorded what would have been silenced. Ready to turn silencing on?</string>
+
+    <!-- Setup step 6 (§15): the same promise, made before anything is on. -->
+    <string name="setup_watch_title">Watch first</string>
+    <string name="setup_watch_body">For the first week every call rings while XX-Dialer records what it would have done. After that it offers to start silencing. It never turns silencing on by itself.</string>
+    <string name="setup_watch_until">watching until %1$s</string>
+    <string name="setup_watch_unset">watching — no end date set yet</string>
+    <string name="setup_silencing_on">silencing on — you turned it on</string>
+
+    <!--
+         Policy rows and their chips. The chips previously printed raw enum
+         names (UNKNOWN / SILENCE / BLOCK / OFF) and the persisted
+         notification tokens uppercased, which put storage vocabulary on
+         screen and turned any wire-format rename into a UI change. The labels
+         live here; the enum constants and stored tokens are untouched.
+         Widget.Xx.Chip sets textAllCaps, so these render in the house caps
+         without being typed that way.
+    -->
+    <string name="hidden_caller_label">Hidden caller policy</string>
+    <string name="hidden_caller_unknown">Treat as unknown</string>
+    <string name="hidden_caller_silence">Silence</string>
+    <string name="hidden_caller_block">Block</string>
+    <string name="stir_label">Caller ID failed its carrier check — the number is forged</string>
+    <string name="stir_block">Block</string>
+    <string name="stir_silence">Silence</string>
+    <string name="stir_off">Let it ring</string>
+    <string name="repeat_caller_label">Let a repeat caller through · same number within 15 min</string>
+    <string name="silenced_notif_label">Silenced-call notifications</string>
+    <string name="silenced_notif_immediate">Right away</string>
+    <string name="silenced_notif_daily">Daily summary</string>
+    <string name="silenced_notif_never">Never</string>
+    <string name="bypass_label">Expecting a call lasts</string>
 </resources>

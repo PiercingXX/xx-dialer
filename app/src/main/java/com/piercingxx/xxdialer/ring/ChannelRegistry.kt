@@ -200,9 +200,9 @@ class ChannelRegistry(private val context: Context, private val dao: ChannelRegi
                 listOf("'$id' was deleted in system settings — recreated as a fresh channel")
             }
             spec.requiresSound && channel.sound == null ->
-                listOf("'$id' lost its sound — muted at the system level, respected (§15)")
+                listOf("'$id' lost its sound — muted at the system level, respected")
             channel.importance == NotificationManager.IMPORTANCE_NONE ->
-                listOf("'$id' is muted at the system level — respected, not fought (§15)")
+                listOf("'$id' is muted at the system level — respected, not fought")
             else -> emptyList()
         }
     }

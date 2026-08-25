@@ -41,8 +41,13 @@ object VerdictLines {
             blockedUpstream -> Line(Glyph.BLOCKED, "✗ Blocked · upstream setting")
             else -> return Line(Glyph.NONE, "")
         }
-        // §6 observe mode is part of the record on every disposition.
-        if (observed) line = line.copy(text = "${line.text} · observed")
+        // §6 observe mode is part of the record on every disposition — and
+        // the honest half of it. "→ Silenced · … · observed" told the user a
+        // call had been silenced when the phone had in fact rung; the suffix
+        // now resolves that contradiction instead of encoding the mode name.
+        // Literal, not R.string: this is a pure-JVM formatter with no Context,
+        // unit-tested character for character.
+        if (observed) line = line.copy(text = "${line.text} · watching — it rang")
         return line
     }
 

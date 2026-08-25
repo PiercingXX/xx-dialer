@@ -83,4 +83,37 @@ object LogRows {
     /** screen_log.mode vocabulary: 'enforced' | 'observed' (todo rule #6). */
     fun modeName(mode: Mode): String =
         if (mode == Mode.ENFORCING) "enforced" else "observed"
+
+    /**
+     * What a log row SAYS about the mode it was written in, as opposed to
+     * what it stores. The stored tokens above are wire format — RecentsMerge
+     * and XxInCallService match on them and BackupJson carries them across
+     * devices — so they are translated at the last moment instead of being
+     * renamed at the source, which would have rewritten every existing row.
+     * "enforced/observed" is state-machine vocabulary and answers the wrong
+     * question; a user reading the log wants to know whether the call was
+     * acted on or merely watched. An unrecognized token prints verbatim: a
+     * row written by some other build should say what it says, not be
+     * relabelled into a lie.
+     */
+    fun modeLabel(storedMode: String): String = when (storedMode) {
+        modeName(Mode.ENFORCING) -> "silencing"
+        modeName(Mode.OBSERVING) -> "watching"
+        else -> storedMode
+    }
+
+    /**
+     * The word for a stored screen_log.verdict token, matching §6's printed
+     * wording. Prefix-matched and nullable because the token is whatever some
+     * past build wrote (`Silence`, `Verdict.Silence`, …): an unrecognized
+     * value earns no word at all rather than a guess — §15's rule against
+     * inventing reasons applies to dispositions too.
+     */
+    fun dispositionWord(verdictToken: String?): String? = when {
+        verdictToken == null -> null
+        verdictToken.startsWith("silence", ignoreCase = true) -> "Silenced"
+        verdictToken.startsWith("block", ignoreCase = true) -> "Blocked"
+        verdictToken.startsWith("ring", ignoreCase = true) -> "Rang"
+        else -> null
+    }
 }

@@ -93,7 +93,7 @@ class SetupActivity : AppCompatActivity() {
             status = binding.statusDialer,
             held = dialerHeld,
             okText = "role held and verified",
-            warnText = "not the default phone app — calls placed through us need this (§4.1)",
+            warnText = "not the default phone app — calls you place need this",
         )
         // A fresh audit clears any stale walk-through once the role verifies.
         if (dialerHeld) hideRestrictedWalkthrough(dialer = true)
@@ -104,7 +104,7 @@ class SetupActivity : AppCompatActivity() {
             status = binding.statusScreening,
             held = screeningHeld,
             okText = "screening role held",
-            warnText = "another screener wins — our screening silently never runs (§4.1)",
+            warnText = "another app is screening calls — ours never runs",
         )
         if (screeningHeld) {
             binding.conflictScreening.visibility = View.GONE
@@ -132,7 +132,7 @@ class SetupActivity : AppCompatActivity() {
             status = binding.statusFsi,
             held = fsiAllowed,
             okText = "allowed",
-            warnText = "heads-up only — calls still ring, just not over the lock screen (§15)",
+            warnText = "heads-up only — calls still ring, just not over the lock screen",
         )
         binding.btnFsi.isVisible = !fsiAllowed
     }
@@ -174,7 +174,13 @@ class SetupActivity : AppCompatActivity() {
         }
     }
 
-    /** Observe-week boundary (§15): enforcement offered after it, never flipped. */
+    /**
+     * Observe-week boundary (§15): silencing is offered after it, never
+     * flipped. The line under the step says which of the two states the app
+     * is actually in, in the same words the Rules switch uses — a Setup step
+     * claiming a state the Rules screen contradicts is the §4.1 half-
+     * configured-but-looks-configured bug wearing different clothes.
+     */
     private fun refreshObserve() {
         lifecycleScope.launch {
             val settings = ServiceLocator.settings(this@SetupActivity)
@@ -185,12 +191,12 @@ class SetupActivity : AppCompatActivity() {
             binding.glyphObserve.text = if (seeded) GLYPH_OK else GLYPH_WARN
             binding.glyphObserve.setTextColor(glyphColor(ok = seeded))
             binding.dateObserve.text = when {
-                mode == Mode.ENFORCING -> "enforcement active — flipped by you"
+                mode == Mode.ENFORCING -> getString(R.string.setup_silencing_on)
                 else -> settings.observeWeekEndMillis()
                     ?.let(SettingsRepository::epochToDateTime)
                     ?.format(DATE_FORMAT)
-                    ?.let { "observe week ends $it" }
-                    ?: "observe week boundary unset"
+                    ?.let { getString(R.string.setup_watch_until, it) }
+                    ?: getString(R.string.setup_watch_unset)
             }
         }
     }
@@ -251,7 +257,7 @@ class SetupActivity : AppCompatActivity() {
         walkthrough.visibility = View.VISIBLE
         appInfo.visibility = View.VISIBLE
         (if (dialer) binding.statusDialer else binding.statusScreening).text =
-            "request refused — restricted-settings gate (§4.1)"
+            "request refused — Android's restricted-settings gate"
     }
 
     private fun hideRestrictedWalkthrough(dialer: Boolean) {

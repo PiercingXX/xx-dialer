@@ -258,9 +258,12 @@ class RulesActivity : AppCompatActivity() {
     }
 
     private fun paintStaticCopy() {
-        binding.observeBanner.text = "Observing — nothing is silenced"
-        binding.enforceLabel.text = "Enforcement"
-        binding.enforceOfferButton.text = "Your observation week ended — enforce now?"
+        // §15 state copy lives in strings.xml so the switch, Setup's last step
+        // and the offer notification cannot drift into three different answers
+        // to "is it silencing yet?". Everything below is Rules-only chrome.
+        binding.observeBanner.text = getString(R.string.watch_banner)
+        binding.enforceLabel.text = getString(R.string.silencing_switch_label)
+        binding.enforceOfferButton.text = getString(R.string.silencing_offer_button)
         binding.precedEyebrow.text = "EVALUATION ORDER · LIVE"
         binding.windowsEyebrow.text = "WINDOWS"
         binding.windowUnknownTitle.text = "Unknown callers"
@@ -268,23 +271,29 @@ class RulesActivity : AppCompatActivity() {
         binding.toneEyebrow.text = "UNKNOWN-CALLER TONE"
         binding.tonePick.text = "Change tone"
         binding.policiesEyebrow.text = "POLICIES"
-        binding.hiddenPolicyLabel.text = "Hidden caller policy"
-        binding.chipHiddenUnknown.text = HiddenCallerPolicy.UNKNOWN.name
-        binding.chipHiddenSilence.text = HiddenCallerPolicy.SILENCE.name
-        binding.chipHiddenBlock.text = HiddenCallerPolicy.BLOCK.name
-        binding.stirLabel.text = "STIR/SHAKEN failed — forged caller ID"
-        binding.chipStirBlock.text = StirAction.BLOCK.name
-        binding.chipStirSilence.text = StirAction.SILENCE.name
-        binding.chipStirOff.text = StirAction.OFF.name
-        binding.repeatLabel.text = "Repeat caller pierces any Silence · 15 min (D10)"
-        binding.notifLabel.text = "Silenced-call notifications"
-        binding.chipNotifImmediate.text = NOTIF_IMMEDIATE.uppercase()
-        binding.chipNotifDaily.text = NOTIF_DAILY.uppercase()
-        binding.chipNotifNever.text = NOTIF_NEVER.uppercase()
+        binding.hiddenPolicyLabel.text = getString(R.string.hidden_caller_label)
+        // Chips label the CHOICE, never the constant behind it. Printing
+        // HiddenCallerPolicy.name / StirAction.name / the persisted notif
+        // token put storage vocabulary on screen and quietly welded the UI to
+        // the wire format — renaming a constant would have reworded the
+        // screen. The mapping from chip id to stored value is unchanged and
+        // still lives in attachPolicyListeners(); only the text moved.
+        binding.chipHiddenUnknown.text = getString(R.string.hidden_caller_unknown)
+        binding.chipHiddenSilence.text = getString(R.string.hidden_caller_silence)
+        binding.chipHiddenBlock.text = getString(R.string.hidden_caller_block)
+        binding.stirLabel.text = getString(R.string.stir_label)
+        binding.chipStirBlock.text = getString(R.string.stir_block)
+        binding.chipStirSilence.text = getString(R.string.stir_silence)
+        binding.chipStirOff.text = getString(R.string.stir_off)
+        binding.repeatLabel.text = getString(R.string.repeat_caller_label)
+        binding.notifLabel.text = getString(R.string.silenced_notif_label)
+        binding.chipNotifImmediate.text = getString(R.string.silenced_notif_immediate)
+        binding.chipNotifDaily.text = getString(R.string.silenced_notif_daily)
+        binding.chipNotifNever.text = getString(R.string.silenced_notif_never)
         binding.answerLabel.text = "Answer interaction on the incoming screen"
         binding.chipAnswerTap.text = "TAP"
         binding.chipAnswerSlide.text = "SLIDE"
-        binding.bypassLabel.text = "Expecting-a-call duration (§7.1)"
+        binding.bypassLabel.text = getString(R.string.bypass_label)
         binding.chipBypass30.text = "30 MIN"
         binding.chipBypass2h.text = "2 H"
         binding.chipBypass8h.text = "8 H"
@@ -334,10 +343,8 @@ class RulesActivity : AppCompatActivity() {
             binding.observeBanner.isVisible = currentMode == Mode.OBSERVING
             binding.enforceOfferButton.isVisible = offer && currentMode == Mode.OBSERVING
             binding.enforceCaption.text = when (currentMode) {
-                Mode.ENFORCING ->
-                    "Verdicts act: silences stay quiet, blocks reject. The log keeps every reason (R7)."
-                Mode.OBSERVING ->
-                    "Every call rings while the log records what would have happened (R11)."
+                Mode.ENFORCING -> getString(R.string.silencing_caption_on)
+                Mode.OBSERVING -> getString(R.string.silencing_caption_off)
             }
 
             bypassUntil = runCatching { settings.bypassUntilMillis() }.getOrNull()
@@ -498,17 +505,19 @@ class RulesActivity : AppCompatActivity() {
 
     // ---- enforcement -----------------------------------------------------------
 
+    /**
+     * The §15 guarantee has a UI half: silencing is never turned on for the
+     * user, so every path that could turn it on lands here first and says, in
+     * the same words the switch and the offer notification use, what changes.
+     * Cancelling must leave the switch reading OFF — the negative button
+     * un-checks it rather than trusting the toggle to bounce back.
+     */
     private fun confirmEnforceThenFlip() {
         MaterialAlertDialogBuilder(this)
-            .setTitle("Turn enforcement on?")
-            .setMessage(
-                "Observing rang everything while the log recorded what would have happened — " +
-                    "the trust week (R11). Enforcing acts on those verdicts: silenced calls stay " +
-                    "quiet, blocks reject before the phone rings. Every call still lands in the " +
-                    "log with its reason, and you can switch back anytime.",
-            )
-            .setPositiveButton("Enforce") { _, _ -> setMode(Mode.ENFORCING) }
-            .setNegativeButton("Stay observing") { _, _ ->
+            .setTitle(R.string.silencing_confirm_title)
+            .setMessage(R.string.silencing_confirm_body)
+            .setPositiveButton(R.string.silencing_confirm_yes) { _, _ -> setMode(Mode.ENFORCING) }
+            .setNegativeButton(R.string.silencing_confirm_no) { _, _ ->
                 suppressEnforce = true
                 binding.enforceSwitch.isChecked = false
                 suppressEnforce = false
@@ -1017,9 +1026,11 @@ class RulesActivity : AppCompatActivity() {
         dialog.setContentView(sheetView.root)
 
         sheetView.testEyebrow.text = "TEST A NUMBER"
-        sheetView.testGo.text = "RUN DECIDE()"
+        sheetView.testGo.text = "TEST THIS NUMBER"
+        // The claim worth making here is that nothing is simulated. Saying it
+        // in English keeps the claim and drops the function name.
         sheetView.testModeLine.text =
-            "Same decide() a real call runs — FactSource facts, live rules."
+            "Runs the same check a real call runs, against your live rules and contacts."
 
         sheetView.testGo.setOnClickListener {
             val raw = sheetView.testInput.text?.toString()?.trim().orEmpty()
@@ -1048,7 +1059,7 @@ class RulesActivity : AppCompatActivity() {
                     .getOrDefault(Rules())
                 val verdict = RingPolicy.decide(now, facts, rules)
                 val reason = LogRows.reason(verdict, facts, rules, now)
-                val modeName = LogRows.modeName(currentMode)
+                val modeLabel = LogRows.modeLabel(LogRows.modeName(currentMode))
 
                 sheetView.testVerdict.text = describe(verdict)
                 sheetView.testVerdict.setTextColor(
@@ -1062,9 +1073,14 @@ class RulesActivity : AppCompatActivity() {
                     ),
                 )
                 sheetView.testReason.text = reason?.uiLabel.orEmpty()
+                // The words the log row itself would carry, not the field
+                // names behind them — the point of the preview is that you
+                // can go and find this line afterwards. The reason is already
+                // spelled out above, so it is not repeated here; the mode is,
+                // because it decides whether a real call would have rung.
+                val disposition = LogRows.dispositionWord(verdict::class.simpleName)?.lowercase()
                 sheetView.testLogLine.text =
-                    "would log: verdict=${verdict::class.simpleName} · " +
-                        "reason=${reason?.name ?: "—"} · mode=$modeName"
+                    "would log: ${disposition ?: "—"} · $modeLabel"
                 sheetView.testResultBlock.isVisible = true
                 sheetView.testGo.isEnabled = true
             }
@@ -1125,8 +1141,11 @@ class RulesActivity : AppCompatActivity() {
             append(reasonLabel(entry))
             if (entry.answered) append(" · answered")
         }
+        // entry.mode is the stored 'enforced'/'observed' token (§11); it is
+        // matched on elsewhere and travels in the backup, so it is translated
+        // for display instead of being restated in the database.
         row.rowDetail.text =
-            "${entry.mode} · ${DateUtils.getRelativeTimeSpanString(entry.at)}"
+            "${LogRows.modeLabel(entry.mode)} · ${DateUtils.getRelativeTimeSpanString(entry.at)}"
         row.rowAction.isVisible = false
         return row.root
     }

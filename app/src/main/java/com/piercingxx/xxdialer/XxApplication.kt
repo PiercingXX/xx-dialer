@@ -91,8 +91,13 @@ class XxApplication : Application() {
     }
 
     /**
-     * §15 observe-week-end: enforcement is offered, never flipped silently.
+     * §15 observe-week-end: silencing is offered, never turned on silently.
      * One notification, once — the Rules banner keeps offering after that.
+     *
+     * The channel id stays `enforce_offer_v1`: ids are immutable to the
+     * platform and a new one would resurrect a channel the user may already
+     * have muted. Only the human-readable channel NAME changed, which is the
+     * half of it the user actually reads in system settings.
      */
     private suspend fun maybeOfferEnforcement() {
         val settings = ServiceLocator.settings(this)
@@ -100,7 +105,11 @@ class XxApplication : Application() {
         if (settings.getString(KEY_OFFER_NOTIFIED) == "1") return
         val manager = getSystemService(NotificationManager::class.java) ?: return
         manager.createNotificationChannel(
-            NotificationChannel(OFFER_CHANNEL, "Enforcement offer", NotificationManager.IMPORTANCE_DEFAULT),
+            NotificationChannel(
+                OFFER_CHANNEL,
+                getString(R.string.silencing_offer_channel),
+                NotificationManager.IMPORTANCE_DEFAULT,
+            ),
         )
         val open = PendingIntent.getActivity(
             this, RC_OFFER,
@@ -109,8 +118,8 @@ class XxApplication : Application() {
         )
         val card = Notification.Builder(this, OFFER_CHANNEL)
             .setSmallIcon(R.mipmap.ic_launcher)
-            .setContentTitle("Observation week complete")
-            .setContentText("Every verdict was logged, nothing was silenced. Ready to enforce?")
+            .setContentTitle(getString(R.string.silencing_offer_title))
+            .setContentText(getString(R.string.silencing_offer_body))
             .setContentIntent(open)
             .setAutoCancel(true)
             .build()

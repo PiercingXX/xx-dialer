@@ -165,7 +165,40 @@ class LogRowsTest {
     fun tierAndModeNames() {
         assertEquals("biz", LogRows.tier(facts(bizTier = true)))
         assertNull(LogRows.tier(facts()))
+        // Wire format, not copy: RecentsMerge and XxInCallService match on
+        // these and BackupJson carries them between devices. Rewording the UI
+        // must never move them.
         assertEquals("enforced", LogRows.modeName(Mode.ENFORCING))
         assertEquals("observed", LogRows.modeName(Mode.OBSERVING))
+    }
+
+    @Test
+    fun modeLabelSpeaksTheUsersQuestionNotTheStateMachines() {
+        assertEquals("silencing", LogRows.modeLabel(LogRows.modeName(Mode.ENFORCING)))
+        assertEquals("watching", LogRows.modeLabel(LogRows.modeName(Mode.OBSERVING)))
+    }
+
+    @Test
+    fun modeLabelPrintsAnUnknownTokenVerbatimRatherThanGuessing() {
+        // A row written by some other build must say what it says; silently
+        // relabelling it would put a claim in the log that nothing made.
+        assertEquals("supervised", LogRows.modeLabel("supervised"))
+        assertEquals("", LogRows.modeLabel(""))
+    }
+
+    @Test
+    fun dispositionWordFollowsThePrintedVerdictVocabulary() {
+        assertEquals("Silenced", LogRows.dispositionWord("Silence"))
+        assertEquals("Blocked", LogRows.dispositionWord("Block"))
+        assertEquals("Rang", LogRows.dispositionWord("Ring"))
+        // Prefix-matched, so qualified class names from older rows still read.
+        assertEquals("Silenced", LogRows.dispositionWord("silence"))
+    }
+
+    @Test
+    fun dispositionWordInventsNothingForATokenItDoesNotKnow() {
+        assertNull(LogRows.dispositionWord(null))
+        assertNull(LogRows.dispositionWord(""))
+        assertNull(LogRows.dispositionWord("Escalate"))
     }
 }

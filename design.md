@@ -648,8 +648,10 @@ removing what they don't use).
    call/history actions. Under Contact Scopes with an empty grant this tab
    states plainly why it is empty and works anyway.
 4. **Rules** — the product. Top: the **enforcement switch** (Enforcing /
-   Observing — in observe mode the whole screen wears an "observing, nothing
-   silenced" banner) and the **Expecting a call** button with its countdown
+   Observing — the switch reads "Silence and block calls", and in observe mode
+   the whole screen wears a "watching only — every call still rings" banner;
+   "enforcement" is state-machine vocabulary and stays out of the UI) and the
+   **Expecting a call** button with its countdown
    when active. Then the precedence list (§6) rendered as the actual
    evaluation order with live windows — this screen *is* the documentation.
    Then: window editors (time + days), unknown-tone picker, hidden-caller

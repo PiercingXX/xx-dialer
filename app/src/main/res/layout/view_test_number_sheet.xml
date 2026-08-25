@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Test-a-number bottom sheet (§12.4, §16): type any number, run THE decide()
      a real call runs over real facts, print the verdict + rule reason exactly
-     as it would land in the screening log. Labels set in code. -->
+     as it would land in the screening log. Labels set in code — and set in the
+     log's own words: decide(), FactSource and the enum names are how this
+     works, not what it says. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
