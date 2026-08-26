@@ -732,6 +732,23 @@ Type ramp:
 | Body, list rows, reasons | JetBrains Mono | 16 / 14 sp |
 | Chips, eyebrows, verdict glyph lines | JetBrains Mono | 11 sp, +0.08em tracking |
 
+### Theme sync with XX-Launcher
+
+XX-Launcher broadcasts `xx.launcher.THEME_CHANGED` carrying the active theme's
+display name and its resolved background ARGB, targeted at each family app by
+package. All nine subscribe. XX-Dialer's exported receiver resolves the carried
+name to a `ThemePreset`, persists it to the ground store so it survives process
+death, and the UI repaints.
+
+Eight choices: AMOLED Night, Graphite, Forest Night, Ocean Drift, Burgundy,
+Paper, Mist, and Custom. Custom is the one with no preset to resolve, so the
+receiver takes the ARGB straight off the broadcast. **A Custom broadcast
+arriving without a background persists nothing** rather than guessing at a
+ground — a wrong ground is worse than a stale one. Verified live on-device.
+
+XX-Dialer is the family app that consumes the raw ARGB; TxxT keys off the name
+only and leaves Custom on the last resolved preset.
+
 ---
 
 ## 13. Manifest
