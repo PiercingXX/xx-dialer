@@ -203,6 +203,7 @@ class XxInCallService : InCallService() {
         val presented = presentedIncoming ?: return
         val call = presented.call
         if (entries[call] == null || call.state != Call.STATE_RINGING) return
+        if (CallGrid.isAnswering(call) || entries[call]?.answered == true) return
         scope.launch {
             runCatching {
                 postIncoming(
@@ -287,9 +288,25 @@ class XxInCallService : InCallService() {
         if (newState == Call.STATE_ACTIVE || newState == Call.STATE_CONNECTING || newState == Call.STATE_DIALING) {
             markOngoing(call)
         }
+        // Leaving RINGING must drop the CallStyle incoming card immediately —
+        // waiting for onCallRemoved leaves the accept/decline popup (and the
+        // channel ringtone) up after the user has already answered.
+        if (!isRingingState(newState)) {
+            dismissIncomingFor(call)
+        }
         // Every transition, not a chosen few: going off-hook must blank, and
         // going on-hold, disconnecting or being screened must stop blanking.
         refreshProximity()
+    }
+
+    private fun isRingingState(state: Int): Boolean =
+        state == Call.STATE_RINGING || state == Call.STATE_SIMULATED_RINGING
+
+    /** Cancel the shared incoming card only when it still belongs to [call]. */
+    private fun dismissIncomingFor(call: Call) {
+        if (presentedIncoming?.call !== call) return
+        presentedIncoming = null
+        notificationManager().cancel(NotifIds.INCOMING)
     }
 
     // ---- proximity blanking (screen off at the ear) ---------------------------
@@ -518,6 +535,7 @@ class XxInCallService : InCallService() {
         fullScreen: Boolean,
     ): Boolean {
         if (call.state != Call.STATE_RINGING) return false
+        if (CallGrid.isAnswering(call) || entries[call]?.answered == true) return false
         val person = Person.Builder().setName(displayName).setImportant(true).build()
         val show = showIntent(displayName, e164, contextLine, cnap, tier)
         val builder = Notification.Builder(this, channelId)
@@ -762,14 +780,22 @@ class XxInCallService : InCallService() {
             this, requestCode,
             Intent(this, IncomingCallActivity::class.java)
                 .setAction(action)
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                .addFlags(
+                    Intent.FLAG_ACTIVITY_NEW_TASK or
+                        Intent.FLAG_ACTIVITY_SINGLE_TOP or
+                        Intent.FLAG_ACTIVITY_CLEAR_TOP,
+                ),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
 
     private fun incomingIntent(action: String, displayName: String, e164: String?, contextLine: CharSequence, cnap: String?, tier: String?): Intent =
         Intent(this, IncomingCallActivity::class.java)
             .setAction(action)
-            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            .addFlags(
+                Intent.FLAG_ACTIVITY_NEW_TASK or
+                    Intent.FLAG_ACTIVITY_SINGLE_TOP or
+                    Intent.FLAG_ACTIVITY_CLEAR_TOP,
+            )
             .putExtras(callExtras(displayName, e164, contextLine, cnap, tier))
 
     private fun notificationManager(): NotificationManager =

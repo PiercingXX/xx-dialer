@@ -1,5 +1,6 @@
 package com.piercingxx.xxdialer.ui
 
+import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -21,6 +22,7 @@ import com.piercingxx.xxdialer.R
 import com.piercingxx.xxdialer.ServiceLocator
 import com.piercingxx.xxdialer.data.SettingsRepository
 import com.piercingxx.xxdialer.databinding.ActivityIncomingCallBinding
+import com.piercingxx.xxdialer.ring.NotifIds
 import kotlinx.coroutines.launch
 
 /**
@@ -42,6 +44,13 @@ class IncomingCallActivity : AppCompatActivity() {
     /** One settlement per surface — double-taps and queued intents must no-op. */
     private var settled = false
 
+    /** Latch so we do not finish() before Telecom has added the ringing call. */
+    private var sawRinging = false
+
+    private val gridListener: () -> Unit = {
+        runOnUiThread { maybeFinishIfCallGone() }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // Lockscreen surface (§12); manifest stays exported=false.
@@ -61,6 +70,17 @@ class IncomingCallActivity : AppCompatActivity() {
 
         consume(intent)
         refreshCannedReplies()
+    }
+
+    override fun onStart() {
+        super.onStart()
+        CallGrid.addListener(gridListener)
+        maybeFinishIfCallGone()
+    }
+
+    override fun onStop() {
+        CallGrid.removeListener(gridListener)
+        super.onStop()
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -203,8 +223,30 @@ class IncomingCallActivity : AppCompatActivity() {
     private fun settle(action: () -> Unit) {
         if (settled) return
         settled = true
+        dropIncomingCard()
         action()
         finish()
+    }
+
+    private fun dropIncomingCard() {
+        (getSystemService(NOTIFICATION_SERVICE) as NotificationManager)
+            .cancel(NotifIds.INCOMING)
+    }
+
+    /**
+     * Finish once the ringing call this surface was showing has left RINGING
+     * (answered, declined, or remote hangup). Do not finish on the first
+     * empty snapshot — Telecom may not have added the Call yet.
+     */
+    private fun maybeFinishIfCallGone() {
+        if (isFinishing) return
+        val number = intent?.getStringExtra(EXTRA_NUMBER_E164)
+        val ringing = CallGrid.ringingCallFor(number) ?: CallGrid.waitingCall()
+        if (ringing != null) {
+            sawRinging = true
+            return
+        }
+        if (sawRinging || settled) finish()
     }
 
     private fun answerCall() {

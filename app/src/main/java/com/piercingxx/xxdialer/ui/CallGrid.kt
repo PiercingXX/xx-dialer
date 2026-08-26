@@ -124,6 +124,7 @@ object CallGrid {
 
     private val calls = CopyOnWriteArrayList<Call>()
     private val activeSince = HashMap<Call, Long>()
+    private val answering: MutableSet<Call> = java.util.concurrent.ConcurrentHashMap.newKeySet()
     private val handler = Handler(Looper.getMainLooper())
 
     /** Notified on the main thread after every mutation. Per-instance, never a single slot. */
@@ -176,8 +177,12 @@ object CallGrid {
         if (!calls.remove(call)) return
         runCatching { call.unregisterCallback(callCallback) }
         activeSince.remove(call)
+        answering.remove(call)
         notifyChange()
     }
+
+    /** True from the moment [answer] is issued until Telecom removes the call. */
+    fun isAnswering(call: Call): Boolean = answering.contains(call)
 
     fun endpointsChanged(list: List<CallEndpoint>) {
         endpoints = list
@@ -234,6 +239,7 @@ object CallGrid {
     /** Hold-and-answer for a SPECIFIC ringing call (§12 call waiting). */
     fun answer(call: Call): Boolean {
         if (lineOf(call.state) != Line.WAITING) return false
+        answering.add(call)
         calls.firstOrNull { lineOf(it.state) == Line.ACTIVE }?.let(::hold)
         runCatching { call.answer(VideoProfile.STATE_AUDIO_ONLY) }
         return true
