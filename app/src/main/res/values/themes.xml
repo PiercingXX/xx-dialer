@@ -9,6 +9,24 @@
         <item name="android:statusBarColor">#000000</item>
         <item name="android:navigationBarColor">#000000</item>
 
+        <!-- The Android 12+ starting window. The platform draws one for every
+             cold start and there is no opting out, only emptying it: its
+             defaults stamp the launcher icon over a theme-derived ground. That
+             matters more here than in an app you open on purpose — the call
+             surfaces cold-start from Telecom, so the mark flashed on an
+             incoming call too. Ink ground and a transparent icon reduce it to
+             the same black the in-call screen opens on. The icon-background and
+             branding slots are the platform's other two ways to draw a mark, so
+             they are pinned shut rather than left to inherit.
+
+             This is the app theme, so it covers the call surfaces as well —
+             they declare no theme of their own. minSdk is 31; no -v31 variant
+             is needed. -->
+        <item name="android:windowSplashScreenBackground">@color/pxx_ink</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@android:color/transparent</item>
+        <item name="android:windowSplashScreenIconBackgroundColor">@android:color/transparent</item>
+        <item name="android:windowSplashScreenBrandingImage">@null</item>
+
         <!-- §12.1 defaults: mono everything, body caps at 90% white -->
         <item name="android:textAppearance">@style/TextAppearance.Xx.Body</item>
         <item name="textAppearanceDisplaySmall">@style/TextAppearance.Xx.Display</item>
