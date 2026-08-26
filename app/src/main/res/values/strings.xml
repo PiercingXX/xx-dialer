@@ -11,6 +11,7 @@
 
     <!-- Generic actions used by shared treatments (answer/decline blocks,
          row and notification recovery affordances, Rules screen) -->
+    <string name="call">Call</string>
     <string name="call_back">Call back</string>
     <string name="block">Block</string>
     <string name="answer">Answer</string>

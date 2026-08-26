@@ -14,6 +14,8 @@ import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.PopupMenu
 import androidx.core.content.ContextCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
 import androidx.core.widget.TextViewCompat
 import com.google.android.material.bottomsheet.BottomSheetDialog
@@ -63,6 +65,20 @@ class InCallActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityInCallBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        val padLeft = binding.root.paddingLeft
+        val padTop = binding.root.paddingTop
+        val padRight = binding.root.paddingRight
+        val padBottom = binding.root.paddingBottom
+        ViewCompat.setOnApplyWindowInsetsListener(binding.root) { view, insets ->
+            val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            view.setPadding(
+                padLeft,
+                bars.top + padTop,
+                padRight,
+                bars.bottom + padBottom,
+            )
+            WindowInsetsCompat.CONSUMED
+        }
 
         binding.btnEnd.setOnClickListener { CallGrid.endActive() }
         binding.btnMute.setOnClickListener { toggleMute() }

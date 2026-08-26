@@ -10,11 +10,10 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:fitsSystemWindows="true"
     android:paddingLeft="@dimen/xx_gutter"
     android:paddingRight="@dimen/xx_gutter"
-    android:paddingTop="48dp"
-    android:paddingBottom="20dp">
+    android:paddingTop="16dp"
+    android:paddingBottom="16dp">
 
     <TextView
         android:id="@+id/incall_kind"
@@ -176,6 +175,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="14dp"
+        android:minHeight="@dimen/xx_button_height"
         android:textColor="@color/pxx_error"
         android:text="End call"/>
 

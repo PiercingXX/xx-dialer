@@ -95,32 +95,39 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="20dp"
+        android:gravity="center_vertical"
         android:orientation="horizontal">
 
         <Button
             android:id="@+id/sheetCall"
             style="@style/Widget.Xx.ButtonPrimary"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="@dimen/xx_button_height"
             android:layout_weight="1"
-            android:text="@string/call_back" />
+            android:gravity="center"
+            android:maxLines="1"
+            android:text="@string/call" />
 
         <Button
             android:id="@+id/sheetMessage"
             style="@style/Widget.Xx.ButtonSecondary"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="@dimen/xx_button_height"
             android:layout_weight="1"
             android:layout_marginStart="12dp"
+            android:gravity="center"
+            android:maxLines="1"
             android:text="Message" />
 
         <Button
             android:id="@+id/sheetHistory"
             style="@style/Widget.Xx.ButtonSecondary"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="@dimen/xx_button_height"
             android:layout_weight="1"
             android:layout_marginStart="12dp"
+            android:gravity="center"
+            android:maxLines="1"
             android:text="@string/tab_recents" />
     </LinearLayout>
 
