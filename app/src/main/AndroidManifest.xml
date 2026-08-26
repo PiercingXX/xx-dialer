@@ -19,6 +19,12 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_PHONE_CALL"/>
     <uses-permission android:name="android.permission.VIBRATE"/>
+    <!-- Screen-off-at-the-ear (telecom/ProximityGuard): PROXIMITY_SCREEN_OFF_
+         WAKE_LOCK is a wake lock like any other as far as the permission model
+         is concerned, even though its whole purpose is turning the display OFF
+         and keeping the touchscreen from hearing a cheek. Normal protection
+         level, granted at install, no prompt, no runtime request. -->
+    <uses-permission android:name="android.permission.WAKE_LOCK"/>
     <!-- deliberately NO android.permission.INTERNET (design §13, R8) -->
 
     <application
@@ -58,8 +64,31 @@
         <activity android:name=".ui.KeypadActivity" android:exported="false"/>
         <activity android:name=".ui.PeopleActivity" android:exported="false"/>
         <activity android:name=".ui.RulesActivity" android:exported="false"/>
-        <activity android:name=".ui.IncomingCallActivity" android:exported="false"/>
-        <activity android:name=".ui.InCallActivity" android:exported="false"/>
+        <!-- The two call surfaces live in their OWN task, not the dialer's.
+             Both are always started with FLAG_ACTIVITY_NEW_TASK, and NEW_TASK
+             with the default affinity does not mean "a new task" — it means
+             "the task that already has this affinity", i.e. the dialer's own
+             back stack. That puts the in-call screen on top of whatever the
+             user last had open in the dialer, so finishing at the end of the
+             call reveals Recents/Keypad instead of the app the call
+             interrupted. With a distinct affinity the call surfaces are always
+             a task of their own on top of everything, and finishing the last
+             of them hands the foreground back to the task underneath —
+             the browser, the launcher, the lockscreen, or the dialer itself
+             when the call was placed from there. That IS the "back to the last
+             screen" behaviour; nothing needs to be launched to produce it.
+
+             Left in Recents deliberately (no excludeFromRecents): while a call
+             is live the overview entry is a legitimate way back to it, and the
+             task disappears by itself the moment its last activity finishes. -->
+        <activity
+            android:name=".ui.IncomingCallActivity"
+            android:exported="false"
+            android:taskAffinity="com.piercingxx.xxdialer.call"/>
+        <activity
+            android:name=".ui.InCallActivity"
+            android:exported="false"
+            android:taskAffinity="com.piercingxx.xxdialer.call"/>
         <activity android:name=".ui.SetupActivity" android:exported="false"/>
 
         <!-- Owns the ringer; no car-mode metadata, ever (§4.1 disqualifier).

@@ -28,6 +28,16 @@ import com.piercingxx.xxdialer.databinding.ActivityInCallBinding
  *
  * UI is deliberately dumb: [CallGrid] owns every call reference and all
  * decisions; this activity renders snapshots and forwards commands.
+ *
+ * Ending a call must land the user back WHERE THEY WERE, including inside
+ * another app entirely, so this surface finishes itself rather than starting
+ * anything (see [CallEndExit] and the call-task affinity in the manifest):
+ * `finish()` on the last activity of the call task hands the foreground back
+ * to the task underneath — the browser the incoming call interrupted, the
+ * Recents tab the outgoing call was placed from, the lockscreen the ring woke.
+ * Any startActivity() here would instead assert a destination the user did not
+ * ask for, which is precisely the "dumped on the dialer's home tab" behaviour
+ * this replaces.
  */
 class InCallActivity : AppCompatActivity() {
 
@@ -35,6 +45,9 @@ class InCallActivity : AppCompatActivity() {
 
     private val handler = Handler(Looper.getMainLooper())
     private var dtmfPanelBuilt = false
+
+    /** Latched so the optimistic launch (call not yet added) cannot self-close. */
+    private val exit = CallEndExit()
 
     /** §12.1: 1 s ticks on tabular Space Mono figures — never reflows. */
     private val tick = object : Runnable {
@@ -80,6 +93,14 @@ class InCallActivity : AppCompatActivity() {
 
     private fun renderSnapshot() {
         val grid = CallGrid.snapshot()
+        // The call ended: leave, and render nothing on the way out — a last
+        // repaint into "No active call" is a frame of wrong state the user
+        // sees flash before the screen behind them comes back.
+        if (exit.fire(grid.isEmpty)) {
+            handler.removeCallbacks(tick)
+            if (!isFinishing) finish()
+            return
+        }
         val primary = grid.primary
         val primaryCall = primary?.let(CallGrid::callFor)
 

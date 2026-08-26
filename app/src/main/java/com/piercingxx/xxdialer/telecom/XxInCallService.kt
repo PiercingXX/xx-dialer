@@ -10,6 +10,7 @@ import android.content.pm.ServiceInfo
 import android.os.Bundle
 import android.os.SystemClock
 import android.telecom.Call
+import android.telecom.CallAudioState
 import android.telecom.CallEndpoint
 import android.telecom.InCallService
 import android.util.Log
@@ -82,9 +83,42 @@ class XxInCallService : InCallService() {
     /** Keyed by the Call itself — Details has no stable public id in jar-35. */
     private val entries = ConcurrentHashMap<Call, Entry>()
     private val ongoingCalls: MutableSet<Call> = ConcurrentHashMap.newKeySet()
+
+    /**
+     * EVERY call Telecom has handed us, live-state readable, until it is
+     * removed. Deliberately not [ongoingCalls]: that set means "has been
+     * off-hook at least once" and is what the foreground notification keys
+     * off, while the proximity decision needs the phase of every leg —
+     * including one that is only ringing, and including a call that was
+     * already ACTIVE when this service bound (which never passes through the
+     * off-hook transitions at all).
+     */
+    private val tracked: MutableSet<Call> = ConcurrentHashMap.newKeySet()
     private val emergencyArmed: MutableSet<Call> = ConcurrentHashMap.newKeySet()
 
     @Volatile private var presentedIncoming: Presented? = null
+
+    /**
+     * Screen-off-at-the-ear lives HERE, not in InCallActivity, because the
+     * lock's lifetime is the CALL's lifetime and this service is the only
+     * thing in the process whose lifetime matches it. An activity-scoped lock
+     * (acquire in onResume / release in onPause) blanks correctly right up
+     * until the user does something ordinary — presses Home mid-call, takes a
+     * notification, gets rotated into a config change — at which point the
+     * screen stops blanking while the phone is still at their ear, or the
+     * screen stays down because onPause never came. Telecom talks to this
+     * service about both halves of the decision (call state AND audio route),
+     * and it outlives every surface it launches.
+     */
+    private val proximity by lazy { ProximityGuard(this) }
+
+    /**
+     * Last route Telecom pushed, from EITHER routing API (§12 ships both).
+     * UNKNOWN until the first push; [currentRoute] re-reads the live audio
+     * state before deciding, so that window is narrower than it looks.
+     */
+    @Volatile private var pushedRoute: EarRoute = EarRoute.UNKNOWN
+
     private val channelsEnsured = object : Any() {
         @Volatile var done = false
     }
@@ -104,6 +138,8 @@ class XxInCallService : InCallService() {
     override fun onCallAdded(call: Call) {
         super.onCallAdded(call)
         runCatching { call.registerCallback(callCallback) }
+        tracked.add(call)
+        refreshProximity()
         CallGrid.callAdded(call)
         when (call.state) {
             Call.STATE_RINGING -> {
@@ -131,6 +167,11 @@ class XxInCallService : InCallService() {
         val entry = entries.remove(call)
         ongoingCalls.remove(call)
         emergencyArmed.remove(call)
+        // Before anything that can throw or suspend: the call is gone, so the
+        // display must stop being ours. Ordering matters — a failure in the
+        // notification bookkeeping below must not be able to strand the screen.
+        tracked.remove(call)
+        refreshProximity()
         // B2: cancel the incoming card ONLY when it belongs to THIS call —
         // another live call's ring/silence presentation must survive.
         if (presentedIncoming?.call === call) {
@@ -169,8 +210,13 @@ class XxInCallService : InCallService() {
     }
 
     override fun onDestroy() {
+        // FIRST, and unconditionally: whatever killed this service — teardown,
+        // an unbind, a crash on the way down — must not leave the display held
+        // off with nothing left in the process watching the sensor.
+        proximity.releaseNow()
         scope.cancel()
         presentedIncoming = null
+        tracked.clear()
         CallGrid.service = null
         super.onDestroy()
     }
@@ -182,7 +228,33 @@ class XxInCallService : InCallService() {
 
     override fun onCallEndpointChanged(callEndpoint: CallEndpoint) {
         super.onCallEndpointChanged(callEndpoint)
+        // The callback cannot fire below 34, but the guard is not decoration:
+        // getEndpointType is a 34+ CALL SITE in a minSdk-31 module, and the
+        // explicit form is the convention §12's routing code already uses.
+        if (android.os.Build.VERSION.SDK_INT >= 34) {
+            pushedRoute = endpointRoute(callEndpoint.endpointType)
+            refreshProximity()
+        }
         CallGrid.endpointChanged(callEndpoint)
+    }
+
+    /**
+     * The deprecated route callback, kept for the same reason §12 keeps the
+     * deprecated routing path: it is the only one that exists below API 34,
+     * and the platform still delivers it above 34. Whichever callback fires
+     * last wins — they describe the same route, so they cannot disagree.
+     *
+     * This is the hook that stops the "screen dies while I'm looking at it on
+     * speaker" bug: the route leaving the ear mid-call releases the lock
+     * immediately (see [ProximityAction.RELEASE_IMMEDIATE]), it does not wait
+     * for the next call-state change.
+     */
+    @Deprecated("Telecom deprecated it in API 34; still the only route signal below 34.")
+    @Suppress("DEPRECATION")
+    override fun onCallAudioStateChanged(audioState: CallAudioState?) {
+        super.onCallAudioStateChanged(audioState)
+        audioState?.let { pushedRoute = legacyRoute(it.route) }
+        refreshProximity()
     }
 
     private fun handleStateChange(call: Call, newState: Int) {
@@ -204,6 +276,71 @@ class XxInCallService : InCallService() {
         if (newState == Call.STATE_ACTIVE || newState == Call.STATE_CONNECTING || newState == Call.STATE_DIALING) {
             markOngoing(call)
         }
+        // Every transition, not a chosen few: going off-hook must blank, and
+        // going on-hold, disconnecting or being screened must stop blanking.
+        refreshProximity()
+    }
+
+    // ---- proximity blanking (screen off at the ear) ---------------------------
+
+    /**
+     * Re-decides the lock from scratch after anything that can change either
+     * input. Recomputing the whole answer beats tracking deltas: there is no
+     * sequence of missed edges that can leave the lock disagreeing with the
+     * current (state, route) pair, which is the failure mode that ends with a
+     * screen that will not come back.
+     */
+    private fun refreshProximity() {
+        val action = ProximityPolicy.decide(tracked.map { phaseOf(it.state) }, currentRoute())
+        proximity.apply(action)
+    }
+
+    /**
+     * `Call.STATE_*` → the proximity phase. AUDIO_PROCESSING lands in the
+     * ENDED bucket on purpose: the call is being screened in the background,
+     * there is no audio in anyone's ear yet, and the user may well be looking
+     * at the screen while it happens.
+     */
+    private fun phaseOf(state: Int): CallPhase = when (state) {
+        Call.STATE_ACTIVE -> CallPhase.ACTIVE
+        Call.STATE_HOLDING -> CallPhase.HELD
+        Call.STATE_RINGING, Call.STATE_SIMULATED_RINGING -> CallPhase.RINGING
+        Call.STATE_DIALING, Call.STATE_CONNECTING,
+        Call.STATE_SELECT_PHONE_ACCOUNT, Call.STATE_PULLING_CALL,
+        -> CallPhase.OUTGOING
+        else -> CallPhase.ENDED
+    }
+
+    /**
+     * The pushed route when there is one, else a live read of the deprecated
+     * audio state — which Telecom always has for a bound InCallService, so
+     * UNKNOWN survives only when the platform genuinely will not say.
+     */
+    @Suppress("DEPRECATION") // same §12 reason: the legacy route API is the floor, not an accident
+    private fun currentRoute(): EarRoute {
+        if (pushedRoute != EarRoute.UNKNOWN) return pushedRoute
+        val live = runCatching { callAudioState?.route }.getOrNull() ?: return EarRoute.UNKNOWN
+        return legacyRoute(live)
+    }
+
+    @Suppress("DEPRECATION")
+    private fun legacyRoute(route: Int): EarRoute = when (route) {
+        CallAudioState.ROUTE_EARPIECE -> EarRoute.EARPIECE
+        CallAudioState.ROUTE_SPEAKER -> EarRoute.SPEAKER
+        CallAudioState.ROUTE_WIRED_HEADSET -> EarRoute.WIRED_HEADSET
+        CallAudioState.ROUTE_BLUETOOTH -> EarRoute.BLUETOOTH
+        CallAudioState.ROUTE_STREAMING -> EarRoute.STREAMING
+        else -> EarRoute.UNKNOWN
+    }
+
+    /** The 34+ endpoint types; the version guard lives at the call site above. */
+    private fun endpointRoute(type: Int): EarRoute = when (type) {
+        CallEndpoint.TYPE_EARPIECE -> EarRoute.EARPIECE
+        CallEndpoint.TYPE_SPEAKER -> EarRoute.SPEAKER
+        CallEndpoint.TYPE_WIRED_HEADSET -> EarRoute.WIRED_HEADSET
+        CallEndpoint.TYPE_BLUETOOTH -> EarRoute.BLUETOOTH
+        CallEndpoint.TYPE_STREAMING -> EarRoute.STREAMING
+        else -> EarRoute.UNKNOWN
     }
 
     // ---- ringing pipeline -------------------------------------------------

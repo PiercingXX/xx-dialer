@@ -66,6 +66,45 @@ fun reduceGrid(cells: List<Cell>): Grid {
     )
 }
 
+/**
+ * When may the in-call surface dismiss itself?
+ *
+ * "The grid is empty" is not the answer on its own, and that is the whole
+ * reason this exists. The in-call screen is launched OPTIMISTICALLY — the
+ * moment placeCall() returns (telecom/CallManager) and the moment answer is
+ * tapped (IncomingCallActivity) — both of which are before Telecom has added
+ * the Call. A surface that finished on the first empty snapshot would close
+ * itself in the first frames of every outgoing call.
+ *
+ * So the exit is LATCHED: the grid must have held a live call at least once
+ * before emptiness means "the call ended" rather than "the call has not
+ * arrived yet". [fire] returns true exactly once, because finish() is not
+ * idempotent in any way worth relying on and later snapshots keep arriving
+ * while the activity tears down.
+ *
+ * A surface that is opened after the call is already gone (a stale ongoing
+ * notification, say) therefore never fires — it renders "No active call" and
+ * waits for the user, which is the pre-existing behaviour and the honest one:
+ * self-closing a screen the user deliberately opened is worse than a screen
+ * that says nothing is happening.
+ */
+class CallEndExit {
+
+    private var sawLiveCall = false
+    private var fired = false
+
+    /** Feed every snapshot; true means "the last call just went away — leave". */
+    fun fire(gridEmpty: Boolean): Boolean {
+        if (!gridEmpty) {
+            sawLiveCall = true
+            return false
+        }
+        if (!sawLiveCall || fired) return false
+        fired = true
+        return true
+    }
+}
+
 /** mm:ss under an hour, h:mm:ss past it; negatives clamp to 00:00. */
 fun formatDuration(elapsedSeconds: Long): String {
     val s = elapsedSeconds.coerceAtLeast(0)
