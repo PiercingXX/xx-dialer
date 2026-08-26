@@ -49,6 +49,8 @@ class InCallActivity : AppCompatActivity() {
     /** Latched so the optimistic launch (call not yet added) cannot self-close. */
     private val exit = CallEndExit()
 
+    private val onGridChange: () -> Unit = { handler.post { renderSnapshot() } }
+
     /** §12.1: 1 s ticks on tabular Space Mono figures — never reflows. */
     private val tick = object : Runnable {
         override fun run() {
@@ -70,7 +72,7 @@ class InCallActivity : AppCompatActivity() {
         binding.btnAnswerWaiting.setOnClickListener { CallGrid.answerWaiting() }
         binding.btnMore.setOnClickListener { showOverflow(it) }
 
-        CallGrid.onChange = { handler.post { renderSnapshot() } }
+        CallGrid.addListener(onGridChange)
     }
 
     override fun onResume() {
@@ -85,7 +87,7 @@ class InCallActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
-        CallGrid.onChange = null
+        CallGrid.removeListener(onGridChange)
         super.onDestroy()
     }
 

@@ -1078,7 +1078,7 @@ class RulesActivity : AppCompatActivity() {
                 // can go and find this line afterwards. The reason is already
                 // spelled out above, so it is not repeated here; the mode is,
                 // because it decides whether a real call would have rung.
-                val disposition = LogRows.dispositionWord(verdict::class.simpleName)?.lowercase()
+                val disposition = LogRows.dispositionWord(verdict.token())?.lowercase()
                 sheetView.testLogLine.text =
                     "would log: ${disposition ?: "—"} · $modeLabel"
                 sheetView.testResultBlock.isVisible = true

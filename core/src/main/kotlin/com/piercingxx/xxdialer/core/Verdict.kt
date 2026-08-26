@@ -31,10 +31,26 @@ sealed interface Verdict {
     data object Block : Verdict
     data class Ring(val tone: Tone) : Verdict
     data class Silence(val reason: Reason) : Verdict
+
+    /**
+     * Stable wire token for screen_log / Recents / R8. Never [KClass.simpleName]:
+     * minify would rename nested types and break R7 matching.
+     */
+    fun token(): String = when (this) {
+        Block -> TOKEN_BLOCK
+        is Ring -> TOKEN_RING
+        is Silence -> TOKEN_SILENCE
+    }
+
+    companion object {
+        const val TOKEN_BLOCK = "Block"
+        const val TOKEN_RING = "Ring"
+        const val TOKEN_SILENCE = "Silence"
+    }
 }
 
 data class CallerFacts(
-    val number: String?,          // E.164-normalized; null = withheld/hidden
+    val number: String?,          // E.164-normalized; null = withheld or unparseable
     val saved: Boolean,
     val starred: Boolean,
     val bizTier: Boolean,
@@ -45,6 +61,8 @@ data class CallerFacts(
     val recentOutgoing: Boolean,
     val cnapName: String?,        // context only — NEVER changes a verdict
     val emergencyWindow: Boolean,
+    /** Presentation is not ALLOWED. Distinct from [number] == null (unparseable). */
+    val withheld: Boolean = false,
 )
 
 /**

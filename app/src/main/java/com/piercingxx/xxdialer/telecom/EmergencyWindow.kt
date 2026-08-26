@@ -5,14 +5,14 @@ package com.piercingxx.xxdialer.telecom
  * android imports, JVM-tested.
  *
  * The marker stores wall-clock and elapsed-realtime side by side; §15 says
- * "the stricter reading wins". Strictness here means: the window CLOSES only
- * when BOTH readings agree it is over (`wallFresh || elapsedFresh`). That is
- * the reading that honors the failure direction — every corrupted reading
- * errs toward ringing, never toward swallowing an emergency callback:
+ * "the stricter reading wins". The window CLOSES only when BOTH usable
+ * readings agree it is over (`wallFresh || elapsedFresh`):
  *
  * - clock moved forward  → wall looks stale, elapsed still fresh → open
  * - clock moved backward → wall age clamps to fresh, elapsed truthful → open
- * - reboot               → elapsed resets small, wall truthful      → open
+ * - reboot               → nowElapsed < markerElapsed, elapsed unusable,
+ *                          wall decides. (A reset elapsed counter would
+ *                          otherwise look "fresh" forever via negative age.)
  */
 object EmergencyWindow {
 
@@ -25,7 +25,9 @@ object EmergencyWindow {
         markerElapsedMillis: Long?,
     ): Boolean {
         val wallFresh = markerWallMillis != null && fresh(markerWallMillis, nowEpochMillis)
-        val elapsedFresh = markerElapsedMillis != null && fresh(markerElapsedMillis, nowElapsedMillis)
+        val elapsedFresh = markerElapsedMillis != null &&
+            nowElapsedMillis >= markerElapsedMillis &&
+            fresh(markerElapsedMillis, nowElapsedMillis)
         return wallFresh || elapsedFresh
     }
 

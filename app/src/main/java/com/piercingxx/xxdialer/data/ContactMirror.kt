@@ -323,7 +323,7 @@ internal object MirrorRows {
         )
     }
 
-    /** One contact may carry several numbers: first resolvable identity wins. */
+    /** One contact may carry several numbers; each E.164 is its own identity. */
     fun dedupe(rows: Sequence<ContactMirrorEntity>): List<ContactMirrorEntity> =
-        rows.distinctBy { it.lookupKey }.toList()
+        rows.distinctBy { it.lookupKey to it.e164 }.toList()
 }

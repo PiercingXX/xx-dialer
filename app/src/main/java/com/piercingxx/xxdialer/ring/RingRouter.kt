@@ -2,6 +2,7 @@ package com.piercingxx.xxdialer.ring
 
 import android.net.Uri
 import com.piercingxx.xxdialer.core.CallerFacts
+import com.piercingxx.xxdialer.core.Reason
 import com.piercingxx.xxdialer.core.Tone
 import com.piercingxx.xxdialer.core.Verdict
 import com.piercingxx.xxdialer.data.ContactMirrorEntity
@@ -76,7 +77,9 @@ internal object RoutePlanner {
     fun plan(verdict: Verdict, customRingtoneRaw: String?, lookupKey: String?): RoutePlan =
         when (verdict) {
             is Verdict.Block -> RoutePlan.None // defensive; blocks are disposed of upstream (§6)
-            is Verdict.Silence -> RoutePlan.Silent
+            is Verdict.Silence ->
+                if (verdict.reason == Reason.SEND_TO_VOICEMAIL) RoutePlan.None
+                else RoutePlan.Silent
             is Verdict.Ring -> ring(verdict.tone, customRingtoneRaw?.takeIf { it.isNotBlank() }, lookupKey)
         }
 

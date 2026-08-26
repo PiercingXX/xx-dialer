@@ -70,9 +70,13 @@ object RecentsMerge {
 
         val candidates = ArrayList<Candidate>()
         calls.forEachIndexed { ci, c ->
-            if (c.e164 == null) return@forEachIndexed // withheld: nothing to match on
             logs.forEachIndexed { li, l ->
-                if (l.e164 != null && l.e164 == c.e164) {
+                val sameIdentity = when {
+                    c.e164 != null && l.e164 != null -> c.e164 == l.e164
+                    c.e164 == null && l.e164 == null -> true
+                    else -> false
+                }
+                if (sameIdentity) {
                     val dist = abs(l.at - c.timeMillis)
                     if (dist <= proximityMs) candidates += Candidate(ci, li, dist)
                 }

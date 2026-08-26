@@ -64,7 +64,7 @@ object LogRows {
         if (facts.bizTier && !rules.businessWindow.contains(now)) return true // row 7
         val number = facts.number
         if (number != null && rules.silencePatterns.any { it.matches(number) }) return true // row 10
-        if (number == null && rules.hiddenCallerPolicy == HiddenCallerPolicy.SILENCE) return true
+        if (facts.withheld && rules.hiddenCallerPolicy == HiddenCallerPolicy.SILENCE) return true
         if (!rules.unknownWindow.contains(now)) return true // row 12
         return false
     }

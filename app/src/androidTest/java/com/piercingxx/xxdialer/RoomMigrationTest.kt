@@ -16,16 +16,8 @@ import org.junit.runner.RunWith
  *
  * WS gate: any future bump of XxDatabase version (WS4 lineage).
  *
- * SKELETON — two prerequisites before this can execute, neither of which is a
- * gradle edit on this branch:
- *  1. Baseline export: set `exportSchema = true` on XxDatabase and add
- *     `ksp { arg("room.schemaLocation", "$projectDir/schemas") }` to :app, so the
- *     v1 JSON is emitted; then copy app/schemas → androidTest assets, e.g.:
- *         sourceSets { getByName("androidTest") { assets.srcDir("$projectDir/schemas") } }
- *     (or commit schemas/ and wire it when this test un-ignores).
- *  2. A real MIGRATION_1_2 object in data/ once v2 exists — replace the
- *     placeholder below with the production one so the test validates THE
- *     migration that ships, not a copy.
+ * v2 shipped (contact_mirror composite PK). Un-ignore on caiman after
+ * exporting schemas; the production migration is [com.piercingxx.xxdialer.data.XxDb.MIGRATION_1_2].
  */
 @Ignore("requires caiman — see PROBE.md")
 @RunWith(AndroidJUnit4::class)

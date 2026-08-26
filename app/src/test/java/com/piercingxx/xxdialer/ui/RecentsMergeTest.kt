@@ -56,6 +56,30 @@ class RecentsMergeTest {
     }
 
     @Test
+    fun withheld_platform_row_pairs_with_withheld_log_on_time() {
+        val merged = RecentsMerge.merge(
+            listOf(call(id = 1, at = t0, e164 = null)),
+            listOf(log(id = 50, at = t0 + 1_000, e164 = null, verdict = "Silence", reason = "HIDDEN_POLICY")),
+        )
+        assertEquals(Glyph.SILENCED, merged[0].glyph)
+        assertEquals("HIDDEN_POLICY", merged[0].reasonRaw)
+        assertEquals(50L, merged[0].screenLogId)
+    }
+
+    @Test
+    fun withheld_does_not_steal_a_numbered_log() {
+        val merged = RecentsMerge.merge(
+            listOf(call(id = 1, at = t0, e164 = null), call(id = 2, at = t0, e164 = "+14155550100")),
+            listOf(log(id = 50, at = t0, e164 = "+14155550100")),
+        )
+        val withheld = merged.first { it.key == 1L }
+        val numbered = merged.first { it.key == 2L }
+        assertEquals(Glyph.NONE, withheld.glyph)
+        assertEquals(Glyph.SILENCED, numbered.glyph)
+        assertEquals(50L, numbered.screenLogId)
+    }
+
+    @Test
     fun matching_requires_the_caller_to_normalize_first() {
         // Contract: PlatformCall.e164 is the normalized identity; a raw-only
         // row (e164 null) is treated as unmatchable, never fuzzy-matched.
@@ -83,13 +107,6 @@ class RecentsMergeTest {
         // exactly one of the two calls carries the annotation; the other stands bare
         assertEquals(1, merged.count { it.screenLogId == 10L })
         assertEquals(1, merged.count { it.screenLogId == null })
-    }
-
-    @Test
-    fun withheld_numbers_never_match() {
-        val withheld = call(id = 1, e164 = null)
-        val merged = RecentsMerge.merge(listOf(withheld), listOf(log(e164 = null)))
-        assertEquals(Glyph.NONE, merged[0].glyph)
     }
 
     @Test

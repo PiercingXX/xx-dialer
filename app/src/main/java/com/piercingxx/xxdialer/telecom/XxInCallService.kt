@@ -151,9 +151,19 @@ class XxInCallService : InCallService() {
                     return
                 }
                 entries[call] = Entry(logId = -1, entity = null, verdictName = "", answered = false)
-                scope.launch { runCatching { ringPipeline(call) }.onFailure { Log.w(TAG, "ring pipeline failed", it) } }
+                scope.launch {
+                    runCatching { ringPipeline(call) }
+                        .onFailure {
+                            Log.w(TAG, "ring pipeline failed", it)
+                            presentFailOpen(call)
+                        }
+                }
             }
             Call.STATE_CONNECTING, Call.STATE_DIALING -> {
+                maybeRecordEmergency(call)
+                markOngoing(call)
+            }
+            Call.STATE_ACTIVE, Call.STATE_HOLDING -> {
                 maybeRecordEmergency(call)
                 markOngoing(call)
             }
@@ -204,6 +214,7 @@ class XxInCallService : InCallService() {
                     presented.e164,
                     presented.cnap,
                     presented.tier,
+                    fullScreen = !hasOffHookPeer(call),
                 )
             }.onFailure { Log.w(TAG, "ringer downgrade failed", it) }
         }
@@ -402,7 +413,7 @@ class XxInCallService : InCallService() {
             at = nowEpoch,
             e164 = number,
             presentation = presentation,
-            verdict = verdict::class.simpleName.orEmpty(),
+            verdict = verdict.token(),
             reason = reason?.name.orEmpty(),
             tier = LogRows.tier(facts),
             stir = DetailsCodec.stirLabel(stirStatus),
@@ -429,38 +440,9 @@ class XxInCallService : InCallService() {
         if (entry != null) {
             entry.logId = logId
             entry.entity = row
-            entry.verdictName = verdict::class.simpleName.orEmpty()
-            entry.effectiveName = effective::class.simpleName.orEmpty()
+            entry.verdictName = verdict.token()
+            entry.effectiveName = effective.token()
             if (call.state == Call.STATE_ACTIVE) entry.answered = true
-        }
-
-        val displayName = mirror?.displayName ?: cnap ?: number ?: WITHHELD_LABEL
-        val line = contextLine(LogRows.tier(facts), reason, cnap)
-        val registry = ServiceLocator.channelRegistry(this)
-
-        when (val choice = RingRouter(registry).route(effective, facts, mirror)) {
-            is RingRouter.Choice.Ring ->
-                postIncoming(call, choice.channelId, displayName, line, number, cnap, LogRows.tier(facts))
-            RingRouter.Choice.Silent ->
-                postIncoming(
-                    call,
-                    registry.channelIdFor(PURPOSE_RING_SILENT),
-                    displayName, line, number, cnap, LogRows.tier(facts),
-                ) // Silence is still surfaced and answerable (§6, R7)
-            RingRouter.Choice.None -> {
-                // §5 stage table: a Block that only surfaces here (screener
-                // failed open or ran minimal-fact) must still DISPOSE of the
-                // call — this app owns the ringer, so an unpresented call
-                // would otherwise sit silent and undead until the caller
-                // gives up. reject() on a RINGING call declines it.
-                if (effective is Verdict.Block) {
-                    runCatching { call.reject(false, null) }
-                        .onFailure { Log.w(TAG, "ring-time block reject failed", it) }
-                    Log.i(TAG, "rejected at ring time: $reason")
-                } else {
-                    Log.i(TAG, "no presentation for verdict=$effective (Block here is defensive)")
-                }
-            }
         }
 
         if (entry == null) {
@@ -469,11 +451,57 @@ class XxInCallService : InCallService() {
                     finalize(
                         Entry(
                             logId, row,
-                            verdictName = verdict::class.simpleName.orEmpty(),
+                            verdictName = verdict.token(),
                             answered = call.state == Call.STATE_ACTIVE,
-                            effectiveName = effective::class.simpleName.orEmpty(),
+                            effectiveName = effective.token(),
                         ),
                     )
+                }
+            }
+            return
+        }
+
+        if (call.state != Call.STATE_RINGING) {
+            if (
+                call.state == Call.STATE_ACTIVE ||
+                call.state == Call.STATE_HOLDING ||
+                call.state == Call.STATE_CONNECTING ||
+                call.state == Call.STATE_DIALING
+            ) {
+                markOngoing(call)
+            }
+            return
+        }
+
+        val displayName = mirror?.displayName ?: cnap ?: number ?: WITHHELD_LABEL
+        val line = contextLine(LogRows.tier(facts), reason, cnap)
+        val registry = ServiceLocator.channelRegistry(this)
+        val waitingOverActive = hasOffHookPeer(call)
+
+        when (val choice = RingRouter(registry).route(effective, facts, mirror)) {
+            is RingRouter.Choice.Ring ->
+                postIncoming(
+                    call,
+                    if (waitingOverActive) registry.channelIdFor(PURPOSE_RING_SILENT) else choice.channelId,
+                    displayName, line, number, cnap, LogRows.tier(facts),
+                    fullScreen = !waitingOverActive,
+                )
+            RingRouter.Choice.Silent ->
+                postIncoming(
+                    call,
+                    registry.channelIdFor(PURPOSE_RING_SILENT),
+                    displayName, line, number, cnap, LogRows.tier(facts),
+                    fullScreen = !waitingOverActive,
+                )
+            RingRouter.Choice.None -> {
+                val divert = effective is Verdict.Block ||
+                    (effective is Verdict.Silence && effective.reason == Reason.SEND_TO_VOICEMAIL)
+                if (divert) {
+                    runCatching { call.reject(false, null) }
+                        .onFailure { Log.w(TAG, "ring-time reject failed", it) }
+                    Log.i(TAG, "rejected at ring time: $reason")
+                } else {
+                    Log.i(TAG, "no presentation for verdict=$effective")
                 }
             }
         }
@@ -487,28 +515,72 @@ class XxInCallService : InCallService() {
         e164: String?,
         cnap: String?,
         tier: String?,
-    ) {
+        fullScreen: Boolean,
+    ): Boolean {
+        if (call.state != Call.STATE_RINGING) return false
         val person = Person.Builder().setName(displayName).setImportant(true).build()
         val show = showIntent(displayName, e164, contextLine, cnap, tier)
         val builder = Notification.Builder(this, channelId)
-            .setSmallIcon(R.mipmap.ic_launcher)
+            .setSmallIcon(R.drawable.ic_phone_incoming)
             .setCategory(Notification.CATEGORY_CALL)
             .setOngoing(true)
             .setContentIntent(show)
             .setContentTitle(displayName)
             .setContentText(contextLine)
             .setStyle(Notification.CallStyle.forIncomingCall(person, declineIntent(), answerIntent()))
-        // canUseFullScreenIntent exists only from API 34; before that the
-        // manifest USE_FULL_SCREEN_INTENT grant is unconditional.
-        val fsiAllowed = android.os.Build.VERSION.SDK_INT < 34 ||
-            notificationManager().canUseFullScreenIntent()
+        val fsiAllowed = fullScreen &&
+            (android.os.Build.VERSION.SDK_INT < 34 || notificationManager().canUseFullScreenIntent())
         if (fsiAllowed) {
             builder.setFullScreenIntent(show, true)
-        } // else: high-importance channel gives the heads-up; Setup offers the grant (§15)
-        notificationManager().notify(NotifIds.INCOMING, builder.build())
-        // Recorded in the same main-thread stretch as notify(): finalize's
-        // cancel discipline reads this to know whose card id INCOMING shows.
+        }
+        val notif = builder.build()
+        try {
+            notificationManager().notify(NotifIds.INCOMING, notif)
+        } catch (t: Throwable) {
+            Log.w(TAG, "incoming notify failed; foreground fallback", t)
+            try {
+                startForeground(NotifIds.INCOMING, notif, ServiceInfo.FOREGROUND_SERVICE_TYPE_PHONE_CALL)
+            } catch (t2: Throwable) {
+                Log.w(TAG, "incoming foreground fallback failed", t2)
+                return false
+            }
+        }
         presentedIncoming = Presented(call, displayName, contextLine, e164, cnap, tier)
+        return true
+    }
+
+    /** R9 for the ringer: this process owns ringing, so a thrown pipeline must still present. */
+    private fun presentFailOpen(call: Call) {
+        if (call.state != Call.STATE_RINGING) return
+        scope.launch {
+            runCatching {
+                ensureChannels()
+                val details = call.details
+                val name = details.contactDisplayName
+                    ?: details.callerDisplayName?.takeIf { it.isNotBlank() }
+                    ?: details.handle?.schemeSpecificPart
+                    ?: WITHHELD_LABEL
+                val channelId = ServiceLocator.channelRegistry(this@XxInCallService)
+                    .channelIdFor(PURPOSE_RING_DEFAULT)
+                val presented = postIncoming(
+                    call, channelId, name, getString(R.string.app_name),
+                    DetailsCodec.numberE164(details.handle?.schemeSpecificPart),
+                    DetailsCodec.cnapName(details.callerDisplayName, details.callerDisplayNamePresentation),
+                    null,
+                    fullScreen = !hasOffHookPeer(call),
+                )
+                if (!presented) Log.w(TAG, "fail-open present produced no card")
+            }.onFailure { Log.w(TAG, "fail-open present failed", it) }
+        }
+    }
+
+    private fun hasOffHookPeer(except: Call): Boolean = tracked.any { call ->
+        call !== except && when (call.state) {
+            Call.STATE_ACTIVE, Call.STATE_HOLDING, Call.STATE_DIALING, Call.STATE_CONNECTING,
+            Call.STATE_SELECT_PHONE_ACCOUNT, Call.STATE_PULLING_CALL,
+            -> true
+            else -> false
+        }
     }
 
     private suspend fun finalize(entry: Entry) {
@@ -551,7 +623,7 @@ class XxInCallService : InCallService() {
     private suspend fun postOngoing() {
         val registry = ServiceLocator.channelRegistry(this)
         val notif = Notification.Builder(this, registry.channelIdFor(PURPOSE_ONGOING))
-            .setSmallIcon(R.mipmap.ic_launcher)
+            .setSmallIcon(R.drawable.ic_phone_incoming)
             .setCategory(Notification.CATEGORY_CALL)
             .setOngoing(true)
             .setContentIntent(inCallIntent())
@@ -706,9 +778,10 @@ class XxInCallService : InCallService() {
     private companion object {
         const val TAG = "XxInCallService"
         const val PURPOSE_RING_SILENT = "ring_silent"
+        const val PURPOSE_RING_DEFAULT = "ring_default"
         const val PURPOSE_ONGOING = "ongoing"
-        const val VERDICT_SILENCE = "Silence"
-        const val VERDICT_BLOCK = "Block"
+        const val VERDICT_SILENCE = Verdict.TOKEN_SILENCE
+        const val VERDICT_BLOCK = Verdict.TOKEN_BLOCK
         const val VERDICT_NONE = "None"
         /** Raw reason token for §4.3 platform-requested silence; UI falls back to the raw string. */
         const val REASON_PLATFORM_SILENCED = "PLATFORM_SILENCED"

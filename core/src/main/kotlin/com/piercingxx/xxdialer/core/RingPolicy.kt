@@ -32,23 +32,22 @@ object RingPolicy {
     }
 
     /**
-     * Withheld numbers take the hidden-caller policy ahead of the unknown
-     * rows. UNKNOWN flows into rows 10–12 like any other unknown caller;
-     * BLOCK/SILENCE short-circuit. Starred/saved are impossible for withheld
-     * calls (no number to look up) so their rows above have already had their
-     * say by the time we get here.
+     * Hidden-caller policy is for withheld presentation only. An ALLOWED
+     * number that failed E.164 is unknown (§15), never hidden — otherwise
+     * short-codes die under hidden-BLOCK.
      */
     private fun unknownVerdict(now: LocalDateTime, facts: CallerFacts, rules: Rules): Verdict {
-        if (facts.number == null) {
+        if (facts.withheld) {
             return when (rules.hiddenCallerPolicy) {
                 HiddenCallerPolicy.BLOCK -> Verdict.Block
                 HiddenCallerPolicy.SILENCE -> Verdict.Silence(Reason.HIDDEN_POLICY)
                 HiddenCallerPolicy.UNKNOWN -> windowVerdict(now, null, rules)
             }
         }
-        return if (rules.silencePatterns.any { it.matches(facts.number) })
+        val number = facts.number
+        return if (number != null && rules.silencePatterns.any { it.matches(number) })
             Verdict.Silence(Reason.PATTERN_SILENCED) // row 10
-        else windowVerdict(now, facts.number, rules)
+        else windowVerdict(now, number, rules)
     }
 
     private fun windowVerdict(now: LocalDateTime, number: String?, rules: Rules): Verdict =
@@ -69,13 +68,15 @@ object RingPolicy {
         rules: Rules,
     ): Verdict {
         var result = verdict
-        // D10: a repeat caller pierces any Silence, never a Block. When this
-        // fires, the log derives its REPEAT_CALLER reason from the facts.
+        // D11: SEND_TO_VOICEMAIL is a platform divert, not a silence we may
+        // promote. D10/D15 pierce every other Silence, never a Block, never
+        // a voicemail divert.
+        if (result is Verdict.Silence && result.reason == Reason.SEND_TO_VOICEMAIL) {
+            return result
+        }
         if (result is Verdict.Silence && facts.repeatCaller && rules.repeatCallerEnabled) {
             result = Verdict.Ring(Tone.UNKNOWN)
         }
-        // D15: while Expecting-a-call is active, any remaining Silence rings.
-        // Blocks still block.
         if (result is Verdict.Silence && bypassActive(now, rules.bypassUntil)) {
             result = Verdict.Ring(Tone.UNKNOWN)
         }

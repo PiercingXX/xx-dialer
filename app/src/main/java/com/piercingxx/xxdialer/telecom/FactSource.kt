@@ -50,6 +50,7 @@ class FactSource(private val db: XxDatabase, private val context: Context) {
             cnapName = null, // CNAP is context-only; arrives at the UI layer later (§6)
             emergencyWindow = emergencyCallbackExtraPresent ||
                 emergencyWindow(nowEpochMillis, elapsedNowMillis),
+            withheld = DetailsCodec.isWithheld(presentation),
         )
     }
 
@@ -136,8 +137,24 @@ class FactSource(private val db: XxDatabase, private val context: Context) {
 
     private companion object {
         const val TAG = "FactSource"
-        const val REPEAT_WINDOW_MS = 15L * 60 * 1000 // D10
-        const val RECENT_OUTGOING_MS = 48L * 60 * 60 * 1000 // D14
+        const val REPEAT_WINDOW_MS = EnhancementWindows.REPEAT_MS
+        const val RECENT_OUTGOING_MS = EnhancementWindows.RECENT_OUTGOING_MS
         const val RECENT_OUTGOING_BUDGET_MS = 750L // M2: bound the cold CallLog scan
+    }
+}
+
+/** D10/D14 window arithmetic — exclusive at the far edge, JVM-testable. */
+internal object EnhancementWindows {
+    const val REPEAT_MS = 15L * 60 * 1000
+    const val RECENT_OUTGOING_MS = 48L * 60 * 60 * 1000
+
+    fun inRepeatWindow(nowMillis: Long, lastSilenceAtMillis: Long): Boolean {
+        val age = nowMillis - lastSilenceAtMillis
+        return age in 0 until REPEAT_MS
+    }
+
+    fun inRecentOutgoingWindow(nowMillis: Long, lastOutgoingAtMillis: Long): Boolean {
+        val age = nowMillis - lastOutgoingAtMillis
+        return age in 0 until RECENT_OUTGOING_MS
     }
 }

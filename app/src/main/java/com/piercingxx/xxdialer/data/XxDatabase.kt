@@ -4,8 +4,9 @@ import androidx.room.Database
 import androidx.room.RoomDatabase
 
 /**
- * The FactStore (WS4, §11). Version 1 only — there are no migrations and no
- * destructive fallback: a future schema change ships a real migration.
+ * The FactStore (WS4, §11). No destructive fallback: every bump ships a real
+ * migration. v2: contact_mirror PK is (lookupKey, e164) so a contact's second
+ * number is still saved at screening.
  */
 @Database(
     entities = [
@@ -17,7 +18,7 @@ import androidx.room.RoomDatabase
         SettingEntity::class,
         EmergencyMarkerEntity::class,
     ],
-    version = 1,
+    version = 2,
     exportSchema = false,
 )
 abstract class XxDatabase : RoomDatabase() {

@@ -6,6 +6,7 @@ import android.app.role.RoleManager
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.view.View
@@ -56,6 +57,11 @@ class SetupActivity : AppCompatActivity() {
             auditStatic()
         }
 
+    private val notificationsLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) {
+            auditStatic()
+        }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivitySetupBinding.inflate(layoutInflater)
@@ -67,6 +73,7 @@ class SetupActivity : AppCompatActivity() {
         binding.btnAppInfoScreening.setOnClickListener { openAppInfo() }
         binding.btnContacts.setOnClickListener { contactsLauncher.launch(Manifest.permission.READ_CONTACTS) }
         binding.btnFsi.setOnClickListener { openFullScreenIntentGrant() }
+        binding.btnNotifications.setOnClickListener { openNotificationGrant() }
         binding.btnDone.setOnClickListener {
             seedObserveWeekIfAbsent()
             startActivity(Intent(this, RecentsActivity::class.java))
@@ -135,6 +142,14 @@ class SetupActivity : AppCompatActivity() {
             warnText = "heads-up only — calls still ring, just not over the lock screen",
         )
         binding.btnFsi.isVisible = !fsiAllowed
+
+        val notificationsOn = NotificationManagerCompat.from(this).areNotificationsEnabled()
+        binding.warningNotifications.isVisible = !notificationsOn
+        binding.btnNotifications.isVisible = !notificationsOn
+        if (!notificationsOn) {
+            binding.glyphChannels.text = GLYPH_WARN
+            binding.glyphChannels.setTextColor(glyphColor(ok = false))
+        }
     }
 
     /**
@@ -167,10 +182,17 @@ class SetupActivity : AppCompatActivity() {
                     },
                 )
             }
-            binding.glyphChannels.text = if (warnings.isEmpty()) GLYPH_OK else GLYPH_WARN
-            binding.glyphChannels.setTextColor(glyphColor(ok = warnings.isEmpty()))
-            binding.statusChannels.text =
-                if (warnings.isEmpty()) "four channels created · healthy" else "channel warnings:"
+            val notificationsOn = NotificationManagerCompat.from(this@SetupActivity).areNotificationsEnabled()
+            val healthy = warnings.isEmpty() && notificationsOn
+            binding.glyphChannels.text = if (healthy) GLYPH_OK else GLYPH_WARN
+            binding.glyphChannels.setTextColor(glyphColor(ok = healthy))
+            binding.statusChannels.text = when {
+                !notificationsOn -> "notifications off — calls cannot ring"
+                warnings.isEmpty() -> "four channels created · healthy"
+                else -> "channel warnings:"
+            }
+            binding.warningNotifications.isVisible = !notificationsOn
+            binding.btnNotifications.isVisible = !notificationsOn
         }
     }
 
@@ -277,6 +299,19 @@ class SetupActivity : AppCompatActivity() {
             Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
                 .setData(Uri.fromParts("package", packageName, null)),
         )
+    }
+
+    private fun openNotificationGrant() {
+        if (Build.VERSION.SDK_INT >= 33) {
+            notificationsLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        } else {
+            runCatching {
+                startActivity(
+                    Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                        .putExtra(Settings.EXTRA_APP_PACKAGE, packageName),
+                )
+            }
+        }
     }
 
     /** API 31+ grant screen for USE_FULL_SCREEN_INTENT (minSdk 31). */

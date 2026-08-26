@@ -46,10 +46,7 @@ class EmergencyWindowTest {
     }
 
     @Test
-    fun rebootResetsElapsed_corruptedReadingErrsTowardOpen() {
-        // Reboot resets elapsed to near-zero, making it look fresh; per the
-        // documented OR rule every corrupted reading errs toward ringing.
-        // Wall alone can only close the window before a reboot.
+    fun shortUptimeElapsedStillFresh_keepsWindowOpenWhenWallStale() {
         assertTrue(
             EmergencyWindow.active(
                 nowEpochMillis = nowEpoch,
@@ -58,13 +55,36 @@ class EmergencyWindowTest {
                 markerElapsedMillis = 5_000,
             )
         )
-        // Without any elapsed reading at all, the truthful wall reading closes it.
         assertFalse(
             EmergencyWindow.active(
                 nowEpochMillis = nowEpoch,
                 markerWallMillis = nowEpoch - window - 1,
                 nowElapsedMillis = 10_000,
                 markerElapsedMillis = null,
+            )
+        )
+    }
+
+    @Test
+    fun rebootMakesElapsedUnusable_staleWallClosesWindow() {
+        assertFalse(
+            EmergencyWindow.active(
+                nowEpochMillis = nowEpoch,
+                markerWallMillis = nowEpoch - window - 1,
+                nowElapsedMillis = 10_000,
+                markerElapsedMillis = 5_000_000_000L,
+            )
+        )
+    }
+
+    @Test
+    fun rebootMakesElapsedUnusable_freshWallKeepsWindowOpen() {
+        assertTrue(
+            EmergencyWindow.active(
+                nowEpochMillis = nowEpoch,
+                markerWallMillis = nowEpoch - 1_000,
+                nowElapsedMillis = 10_000,
+                markerElapsedMillis = 5_000_000_000L,
             )
         )
     }

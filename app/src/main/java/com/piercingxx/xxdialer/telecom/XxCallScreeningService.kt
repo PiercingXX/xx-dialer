@@ -6,6 +6,7 @@ import android.telecom.CallScreeningService
 import android.util.Log
 import com.piercingxx.xxdialer.ServiceLocator
 import com.piercingxx.xxdialer.core.Mode
+import com.piercingxx.xxdialer.core.Reason
 import com.piercingxx.xxdialer.core.RingPolicy
 import com.piercingxx.xxdialer.core.Verdict
 import com.piercingxx.xxdialer.data.ScreenLogEntity
@@ -95,15 +96,17 @@ class XxCallScreeningService : CallScreeningService() {
         val rules = ServiceLocator.rules(this).current()
         val verdict = RingPolicy.decide(now, facts, rules)
         val mirrorSaved = facts.saved
-        val wantsBlock = verdict is Verdict.Block && !mirrorSaved // contacts double-guard (§8)
+        val voicemail = verdict is Verdict.Silence && verdict.reason == Reason.SEND_TO_VOICEMAIL
+        val wantsBlock = verdict is Verdict.Block && !mirrorSaved
         val observing = settings.enforcementMode() == Mode.OBSERVING
+        val reject = (wantsBlock || voicemail) && !observing
 
         val row = ScreenLogEntity(
             id = 0,
             at = nowEpoch,
             e164 = number,
             presentation = presentation,
-            verdict = verdict::class.simpleName ?: "Unknown",
+            verdict = verdict.token(),
             reason = LogRows.reason(verdict, facts, rules, now)?.name.orEmpty(),
             tier = LogRows.tier(facts),
             stir = DetailsCodec.stirLabel(details.callerNumberVerificationStatus),
@@ -114,8 +117,8 @@ class XxCallScreeningService : CallScreeningService() {
         // Only Block rows are logged here (R7); allow rows are logged at ring
         // time by the InCallService, which owns the full verdict. The observe
         // gate lives HERE (todo #6): observed blocks are logged but allowed.
-        if (wantsBlock) persist(row)
-        return Outcome(block = wantsBlock && !observing, row = row)
+        if (wantsBlock || reject) persist(row)
+        return Outcome(block = reject, row = row)
     }
 
     private suspend fun persist(row: ScreenLogEntity) {

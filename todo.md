@@ -3,66 +3,18 @@
 Spec: [design.md](design.md). Target: Pixel 9 Pro (`caiman`), GrapheneOS,
 Android 17 / SDK 37.
 
-## Status ledger — 2026-08-25 (functional-completeness pass)
+## Status ledger — 2026-08-25 (ship-readiness)
 
-A two-agent audit against design.md found and closed the gaps below; all
-device gates remain OPEN pending `caiman`. Full `./gradlew build` green
-(lint + lintVitalRelease + R8), 484 JVM tests pass, no INTERNET.
+WS0–10 are **code-complete at the JVM**. A full-app review against design.md
+found the policy core, observe gate (D13), R8 no-INTERNET, and screener
+fail-open sound — and found the ringer, mirror, and in-call path are **not**
+daily-driver safe. This file is the close-out list for those findings.
 
-- **Mirror engine armed** (WS4 was code-complete but never WIRED): singleton
-  via ServiceLocator, initial `refreshAll()` + observer at boot, foreground
-  sweep + daily-digest flush via ActivityLifecycleCallbacks.
-- **Tab navigation wired** — `TabBar.bind` was never called from any screen;
-  now bound in all four tabs, plus the §12 tab-hiding setting (Rules row).
-- **Ring-time Block disposes the call** — `Choice.None` with a Block verdict
-  now rejects instead of leaving an undead silent call.
-- **Observe-gate integrity (D13)**: the silenced-call card follows the
-  EFFECTIVE verdict, and observed screener-blocks no longer double-log
-  (tallies were double-counting).
-- **In-call surface auto-launches** on answer and on outgoing place; the
-  incoming screen shows the resolved display name; decline/answer target
-  the exact ringing call.
-- **Screener off main thread** — async respondToCall replaces the 4.5 s
-  `runBlocking` on the main looper.
-- **Ring-next-time is real**: WRITE_CONTACTS declared (role auto-grants),
-  one-tap star from both notification cards, Recents/People writes land.
-- **Settings that existed only as keys got UI**: answer interaction,
-  Recents grouping, Expecting-a-call duration (30 m/2 h/8 h); daily
-  notification digest actually flushes; QS tile got its icon+label
-  (was un-addable); §4.4 upstream-blocking detection warns on Rules;
-  enforcement offer now posts its notification; voicemail long-press uses
-  the `voicemail:` scheme; E164 region follows the SIM.
+**Good to go as:** JVM-complete only. Observe-mode dogfood on a live SIM is
+the next experiment after WS11. Enforce-mode daily drive is not.
 
-Code-complete at the JVM level; nothing device-proven. This ledger
-supersedes the stale "Status: nothing built" line kept below.
-
-- **WS0 BUILT-AWAITING-DEVICE** — probe APK builds
-  (`./gradlew :probe:assembleDebug` → `probe/build/outputs/apk/debug/probe-debug.apk`);
-  run [PROBE.md](PROBE.md) on `caiman`, paste answers into design §4.
-- **WS1 DONE** — gate: `./gradlew :app:assembleDebug` PASS.
-- **WS2 DONE** — gate: §6 truth table, 66 named tests PASS in `core/`.
-- **WS3 CODE-COMPLETE** — Setup flow + InCallService + `placeCall()` in tree;
-  device gate OPEN.
-- **WS4 CODE-COMPLETE** — Room v1 + mirror engine (`data/`,
-  `ContactMirror.kt`); empty-grant-on-device unproven; device gate OPEN.
-- **WS5 CODE-COMPLETE** — screening fail-open (`XxCallScreeningService`);
-  spam-block-live and the 5 s budget unproven; device gate OPEN.
-- **WS6 CODE-COMPLETE** — channels/router/notifier/tile (`ring/`); headline
-  behavior needs `caiman`.
-- **WS7 PARTIAL** — incoming/in-call UI ships this cycle (incl. call-waiting
-  surface); daily-driver gate OPEN.
-- **WS8 DONE-CODE** — recents/keypad/people + T9.
-- **WS9 DONE-CODE** — rules/test-a-number/log/tallies/import-backup +
-  missed-call notification ownership.
-- **WS10 MOSTLY-DONE** — backup hardened, Expecting-a-call bypass + QS tile
-  done, hidden-caller policy + repeat toggle done; offline blocklist import
-  found in tree (`util/BlocklistImport.kt` + `RulesActivity` button +
-  `BlocklistImportTest`) — code-complete, JVM-tested (update 2026-08-23).
-
----
-
-**Status: nothing built.** The repo holds `design.md`, this file, and
-`design/` (the screen mockup + research notes).
+Device gates remain OPEN: probe answers in [PROBE.md](PROBE.md), live-SIM
+incoming/outgoing/waiting, instrumented suites (still `@Ignore`d).
 
 ---
 
@@ -73,73 +25,146 @@ are source-verified on AOSP but unproven on the GrapheneOS build in hand:
 the Restricted Settings gate on `ROLE_DIALER` for sideloaded apps, channel
 ringing with the `DEFAULT_RINGTONE_URI` indirection, Contact Scopes' effect
 on `PhoneLookup` at call time, and what STIR statuses the real carrier
-delivers. Nope-Mode cost one factory reset to learn its provisioning window
-the hard way; the probe APK costs a day and is thrown away. Do it first.
+delivers. Do it on `caiman` before flipping enforcement.
 
 **2. The failure direction is a law, not a preference.** Every failure —
-timeout, stale mirror, empty Contact Scopes grant, crashed screener — must
-resolve to *the phone rings*. Blocks come only from explicit signals (design
-D5). If a change makes any failure path quieter instead of louder, it is
-wrong regardless of how reasonable it looks.
+timeout, stale mirror, empty Contact Scopes grant, crashed screener **or
+ringer** — must resolve to *the phone rings*. Blocks come only from explicit
+signals (design D5). If a change makes any failure path quieter instead of
+louder, it is wrong.
 
-**3. The tone mechanism is notification channels, and channels are
-append-only.** A channel's sound is immutable after creation, and
-delete-and-recreate with the same ID resurrects the old settings. Every
-tone change mints a new versioned channel ID (`ring_unknown_v2`). The
-`channel_registry` table exists for exactly this; there is no shortcut.
+**3. Channels are append-only.** A channel's sound is immutable after
+creation. Tone changes mint a new versioned id (`ring_unknown_v2`). Never
+delete-and-recreate the same id.
 
 **4. Hold both roles.** Default dialer alone is not enough — if any other
 app holds `ROLE_CALL_SCREENING`, XX-Dialer's screener is silently never
-invoked. Setup claims both and detects the conflict (design §4.1).
+invoked.
 
-**5. The pure core carries the correctness burden.** `RingPolicy`, `Windows`,
-and `E164` import nothing from `android.*` and are fully testable on the
-JVM. WS2 finishes — the whole §6 truth table green — before any Android
-code consumes a verdict. This is the same discipline as Nope-Mode WS3, for
-the same reason: the part that must be right is the part that needs no
-device.
+**5. The pure core carries the correctness burden.** `RingPolicy`, `Window`,
+and `E164` import nothing from `android.*`. A workstream with failing tests
+is not done.
 
 **6. Observe mode is a gate, not a branch.** The verdict path runs
-identically whether enforcing or observing; observe differs only at the
-final gate (design §6, D13). If observe mode ever needs its own code path,
-the design has been violated — a week of observation is only worth anything
-because it exercises the real code. Dogfooding at the WS7 gate happens in
-observe mode first.
-
-### One decision still open
-
-**O1: Views or Compose?** (design §18.) The spec assumes Views (family
-default — Launcher, Nope-Mode); Vitals went Compose by operator ruling.
-Blocks WS3's screen work, not WS0–2. Needs the operator's call; if Compose,
-nothing else in the spec changes.
+identically; observe differs only at the final gate (D13).
 
 ---
 
-## Workstreams
+## Workstreams 0–10 (historical)
 
-| WS | Scope | Gate / exit criterion |
+| WS | Scope | Status |
 |---|---|---|
-| 0 | **Probe APK** (throwaway, separate module): request both roles on-device; post a CallStyle notification on a channel with `IN_CALL_SERVICE_RINGING` set and confirm it rings; flip the system ringtone and confirm the indirection follows; enable Contact Scopes with a partial grant and observe `PhoneLookup`; log STIR status for a few real calls | Written answers to all four questions pasted into design §4 replacing the [VERIFY] flags |
-| 1 | Skeleton — gradle, manifest (§13), packages (§14), vendored brand tokens, shipped fonts, launcher icon | Builds, installs, is visibly a PiercingXX app |
-| 2 | `core/` — `RingPolicy` (repeat-pierce on every Silence, recent-outgoing 48 h, Expecting-a-call bypass, observe gate), `Windows`, `E164`, `Verdict`; the full §16 JVM suite | **Every row of the §6 table has a named passing test** |
-| 3 | Dialer plumbing — Setup flow (role requests, Restricted Settings walk-through, held-state verification), `XxInCallService`, place/receive with a bare-bones screen, `placeCall()` everywhere | Can daily-drive basic calls, ugly |
-| 4 | FactStore — contact mirror, observer, on-foreground sweep, Business tier storage, Scopes-degradation states | Empty-grant run classifies everyone unknown, no crash, no re-prompt |
-| 5 | `XxCallScreeningService` + system blocklist writes + pattern rules with contacts exemption + STIR action | Spam block live end-to-end; screener answers well inside 5 s from the mirror |
-| 6 | Ringer — `ChannelRegistry`, verdict → channel routing, silent channel, FSI/heads-up, `onSilenceRinger`, **observe gate wired last-in-chain** | **The headline works: unknown caller rings the unknown tone 9–17, silent with reason outside — and observe mode provably changes only the gate** |
-| 7 | Incoming + in-call UI — CallStyle, answer-interaction setting, CNAP context line, in-call controls, call waiting (hold/swap), audio routing both paths | **Daily-driver gate: stock dialer replaced for real, in observe mode, including one deliberate call-waiting test** |
-| 8 | Recents (chips, verdict rows, starred strip, row actions) + Keypad (T9 match) + People (tiers, contact sheet) | |
-| 9 | Rules screen — enforcement switch + observe banner, precedence list, window editors, mask builder + neighbor-spoof preset, tone picker, silenced-notification policy, Test-a-number, full log with reasons + weekly tallies; missed-call notification ownership with inline actions (Call back · Ring next time · Block) and burst batching | R7 complete: every screened call explains itself |
-| 10 | Gson backup/restore (tiers, patterns, settings, windows); **Expecting-a-call bypass + QS tile**; polish — hidden-caller policy, repeat toggle, offline blocklist import; upstream-setting detection warnings | v1 |
+| 0 | Probe APK | BUILT-AWAITING-DEVICE |
+| 1 | Skeleton | DONE |
+| 2 | `core/` §6 truth table | DONE (66 named tests) |
+| 3 | Dialer plumbing | CODE-COMPLETE; device gate OPEN |
+| 4 | FactStore + mirror | CODE-COMPLETE; device gate OPEN |
+| 5 | Call screening | CODE-COMPLETE; device gate OPEN |
+| 6 | Ringer / channels | CODE-COMPLETE; device gate OPEN |
+| 7 | Incoming + in-call UI | PARTIAL; daily-driver gate OPEN |
+| 8 | Recents / keypad / people | DONE-CODE |
+| 9 | Rules / log / missed-call | DONE-CODE |
+| 10 | Backup / Expecting-a-call / polish | MOSTLY-DONE |
 
-WS3–6 produce a functionally complete headless policy dialer with an ugly
-screen. UI is deliberately late: the ring policy is the part that has to be
-right, and it is the part that can be proven correct without a device.
+O1 (Views vs Compose) is closed: Views, as spec D7.
+
+The stale "Status: nothing built." line that used to live below the first
+ledger is retired. The repo is a working tree, not a spec-only checkout.
+
+---
+
+## WS11 — Ship-readiness (this cycle)
+
+Gate: `./gradlew :core:test :app:testDebugUnitTest` green, plus
+`:app:assembleDebug` with `verifyNoInternet`. Device proof is **not** this
+gate — it stays OPEN.
+
+### Ringer fail-open (R9)
+
+- [x] **T1.** `XxInCallService` owns `IN_CALL_SERVICE_RINGING`, so the system
+      will not ring. Pipeline/`notify()` failure must still present a
+      default-tone CallStyle (or `startForeground` fallback) for a still-
+      `RINGING` call. Never leave a ringing call unpresented.
+- [x] **T2.** After live PhoneLookup, skip `postIncoming` unless
+      `call.state == STATE_RINGING`. If it became `ACTIVE` mid-pipeline, go
+      ongoing only. If the call is gone (`entry == null`), do not present.
+- [x] **T4.** Second call while in-call: heads-up only, no FSI, no second
+      ringtone over the active audio path (design §15). Drive accept via
+      `CallGrid.answerWaiting()`.
+- [x] **T5.** `onCallAdded` of an already-`ACTIVE`/`HOLDING` call (rebind,
+      crash, role grant mid-call) must `markOngoing` + `maybeRecordEmergency`.
+- [x] **T15.** CallStyle `setSmallIcon` uses a monochrome status drawable
+      (`ic_phone_incoming`), never the adaptive launcher mipmap.
+
+### Policy / facts
+
+- [x] **T6.** `EmergencyWindow`: if `nowElapsed < markerElapsed`, treat
+      elapsed as a reboot (unusable) and close on wall time only. The OR is
+      for clock skew, not monotonic-clock reset.
+- [x] **T7.** `SEND_TO_VOICEMAIL` is honored: D10/D15 must not pierce it;
+      ring-time routes to `None` and rejects toward voicemail. Observe mode
+      still rings (D13 last gate).
+- [x] **T8.** Hidden-caller policy applies only when presentation is
+      withheld. An ALLOWED number that fails E.164 is unknown, never hidden.
+      Add `CallerFacts.withheld`.
+- [x] **T10.** Persist a stable verdict token (`Block`/`Silence`/`Ring`)
+      independent of `KClass.simpleName`. Keep those names through R8.
+      `proguard-rules.pro` keeps `Verdict` as belt-and-suspenders.
+
+### Mirror
+
+- [x] **T3.** `contact_mirror` is keyed by `(lookupKey, e164)` — Room v2 +
+      real migration, no destructive fallback. `MirrorRows.dedupe` keeps
+      every resolvable number. People list still shows one row per contact;
+      the sheet lists every number. Screening `findByE164` then sees the
+      second number as saved (contacts exemption / D5).
+
+### In-call UI
+
+- [x] **T9.** `CallGrid` listeners are a list. `InCallActivity.onDestroy`
+      removes only its own listener so rotation cannot wipe the next
+      instance.
+- [x] **T11.** `swap()` waits for `STATE_HOLDING` before `unhold` of the
+      parked call. Fallback timer if the hold callback never arrives.
+
+### Setup / Recents / missed-call
+
+- [x] **T12.** Setup warns (does not hard-gate `isFullyConfigured`) when
+      notifications are disabled or ring channels are `IMPORTANCE_NONE`.
+      Offer the system notification screen / `POST_NOTIFICATIONS`.
+- [x] **T13.** Silenced-notification `"never"` applies only to enforced
+      Silence. A ringing-then-missed call (including observed-silence, which
+      rang) still posts Telecom's missed-call card.
+- [x] **T14.** Recents merge pairs withheld platform rows with withheld
+      `screen_log` rows on time proximity so R7 glyphs still attach.
+
+### Tests
+
+- [x] **T16.** `testInstrumentationRunner` on `:app`. Leave on-device
+      androidTest `@Ignore`d (still needs `caiman`). Add JVM tests for:
+      T6 reboot, T7 no-pierce voicemail, T8 unparseable-vs-hidden, T3
+      multi-number dedupe, T11 swap sequencing, T13 missed-notif policy,
+      T14 withheld Recents join, unknown-window 08:59/09:00/16:59/17:00,
+      repeat 14:59/15:01 and recent-outgoing 47:59/48:01 against a fake
+      clock.
+
+WS11 JVM gate: **350 tests green** (`:core` 72, `:app` 278),
+`assembleDebug` + `verifyNoInternet` PASS. Device proof still OPEN.
+
+### After WS11 (still OPEN — not this cycle)
+
+- Run [PROBE.md](PROBE.md) on `caiman`; paste V1–V4 into design §4.
+- One real incoming, one real outgoing, one call-waiting, one
+  voicemail-contact, one short-code — **observe mode, live SIM**.
+- Un-ignore a smoke subset of androidTest on that Pixel.
+- Then, and only then, offer enforcement.
+
+---
 
 ## Standing rules
 
 - A workstream with failing tests is not done.
-- `aapt2 dump permissions` shows no `INTERNET` at every WS exit — it is the
-  brand claim, and it rots exactly once.
+- `aapt2 dump permissions` shows no `INTERNET` at every WS exit.
 - Instrumented tests for WS5–7 run on `caiman` itself; the emulator does not
   have GrapheneOS's Contact Scopes, its exposed block-unknown setting, or a
   real carrier's STIR behavior.

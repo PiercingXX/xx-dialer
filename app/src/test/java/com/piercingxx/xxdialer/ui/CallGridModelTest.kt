@@ -149,4 +149,12 @@ class DurationFormatTest {
     fun negative_elapsed_clamps_to_zero() {
         assertEquals("00:00", formatDuration(-30))
     }
+
+    @Test
+    fun swap_unholds_parked_only_when_the_held_leg_reports_holding() {
+        val req = SwapRequest(holdingKey = "a", parkedKey = "b")
+        assertEquals("b", onHoldingForSwap(req, "a"))
+        assertNull(onHoldingForSwap(req, "b"))
+        assertNull(onHoldingForSwap(null, "a"))
+    }
 }

@@ -40,8 +40,7 @@ once the log has earned it; it is never flipped for you.
 ## Status 🧪
 
 Installed and holding both roles — `ROLE_DIALER` and `ROLE_CALL_SCREENING` on a
-Pixel 6 running GrapheneOS. 304 JVM tests green, 66 of them the policy's truth
-table.
+Pixel 6 running GrapheneOS. 350 JVM tests green, 72 of them in `:core`.
 
 **Not proven against a live SIM.** No real call has been placed, answered, or
 screened through a carrier. The ring policy is proven by those truth-table tests

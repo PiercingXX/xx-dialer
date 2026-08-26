@@ -111,7 +111,7 @@ class PeopleActivity : AppCompatActivity() {
         }
         val items = mutableListOf<PeopleItem>()
         if (rows.isNotEmpty()) {
-            val sorted = rows.sortedBy { it.displayName.lowercase() }
+            val sorted = rows.distinctBy { it.lookupKey }.sortedBy { it.displayName.lowercase() }
             val starred = sorted.filter { it.starred }
             val biz = sorted.filter { !it.starred && it.lookupKey in bizKeys }
             val everyone = sorted.filter { !it.starred && it.lookupKey !in bizKeys }

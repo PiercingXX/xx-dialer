@@ -126,8 +126,12 @@ object CallGrid {
     private val activeSince = HashMap<Call, Long>()
     private val handler = Handler(Looper.getMainLooper())
 
-    /** Notified on the main thread after every mutation. */
-    @Volatile var onChange: (() -> Unit)? = null
+    /** Notified on the main thread after every mutation. Per-instance, never a single slot. */
+    private val listeners = CopyOnWriteArrayList<() -> Unit>()
+
+    fun addListener(listener: () -> Unit) { listeners.add(listener) }
+
+    fun removeListener(listener: () -> Unit) { listeners.remove(listener) }
 
     /**
      * Set by XxInCallService.onCreate; it forwards onCallAdded/onCallRemoved
@@ -142,9 +146,18 @@ object CallGrid {
     /** Pushed by the service on onCallEndpointChanged (API 34+). */
     @Volatile private var currentEndpoint: CallEndpoint? = null
 
+    private var swapRequest: SwapRequest? = null
+
+    private val swapFallback = Runnable {
+        val req = swapRequest ?: return@Runnable
+        swapRequest = null
+        calls.firstOrNull { stableKey(it) == req.parkedKey }?.let(::unhold)
+    }
+
     private val callCallback = object : Call.Callback() {
         override fun onStateChanged(call: Call, newState: Int) {
             if (newState == Call.STATE_ACTIVE) recordAnchor(call)
+            if (newState == Call.STATE_HOLDING) completeSwapIfHolding(stableKey(call))
             notifyChange()
         }
         override fun onDetailsChanged(call: Call, details: Call.Details) {
@@ -256,13 +269,22 @@ object CallGrid {
 
     fun end(call: Call) { runCatching { call.disconnect() } }
 
-    /** §12 swap: the top-banner toggle — hold the live call, resume the held. */
+    /** §12 swap: hold the live call, unhold the parked one only once HOLDING lands. */
     fun swap(): Boolean {
         val active = calls.firstOrNull { lineOf(it.state) == Line.ACTIVE } ?: return false
         val held = calls.firstOrNull { lineOf(it.state) == Line.HELD } ?: return false
+        swapRequest = SwapRequest(holdingKey = stableKey(active), parkedKey = stableKey(held))
         hold(active)
-        unhold(held)
+        handler.removeCallbacks(swapFallback)
+        handler.postDelayed(swapFallback, SWAP_UNHOLD_FALLBACK_MS)
         return true
+    }
+
+    private fun completeSwapIfHolding(holdingKey: String) {
+        val parked = onHoldingForSwap(swapRequest, holdingKey) ?: return
+        swapRequest = null
+        handler.removeCallbacks(swapFallback)
+        calls.firstOrNull { stableKey(it) == parked }?.let(::unhold)
     }
 
     /**
@@ -364,8 +386,19 @@ object CallGrid {
     }
 
     private fun notifyChange() {
-        handler.post { onChange?.invoke() }
+        handler.post { listeners.forEach { it() } }
     }
 
     private const val WITHHELD_LABEL = "Unknown caller"
+    private const val SWAP_UNHOLD_FALLBACK_MS = 800L
+}
+
+/** Hold this key, then unhold [parkedKey] once HOLDING is reported. */
+data class SwapRequest(val holdingKey: String, val parkedKey: String)
+
+/** Pure seam: when the call we asked to hold reports HOLDING, unhold the parked one. */
+fun onHoldingForSwap(request: SwapRequest?, holdingKey: String): String? {
+    if (request == null) return null
+    if (request.holdingKey != holdingKey) return null
+    return request.parkedKey
 }

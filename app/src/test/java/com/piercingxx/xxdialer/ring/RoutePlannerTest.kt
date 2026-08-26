@@ -68,13 +68,21 @@ class RoutePlannerTest {
     }
 
     @Test
-    fun `silence routes to the silent channel choice regardless of reason`() {
+    fun `silence routes to the silent channel choice except voicemail divert`() {
         val plan = RoutePlanner.plan(
             Verdict.Silence(com.piercingxx.xxdialer.core.Reason.UNKNOWN_OUTSIDE_WINDOW),
             null,
             null,
         )
         assertEquals(RoutePlan.Silent, plan)
+    }
+
+    @Test
+    fun `send-to-voicemail silence is None so ring-time rejects toward mailbox`() {
+        assertEquals(
+            RoutePlan.None,
+            RoutePlanner.plan(Verdict.Silence(com.piercingxx.xxdialer.core.Reason.SEND_TO_VOICEMAIL), null, null),
+        )
     }
 
     @Test

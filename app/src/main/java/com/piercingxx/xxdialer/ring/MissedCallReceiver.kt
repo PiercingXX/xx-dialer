@@ -57,24 +57,19 @@ class MissedCallReceiver : BroadcastReceiver() {
     }
 
     private suspend fun postMissedNotification(context: Context, intent: Intent) {
-        // §12 three-state policy; "never" means this card never exists.
-        // DELIBERATE: "daily" posts immediately here — this card is a call
-        // that actually RANG and was missed (wanted by construction); only
-        // the silenced category batches into the daily digest.
         val policy = runCatching {
             ServiceLocator.settings(context).silencedNotifPolicy()
         }.getOrDefault(POLICY_IMMEDIATE)
-        if (policy == POLICY_NEVER) return
 
         val count = intent.getIntExtra(TelecomManager.EXTRA_NOTIFICATION_COUNT, 1)
-        // TelecomManager.EXTRA_PHONE_NUMBER is not in the public SDK surface;
-        // this is its literal value on the SHOW_MISSED_CALLS broadcast.
         val rawNumber = intent.getStringExtra(EXTRA_PHONE_NUMBER)
         val e164 = rawNumber?.let { E164.normalize(it) }
 
         val logRow = e164?.let { number ->
             runCatching { ServiceLocator.db(context).screenLogDao().latestFor(number) }.getOrNull()
         }
+
+        if (!MissedNotifPolicy.shouldPost(policy, logRow?.verdict, logRow?.mode)) return
 
         val notification = buildNotification(context, count, rawNumber ?: e164, logRow)
         // POST_NOTIFICATIONS may be ungranted; a refused card must not crash.
@@ -209,7 +204,21 @@ class MissedCallReceiver : BroadcastReceiver() {
         /** Telecom's number extra on ACTION_SHOW_MISSED_CALLS_NOTIFICATION. */
         private const val EXTRA_PHONE_NUMBER = "android.telecom.extra.PHONE_NUMBER"
 
-        private const val POLICY_IMMEDIATE = "immediate"
-        private const val POLICY_NEVER = "never"
+        const val POLICY_IMMEDIATE = "immediate"
+        const val POLICY_NEVER = "never"
+        const val POLICY_DAILY = "daily"
+    }
+}
+
+/**
+ * `"never"` is for the silenced category only. A call that actually rang
+ * (including observed-silence) still posts the missed-call card.
+ */
+internal object MissedNotifPolicy {
+    fun shouldPost(policy: String, verdict: String?, mode: String?): Boolean {
+        if (policy != MissedCallReceiver.POLICY_NEVER) return true
+        val silenced = LogRows.dispositionWord(verdict) == "Silenced"
+        val observed = mode == LogRows.modeName(com.piercingxx.xxdialer.core.Mode.OBSERVING)
+        return !silenced || observed
     }
 }

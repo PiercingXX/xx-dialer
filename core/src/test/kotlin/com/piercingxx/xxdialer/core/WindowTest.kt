@@ -57,6 +57,16 @@ class WindowTest {
     }
 
     @Test
+    fun unknownWindow_0859_outside_0900_inside_1659_inside_1700_outside() {
+        val unknown = Window(9 * 60, 17 * 60, Window.ALL_DAYS)
+        val day = java.time.LocalDate.of(2026, 8, 20)
+        assertFalse(unknown.contains(day.atTime(8, 59, 59)))
+        assertTrue(unknown.contains(day.atTime(9, 0, 0)))
+        assertTrue(unknown.contains(day.atTime(16, 59, 59)))
+        assertFalse(unknown.contains(day.atTime(17, 0, 0)))
+    }
+
+    @Test
     fun dstFallBack_wallClockSemantics_repeatedHourIsJustWallTime() {
         // 2026-11-01: 01:30 occurs twice in LA; as a LocalDateTime it is one
         // wall-clock instant and lands inside the window exactly once.

@@ -79,14 +79,24 @@ class MirrorRowMappingTest {
     }
 
     @Test
-    fun `dedupe keeps first resolvable number per contact`() {
+    fun `dedupe keeps every number of a contact`() {
         val rows = sequenceOf(
             MirrorRows.row("k1/", "4155550100", "A", false, null, false, 0L)!!,
             MirrorRows.row("k1/", "+14155550999", "A", false, null, false, 0L)!!,
             MirrorRows.row("k2/", "0014155550100", "B", false, null, false, 0L)!!,
         )
         val deduped = MirrorRows.dedupe(rows)
-        assertEquals(2, deduped.size)
-        assertEquals("+14155550100", deduped[0].e164) // same caller as k2's 00-form (§6 property)
+        assertEquals(3, deduped.size)
+        assertEquals(setOf("+14155550100", "+14155550999"), deduped.filter { it.lookupKey == "k1/" }.map { it.e164 }.toSet())
+    }
+
+    @Test
+    fun `dedupe collapses identical lookupKey and e164`() {
+        val a = MirrorRows.row("k1/", "4155550100", "A", false, null, false, 0L)!!
+        val b = MirrorRows.row("k1/", "+14155550100", "A", true, null, false, 1L)!!
+        val deduped = MirrorRows.dedupe(sequenceOf(a, b))
+        assertEquals(1, deduped.size)
+        assertEquals("+14155550100", deduped[0].e164)
+        assertFalse(deduped[0].starred) // first wins
     }
 }

@@ -30,11 +30,8 @@ object DetailsCodec {
     fun isWithheld(presentation: Int): Boolean = presentation != TelecomManager.PRESENTATION_ALLOWED
 
     /**
-     * E.164 identity (§6). Garbage → null. Note: null then flows into
-     * CallerFacts.number as "withheld", so a normalization failure on an
-     * ALLOWED number lands in the hidden-caller policy's UNKNOWN arm — under
-     * the default policy that is identical to unknown (noisy, never lossy,
-     * §15 last row); it diverges only if the user hardens the hidden policy.
+     * E.164 identity (§6). Garbage → null. Callers must keep presentation
+     * withheld separate: a null here on an ALLOWED handle is unknown, not hidden.
      */
     fun numberE164(schemeSpecificPart: String?): String? = E164.normalize(schemeSpecificPart)
 

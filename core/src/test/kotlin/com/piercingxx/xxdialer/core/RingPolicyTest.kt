@@ -30,9 +30,10 @@ class RingPolicyTest {
         recentOutgoing: Boolean = false,
         cnapName: String? = null,
         emergencyWindow: Boolean = false,
+        withheld: Boolean = false,
     ) = CallerFacts(
         number, saved, starred, bizTier, sendToVoicemail, userBlocked,
-        stirFailed, repeatCaller, recentOutgoing, cnapName, emergencyWindow,
+        stirFailed, repeatCaller, recentOutgoing, cnapName, emergencyWindow, withheld,
     )
 
     private fun rules(
@@ -54,6 +55,13 @@ class RingPolicyTest {
     // ---------------------------------------------------------------- rows
 
     @Test
+    fun verdict_tokens_are_stable_wire_names() {
+        assertEquals("Block", Verdict.Block.token())
+        assertEquals("Ring", Verdict.Ring(Tone.DEFAULT).token())
+        assertEquals("Silence", Verdict.Silence(Reason.SEND_TO_VOICEMAIL).token())
+    }
+
+    @Test
     fun row1_emergencyWindow_beatsEveryLowerRow_includingUserBlocked() {
         // Emergency is row 1, blocklist is row 3 — first match wins, so the
         // emergency callback rings even for an otherwise-blocked number.
@@ -70,6 +78,26 @@ class RingPolicyTest {
     @Test
     fun row2_voicemail_sitsAboveBlock_voicemailWins() {
         val verdict = RingPolicy.decide(noon, facts(sendToVoicemail = true, userBlocked = true), rules())
+        assertEquals(Verdict.Silence(Reason.SEND_TO_VOICEMAIL), verdict)
+    }
+
+    @Test
+    fun row2_voicemail_isNotPiercedByRepeat() {
+        val verdict = RingPolicy.decide(
+            evening,
+            facts(sendToVoicemail = true, repeatCaller = true),
+            rules(),
+        )
+        assertEquals(Verdict.Silence(Reason.SEND_TO_VOICEMAIL), verdict)
+    }
+
+    @Test
+    fun row2_voicemail_isNotPiercedByExpecting() {
+        val verdict = RingPolicy.decide(
+            evening,
+            facts(sendToVoicemail = true),
+            rules(bypassUntil = evening.plusHours(2)),
+        )
         assertEquals(Verdict.Silence(Reason.SEND_TO_VOICEMAIL), verdict)
     }
 
@@ -246,7 +274,7 @@ class RingPolicyTest {
     fun repeat_piercesHiddenPolicySilence() {
         val verdict = RingPolicy.decide(
             evening,
-            facts(number = null, repeatCaller = true),
+            facts(number = null, withheld = true, repeatCaller = true),
             rules(hiddenCallerPolicy = HiddenCallerPolicy.SILENCE),
         )
         assertEquals(Verdict.Ring(Tone.UNKNOWN), verdict)
@@ -305,23 +333,51 @@ class RingPolicyTest {
 
     @Test
     fun hidden_policyUnknown_flowsIntoRows11and12_asUnknown() {
-        assertEquals(Verdict.Ring(Tone.UNKNOWN), RingPolicy.decide(noon, facts(number = null), rules()))
+        assertEquals(Verdict.Ring(Tone.UNKNOWN), RingPolicy.decide(noon, facts(number = null, withheld = true), rules()))
         assertEquals(
             Verdict.Silence(Reason.UNKNOWN_OUTSIDE_WINDOW),
-            RingPolicy.decide(evening, facts(number = null), rules()),
+            RingPolicy.decide(evening, facts(number = null, withheld = true), rules()),
         )
     }
 
     @Test
     fun hidden_policySilence_withheldNumber_silencedWithHiddenReason() {
-        val verdict = RingPolicy.decide(noon, facts(number = null), rules(hiddenCallerPolicy = HiddenCallerPolicy.SILENCE))
+        val verdict = RingPolicy.decide(
+            noon,
+            facts(number = null, withheld = true),
+            rules(hiddenCallerPolicy = HiddenCallerPolicy.SILENCE),
+        )
         assertEquals(Verdict.Silence(Reason.HIDDEN_POLICY), verdict)
     }
 
     @Test
     fun hidden_policyBlock_withheldNumber_blocks() {
-        val verdict = RingPolicy.decide(noon, facts(number = null), rules(hiddenCallerPolicy = HiddenCallerPolicy.BLOCK))
+        val verdict = RingPolicy.decide(
+            noon,
+            facts(number = null, withheld = true),
+            rules(hiddenCallerPolicy = HiddenCallerPolicy.BLOCK),
+        )
         assertEquals(Verdict.Block, verdict)
+    }
+
+    @Test
+    fun unparseableAllowed_doesNotTakeHiddenBlock() {
+        val verdict = RingPolicy.decide(
+            noon,
+            facts(number = null, withheld = false),
+            rules(hiddenCallerPolicy = HiddenCallerPolicy.BLOCK),
+        )
+        assertEquals(Verdict.Ring(Tone.UNKNOWN), verdict)
+    }
+
+    @Test
+    fun unparseableAllowed_outsideWindow_isUnknownSilence() {
+        val verdict = RingPolicy.decide(
+            evening,
+            facts(number = null, withheld = false),
+            rules(hiddenCallerPolicy = HiddenCallerPolicy.BLOCK),
+        )
+        assertEquals(Verdict.Silence(Reason.UNKNOWN_OUTSIDE_WINDOW), verdict)
     }
 
     // ------------------------------------------------------- pattern rules
@@ -348,7 +404,7 @@ class RingPolicyTest {
 
     @Test
     fun pattern_withheldNumber_cannotMatch_anyPattern() {
-        val verdict = RingPolicy.decide(noon, facts(number = null), rules(silencePatterns = listOf(neighborSpoof), blockPatterns = listOf(neighborSpoof)))
+        val verdict = RingPolicy.decide(noon, facts(number = null, withheld = true), rules(silencePatterns = listOf(neighborSpoof), blockPatterns = listOf(neighborSpoof)))
         assertEquals(Verdict.Ring(Tone.UNKNOWN), verdict)
     }
 
@@ -366,7 +422,7 @@ class RingPolicyTest {
             Case(evening, facts(bizTier = true, saved = true), rules()),    // business outside
             Case(noon, facts(sendToVoicemail = true), rules()),             // voicemail
             Case(noon, facts(emergencyWindow = true), rules()),             // emergency
-            Case(evening, facts(number = null), rules(hiddenCallerPolicy = HiddenCallerPolicy.SILENCE)),
+            Case(evening, facts(number = null, withheld = true), rules(hiddenCallerPolicy = HiddenCallerPolicy.SILENCE)),
             Case(evening, facts(repeatCaller = true), rules()),             // pierced
         )
         for (case in cases) {
@@ -390,7 +446,7 @@ class RingPolicyTest {
             Case(evening, facts(bizTier = true, saved = true), rules()),
             Case(noon, facts(sendToVoicemail = true), rules()),
             Case(noon, facts(emergencyWindow = true), rules()),
-            Case(evening, facts(number = null), rules(hiddenCallerPolicy = HiddenCallerPolicy.SILENCE)),
+            Case(evening, facts(number = null, withheld = true), rules(hiddenCallerPolicy = HiddenCallerPolicy.SILENCE)),
             Case(noon, facts(), rules(silencePatterns = listOf(neighborSpoof))),
             Case(evening, facts(repeatCaller = true), rules()),
             Case(noon, facts(), rules(bypassUntil = noon.plusHours(2))),

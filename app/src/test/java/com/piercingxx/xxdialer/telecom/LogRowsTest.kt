@@ -110,7 +110,7 @@ class LogRowsTest {
     @Test
     fun hiddenSilencePolicy_silencedLabel() {
         val rules = Rules(hiddenCallerPolicy = HiddenCallerPolicy.SILENCE)
-        val f = facts(number = null)
+        val f = facts(number = null).copy(withheld = true)
         val v = RingPolicy.decide(now, f, rules)
         assertEquals(Reason.HIDDEN_POLICY, label(v, f, rules))
     }
@@ -127,11 +127,11 @@ class LogRowsTest {
     }
 
     @Test
-    fun sendToVoicemail_piercedByRepeat_labeledRepeatCaller() {
+    fun sendToVoicemail_isNotPiercedByRepeat() {
         val f = facts(sendToVoicemail = true, repeatCaller = true)
         val v = RingPolicy.decide(now, f, Rules())
-        assertEquals(Verdict.Ring(Tone.UNKNOWN), v) // D10 pierced SEND_TO_VOICEMAIL
-        assertEquals(Reason.REPEAT_CALLER, label(v, f, Rules()), "L2: pierced voicemail arm was mislabeled")
+        assertEquals(Verdict.Silence(Reason.SEND_TO_VOICEMAIL), v)
+        assertEquals(Reason.SEND_TO_VOICEMAIL, label(v, f, Rules()))
     }
 
     @Test
@@ -144,13 +144,13 @@ class LogRowsTest {
     }
 
     @Test
-    fun sendToVoicemail_piercedByExpecting_labeledExpecting() {
+    fun sendToVoicemail_isNotPiercedByExpecting() {
         val later = now.withHour(21)
         val f = facts(sendToVoicemail = true)
         val rules = Rules(bypassUntil = later.plusMinutes(30))
         val v = RingPolicy.decide(later, f, rules)
-        assertEquals(Verdict.Ring(Tone.UNKNOWN), v) // D15 pierced
-        assertEquals(Reason.EXPECTING_A_CALL, LogRows.reason(v, f, rules, later))
+        assertEquals(Verdict.Silence(Reason.SEND_TO_VOICEMAIL), v)
+        assertEquals(Reason.SEND_TO_VOICEMAIL, LogRows.reason(v, f, rules, later))
     }
 
     @Test

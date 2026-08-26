@@ -4,6 +4,7 @@ import com.piercingxx.xxdialer.telecom.XxCallScreeningService
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
@@ -71,6 +72,13 @@ class CallWaitingHoldSwapModelTest {
     }
 
     // ---- swap (R1) -----------------------------------------------------------------
+
+    @Test
+    fun swap_sequence_unholds_parked_when_active_reports_holding() {
+        val req = SwapRequest("active", "held")
+        assertEquals("held", onHoldingForSwap(req, "active"))
+        assertNull(onHoldingForSwap(req, "other"))
+    }
 
     @Test
     fun active_plus_held_enables_swap_in_both_arrivals() {
