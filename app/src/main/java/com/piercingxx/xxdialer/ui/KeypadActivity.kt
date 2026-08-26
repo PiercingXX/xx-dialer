@@ -27,9 +27,15 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
- * Keypad tab (design §12.2): 3×4 grid plus trailing backspace column, Space
- * Mono tabular digits, T9 match-as-you-type against the contact mirror, and
- * the call block. Views + viewBinding, no Compose (D7).
+ * Keypad tab (design §12.2): a centred 3×4 grid with backspace at the right
+ * end of the entry row (the Pixel placement — beside the digits it deletes,
+ * not in a fourth grid column), Space Mono tabular digits, T9
+ * match-as-you-type against the contact mirror, and the call block.
+ * Views + viewBinding, no Compose (D7).
+ *
+ * Nothing here measures or positions `key_delete`; it is found by id through
+ * viewBinding, so moving it between parents in `activity_keypad.xml` costs
+ * only this comment.
  */
 class KeypadActivity : AppCompatActivity() {
 
@@ -176,6 +182,12 @@ class KeypadActivity : AppCompatActivity() {
         // affordance) instead of a dead empty overlay.
         val offerSave = hits.isEmpty() && query.count(Char::isDigit) >= MIN_SAVE_DIGITS
         if (offerSave) binding.keypadMatches.addView(addContactRow(query))
+        // GONE is safe here only because the *band* around this ScrollView
+        // carries the layout weight, not the ScrollView itself: hiding this
+        // view withdraws it and its weight from the parent's measurement, so
+        // if it owned the weight the pad below would jump up the moment the
+        // matches cleared. Nothing here may resize the band — the fixed
+        // positions of keypad_call and tab_bar depend on it.
         binding.keypadMatchScroll.visibility =
             if (hits.isEmpty() && !offerSave) View.GONE else View.VISIBLE
     }
