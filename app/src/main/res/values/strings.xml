@@ -76,4 +76,17 @@
     <string name="silenced_notif_daily">Daily summary</string>
     <string name="silenced_notif_never">Never</string>
     <string name="bypass_label">Expecting a call lasts</string>
+
+    <!--
+         Visual voicemail (§12). OPT-IN, off by default: the dialer holds no
+         network sockets until the user flips this toggle. The label and the
+         caption are the two halves of the same promise — what the toggle does
+         and that it defaults off. The network note is the honesty clause from
+         todo.md: declaring INTERNET is not using it, and GrapheneOS can revoke
+         Network as a second, OS-level kill switch.
+    -->
+    <string name="vvm_label">Visual voicemail</string>
+    <string name="vvm_caption">On: a Voicemail tab, carrier mailbox over the network. Off: long-press 1 only. Default off.</string>
+    <string name="vvm_network_note">Visual voicemail talks to your carrier\'s mailbox. Leave it off if you do not want this app on the network. GrapheneOS can also revoke Network for this app.</string>
+    <string name="tab_voicemail">Voicemail</string>
 </resources>

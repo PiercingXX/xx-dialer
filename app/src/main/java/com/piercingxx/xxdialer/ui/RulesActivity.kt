@@ -302,6 +302,10 @@ class RulesActivity : AppCompatActivity() {
         binding.chipTabRecents.text = "RECENTS"
         binding.chipTabKeypad.text = "KEYPAD"
         binding.chipTabPeople.text = "PEOPLE"
+        binding.chipTabVoicemail.text = "VOICEMAIL"
+        binding.vvmLabel.text = getString(R.string.vvm_label)
+        binding.vvmCaption.text = getString(R.string.vvm_caption)
+        binding.vvmNetworkNote.text = getString(R.string.vvm_network_note)
         binding.patternsEyebrow.text = "PATTERN RULES"
         binding.exemptionNote.text =
             "Every pattern rule carries the contacts exemption, non-optionally: " +
@@ -702,9 +706,25 @@ class RulesActivity : AppCompatActivity() {
                 if (checked) "1" else "0",
             )
         }
+        // Visual voicemail (§12): OPT-IN. Flipping the toggle persists the
+        // setting; the Voicemail hide-chip's visibility is re-gated on it in
+        // syncPolicyControls via RulesScreenVoicemail.voicemailHideChipVisible.
+        binding.vvmSwitch.setOnCheckedChangeListener { _, checked ->
+            if (suppressPolicies) return@setOnCheckedChangeListener
+            persistSetting(
+                SettingsRepository.KEY_VISUAL_VOICEMAIL,
+                if (checked) "1" else "0",
+            )
+            syncVoicemailGate()
+        }
         // Multi-select: checked chip = hidden tab. Rules itself is absent by
         // construction — the setting can always be reached to undo itself.
-        listOf(binding.chipTabRecents, binding.chipTabKeypad, binding.chipTabPeople).forEach { chip ->
+        listOf(
+            binding.chipTabRecents,
+            binding.chipTabKeypad,
+            binding.chipTabPeople,
+            binding.chipTabVoicemail,
+        ).forEach { chip ->
             chip.setOnCheckedChangeListener { _, _ ->
                 if (suppressPolicies) return@setOnCheckedChangeListener
                 val hidden = buildSet {
@@ -767,6 +787,13 @@ class RulesActivity : AppCompatActivity() {
             binding.chipTabRecents.isChecked = "recents" in hiddenTabs
             binding.chipTabKeypad.isChecked = "keypad" in hiddenTabs
             binding.chipTabPeople.isChecked = "people" in hiddenTabs
+            // Visual voicemail (§12): read the toggle and gate the hide-chip on
+            // it. Off ⇒ the chip is gone (the tab is absent, not hidden); on ⇒
+            // the chip appears and reflects the hidden set like the others.
+            val vvmEnabled = runCatching { settings.visualVoicemailEnabled() }
+                .getOrDefault(false)
+            binding.vvmSwitch.isChecked = vvmEnabled
+            syncVoicemailGate()
             listOf(binding.hiddenPolicyGroup, binding.stirGroup, binding.notifGroup,
                 binding.answerGroup, binding.bypassGroup)
                 .forEach(::restyleGroup)
@@ -778,6 +805,25 @@ class RulesActivity : AppCompatActivity() {
     private fun persistSetting(key: String, value: String) {
         lifecycleScope.launch {
             runCatching { ServiceLocator.settings(this@RulesActivity).setString(key, value) }
+        }
+    }
+
+    /**
+     * §12 gated hide-chip: the Voicemail chip in the "Hide tabs" group is
+     * present only while Visual voicemail is on. Off ⇒ the tab is absent
+     * entirely, so its hide-chip is gone too (todo.md) — never merely
+     * disabled. The gate is [RulesScreenVoicemail.voicemailHideChipVisible],
+     * the single source of truth the unit test drives.
+     */
+    private fun syncVoicemailGate() {
+        lifecycleScope.launch {
+            val settings = ServiceLocator.settings(this@RulesActivity)
+            val vvmEnabled = runCatching { settings.visualVoicemailEnabled() }
+                .getOrDefault(false)
+            val hiddenTabs = runCatching { settings.hiddenTabs() }.getOrDefault(emptySet())
+            binding.chipTabVoicemail.isVisible =
+                RulesScreenVoicemail.voicemailHideChipVisible(vvmEnabled)
+            binding.chipTabVoicemail.isChecked = "voicemail" in hiddenTabs
         }
     }
 

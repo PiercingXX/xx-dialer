@@ -63,6 +63,14 @@ class SettingsRepository(private val dao: SettingDao) {
         dao.put(KEY_HIDDEN_TABS, names.joinToString(",") { it.lowercase() })
 
     /**
+     * Visual voicemail is OPT-IN (§12): ships off ("0") and reads on only once
+     * the user flips the toggle. Absent or garbage fails open to off — the
+     * dialer holds no network sockets until this reads non-zero.
+     */
+    suspend fun visualVoicemailEnabled(): Boolean =
+        dao.get(KEY_VISUAL_VOICEMAIL)?.trim() == "1"
+
+    /**
      * Enforcement is *offered*, never flipped silently (§15 observe-week-end):
      * true only while still observing and past the seeded week boundary.
      */
