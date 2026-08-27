@@ -71,6 +71,18 @@ class SettingsRepository(private val dao: SettingDao) {
         dao.get(KEY_VISUAL_VOICEMAIL)?.trim() == "1"
 
     /**
+     * T4: whether the mailbox was ACTIVATEd in a prior run — the persisted
+     * "previously activated" flag that decides DEACTIVATE on toggle-off.
+     * Absent or garbage reads false (nothing to undo). Set when ACTIVATE is
+     * sent, cleared after DEACTIVATE.
+     */
+    suspend fun visualVoicemailWasActivated(): Boolean =
+        dao.get(KEY_VISUAL_VOICEMAIL_ACTIVATED)?.trim() == "1"
+
+    suspend fun setVisualVoicemailActivated(activated: Boolean) =
+        dao.put(KEY_VISUAL_VOICEMAIL_ACTIVATED, if (activated) "1" else "0")
+
+    /**
      * Enforcement is *offered*, never flipped silently (§15 observe-week-end):
      * true only while still observing and past the seeded week boundary.
      */
@@ -99,6 +111,7 @@ class SettingsRepository(private val dao: SettingDao) {
         const val KEY_GROUP_RECENTS = "group_recents"
         const val KEY_HIDDEN_TABS = "hidden_tabs"
         const val KEY_VISUAL_VOICEMAIL = "visual_voicemail"
+        const val KEY_VISUAL_VOICEMAIL_ACTIVATED = "visual_voicemail_activated"
 
         private val gson = Gson()
         private const val DEFAULT_BYPASS_MINUTES = 120
