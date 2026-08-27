@@ -164,3 +164,17 @@ V2 can land before IMAP so the operator can see the tab appear/disappear.
 
 
 
+---
+
+## VVM findings (V0 — device dump)
+
+**Carrier-config dump: BLOCKED.** No adb device is attached in the build sandbox, so
+`adb shell dumpsys carrier_config | grep -i vvm` could not be run against the target SIM.
+See `docs/vvm-carrier-config.txt` for the BLOCKED marker. Re-run V0 on a host with the
+Pixel 9 Pro connected to capture `KEY_VVM_TYPE_STRING` / destination / port / cellular-required.
+
+**Empty-type decision (recorded now):** if the carrier publishes no
+`KEY_VVM_TYPE_STRING` (empty `vvm_type`), ship the client anyway and surface the honest
+"this SIM does not publish VVM" state from D8 — do not fake an inbox. The client must
+tolerate an empty `vvm_type` and never activate or open IMAP without a real carrier
+config.
