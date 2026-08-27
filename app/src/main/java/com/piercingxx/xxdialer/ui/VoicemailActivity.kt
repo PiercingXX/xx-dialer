@@ -1,8 +1,10 @@
 package com.piercingxx.xxdialer.ui
 
+import android.net.Uri
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import com.piercingxx.xxdialer.R
+import com.piercingxx.xxdialer.vvm.VvmAudioPlayer
 
 /**
  * Voicemail tab (design §12): the fifth tab, reachable only while the
@@ -12,6 +14,16 @@ import com.piercingxx.xxdialer.R
  * later task. Views + viewBinding, no Compose (D7).
  */
 class VoicemailActivity : AppCompatActivity() {
+
+    private val audioPlayer: VvmAudioPlayer by lazy { VvmAudioPlayer(this) }
+
+    /**
+     * T3: plays the voicemail at [uri], fetching its audio first when the row
+     * carries no content (fetch-then-play). The list/detail UI (V7) calls this
+     * when the user taps a voicemail; the player owns the fetch-vs-play
+     * decision and the MediaPlayer lifecycle.
+     */
+    fun playVoicemail(uri: Uri): Boolean = audioPlayer.play(uri)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
