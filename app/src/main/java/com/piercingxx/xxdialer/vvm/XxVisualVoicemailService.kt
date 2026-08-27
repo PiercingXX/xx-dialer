@@ -1,6 +1,9 @@
 package com.piercingxx.xxdialer.vvm
 
 import android.telecom.PhoneAccountHandle
+import android.telephony.CarrierConfigManager
+import android.telephony.SubscriptionManager
+import android.telephony.TelephonyManager
 import android.telephony.VisualVoicemailService
 import android.telephony.VisualVoicemailService.VisualVoicemailTask
 import android.telephony.VisualVoicemailSms
@@ -30,7 +33,15 @@ class XxVisualVoicemailService : VisualVoicemailService() {
     }
 
     override fun onCellServiceConnected(task: VisualVoicemailTask, phoneAccountHandle: PhoneAccountHandle) {
-        gate(task) { /* T3: ACTIVATE when the CarrierConfig is valid. */ }
+        gate(task) {
+            // T3: ACTIVATE only when the toggle is on AND the carrier config is
+            // valid (D5: protocol from KEY_VVM_TYPE_STRING). The gate owns the
+            // toggle clause; this reads the carrier half and feeds the decision.
+            val carrierConfigValid = carrierConfigValid(phoneAccountHandle)
+            if (VvmGate.shouldActivate(toggleOn = true, carrierConfigValid = carrierConfigValid)) {
+                // TODO T4: TelephonyManager.sendVisualVoicemailSms(ACTIVATE).
+            }
+        }
     }
 
     override fun onSmsReceived(task: VisualVoicemailTask, message: VisualVoicemailSms) {
@@ -44,6 +55,20 @@ class XxVisualVoicemailService : VisualVoicemailService() {
     override fun onStopped(task: VisualVoicemailTask) {
         // Task-lifecycle callback, not VVM work: always finish, no gate.
         task.finish()
+    }
+
+    /**
+     * T3: a carrier config is valid for VVM when it declares a protocol — a
+     * non-empty `KEY_VVM_TYPE_STRING` (todo.md D5). Absent config, an unknown
+     * subscription, or an empty type all mean we must NOT ACTIVATE.
+     */
+    private fun carrierConfigValid(phoneAccountHandle: PhoneAccountHandle): Boolean {
+        val telephony = getSystemService(TelephonyManager::class.java) ?: return false
+        val subscriptionId = telephony.getSubscriptionId(phoneAccountHandle)
+        if (subscriptionId == SubscriptionManager.INVALID_SUBSCRIPTION_ID) return false
+        val manager = getSystemService(CarrierConfigManager::class.java) ?: return false
+        val config = manager.getConfigForSubId(subscriptionId) ?: return false
+        return !config.getString(CarrierConfigManager.KEY_VVM_TYPE_STRING).isNullOrEmpty()
     }
 
     /**

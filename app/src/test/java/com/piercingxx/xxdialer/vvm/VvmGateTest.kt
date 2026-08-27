@@ -28,4 +28,24 @@ class VvmGateTest {
             "toggle on is the only state that lets VVM run",
         )
     }
+
+    @Test
+    fun shouldActivateTrueOnlyWhenCarrierConfigValid() {
+        assertTrue(
+            VvmGate.shouldActivate(toggleOn = true, carrierConfigValid = true),
+            "toggle on + valid carrier config is the only state that ACTIVATEs",
+        )
+        assertFalse(
+            VvmGate.shouldActivate(toggleOn = false, carrierConfigValid = true),
+            "toggle off must never ACTIVATE, even with a valid carrier config",
+        )
+        assertFalse(
+            VvmGate.shouldActivate(toggleOn = true, carrierConfigValid = false),
+            "toggle on with an invalid carrier config must not ACTIVATE (D5: no protocol)",
+        )
+        assertFalse(
+            VvmGate.shouldActivate(toggleOn = false, carrierConfigValid = false),
+            "both off must not ACTIVATE",
+        )
+    }
 }

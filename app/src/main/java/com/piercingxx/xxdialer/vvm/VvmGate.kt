@@ -14,4 +14,14 @@ object VvmGate {
      * no-ops every callback and finishes its task immediately.
      */
     fun shouldRunVvm(toggleOn: Boolean): Boolean = toggleOn
+
+    /**
+     * True only when the toggle is on AND the carrier declares a VVM protocol
+     * (todo.md D5: the protocol comes from CarrierConfig `KEY_VVM_TYPE_STRING`).
+     * A carrier with no valid config cannot be ACTIVATEd, so this stays false
+     * even when the toggle is on — [onCellServiceConnected] must not send
+     * ACTIVATE unless both hold.
+     */
+    fun shouldActivate(toggleOn: Boolean, carrierConfigValid: Boolean): Boolean =
+        toggleOn && carrierConfigValid
 }
