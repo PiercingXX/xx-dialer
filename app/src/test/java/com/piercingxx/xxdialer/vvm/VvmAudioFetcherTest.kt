@@ -27,15 +27,21 @@ import org.robolectric.annotation.Config
 class VvmAudioFetcherTest {
 
     /**
-     * Robolectric's in-memory VoicemailContract provider is a per-sandbox
-     * singleton whose rows persist across tests in the same run. A row written
-     * by an earlier test (VvmImapSyncWorkerTest, or a sibling test here) breaks
-     * the row-URI query this class relies on, so the full-suite gate fails even
-     * though each test passes in isolation. Clear every row before each test so
-     * each one starts from a clean provider.
+     * Robolectric has no working VoicemailContract provider (both the collection
+     * and row URI queries return null), so the audio fetcher's readHasContent()
+     * fails and the fetch broadcast is never sent. Register an in-memory provider
+     * ([InMemoryVoicemailProvider]) so the insert/query round-trip exercises the
+     * real production read path. Each test then starts from a clean provider by
+     * deleting every row, so no row written by an earlier test (the IMAP sync
+     * worker test, or a sibling here) can leak into the row-URI query.
      */
     @Before
-    fun clearVoicemailRows() {
+    fun setUp() {
+        // Robolectric has no working VoicemailContract provider, so both the
+        // collection and row URI queries return null and readHasContent() fails.
+        // Register an in-memory provider so the insert/query round-trip actually
+        // exercises the production read path (see InMemoryVoicemailProvider).
+        InMemoryVoicemailProvider.register()
         val context = ApplicationProvider.getApplicationContext<Context>()
         context.contentResolver.delete(
             VoicemailContract.Voicemails.buildSourceUri(context.packageName),
