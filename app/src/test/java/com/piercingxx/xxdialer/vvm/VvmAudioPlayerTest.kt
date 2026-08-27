@@ -43,6 +43,12 @@ class VvmAudioPlayerTest {
         var created: ShadowMediaPlayer? = null
         ShadowMediaPlayer.setCreateListener { _, shadow -> created = shadow }
         val contentUri = insertVoicemail(context, hasContent = 1)
+        // Robolectric's ShadowMediaPlayer throws when setDataSource is given a
+        // content URI with no registered media info (it has no real provider to
+        // read from). Register the row's URI so prepare()/start() can succeed and
+        // the direct-play path is actually exercised rather than swallowed by the
+        // player's runCatching.
+        ShadowMediaPlayer.addMediaInfo(contentUri, ShadowMediaPlayer.MediaInfo(1, 1000))
         val played = VvmAudioPlayer(context).play(contentUri)
         assertTrue("a content-bearing voicemail must play directly", played)
         assertNotNull("playback must create a MediaPlayer", created)
