@@ -90,6 +90,7 @@ class SettingsRepository(private val dao: SettingDao) {
         const val KEY_ANSWER_INTERACTION = "answer_interaction"
         const val KEY_GROUP_RECENTS = "group_recents"
         const val KEY_HIDDEN_TABS = "hidden_tabs"
+        const val KEY_VISUAL_VOICEMAIL = "visual_voicemail"
 
         private val gson = Gson()
         private const val DEFAULT_BYPASS_MINUTES = 120
@@ -120,6 +121,12 @@ class SettingsRepository(private val dao: SettingDao) {
             KEY_SILENCED_NOTIF_POLICY to DEFAULT_NOTIF_POLICY,
             KEY_ANSWER_INTERACTION to "tap",
             KEY_GROUP_RECENTS to "1",
+            // Visual voicemail is OPT-IN (§12): ships off. The dialer holds no
+            // network sockets until the user flips this toggle, so the manifest
+            // INTERNET/ACCESS_NETWORK_STATE permissions stay dormant by default
+            // (the runtime opt-in gate, not a manifest-level one — Android has
+            // no conditional uses-permission).
+            KEY_VISUAL_VOICEMAIL to "0",
         )
 
         /** {"startMinute":540,"endMinute":1020,"daysMask":127} ↔ core.Window (§7). */
