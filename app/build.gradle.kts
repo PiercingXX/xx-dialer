@@ -39,6 +39,24 @@ android {
     kotlinOptions {
         jvmTarget = "17"
     }
+
+    // Robolectric (VvmCredentialStoreTest, T2) needs real Android resources so
+    // EncryptedSharedPreferences can be exercised under the JVM.
+    testOptions {
+        unitTests {
+            isIncludeAndroidResources = true
+            // Robolectric must not try to download android-all at test time: the
+            // gate runs --offline and the sandbox home dir is read-only, so the
+            // SDK jars are resolved from the local ~/.m2 repository instead.
+            all {
+                it.systemProperty("robolectric.offline", "true")
+                it.systemProperty(
+                    "robolectric.dependency.dir",
+                    "/home/piercingxx/.m2/repository/org/robolectric/android-all-instrumented/14-robolectric-10818077-i6",
+                )
+            }
+        }
+    }
 }
 
 dependencies {
@@ -65,11 +83,19 @@ dependencies {
     // Gson backup/restore (D12) and libphonenumber parity with :core.
     implementation("com.google.code.gson:gson:2.13.2")
 
+    // EncryptedSharedPreferences for VVM credentials (T2): the mailbox password
+    // is stored encrypted and is stripped from every backup/log surface.
+    implementation("androidx.security:security-crypto:1.1.0-alpha06")
+
     // Pure policy core — the part that must be correct (design §5).
     implementation(project(":core"))
 
     testImplementation("junit:junit:4.13.2")
     testImplementation(kotlin("test"))
+    // Robolectric + androidx.test:core drive VvmCredentialStoreTest under the
+    // JVM (ApplicationProvider instantiates the store against real resources).
+    testImplementation("org.robolectric:robolectric:4.12.1")
+    testImplementation("androidx.test:core:1.6.1")
 
     // androidTest instrumented skeletons for the on-caiman §16 suite (design
     // §16; PROBE.md procedures). JUnit4 + androidx.test runner/rules/ext +
