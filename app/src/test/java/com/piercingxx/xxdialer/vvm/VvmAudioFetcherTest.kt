@@ -8,6 +8,7 @@ import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -24,6 +25,24 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
 class VvmAudioFetcherTest {
+
+    /**
+     * Robolectric's in-memory VoicemailContract provider is a per-sandbox
+     * singleton whose rows persist across tests in the same run. A row written
+     * by an earlier test (VvmImapSyncWorkerTest, or a sibling test here) breaks
+     * the row-URI query this class relies on, so the full-suite gate fails even
+     * though each test passes in isolation. Clear every row before each test so
+     * each one starts from a clean provider.
+     */
+    @Before
+    fun clearVoicemailRows() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        context.contentResolver.delete(
+            VoicemailContract.Voicemails.buildSourceUri(context.packageName),
+            null,
+            null,
+        )
+    }
 
     @Test
     fun broadcastsFetchWhenNoContent() {
