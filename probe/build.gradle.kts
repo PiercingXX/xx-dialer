@@ -38,12 +38,13 @@ kotlin {
 }
 
 // ---------------------------------------------------------------------------
-// R8/D8 guard — "no INTERNET permission, ever" (applies to the throwaway too).
-// verifyNoInternet runs automatically after :probe:assembleDebug (finalizedBy),
-// dumps the debug APK's declared permissions via aapt2, and fails the build if
-// android.permission.INTERNET appears (case-insensitive). The detection logic
-// is mirrored verbatim by
-// app/src/test/java/com/piercingxx/xxdialer/util/NoInternetGuardTest.kt —
+// R8/D8 guard — "no network use outside opt-in VVM" (todo.md D1).
+// verifyVvmInternetOnly runs automatically after :probe:assembleDebug
+// (finalizedBy), dumps the debug APK's declared permissions via aapt2, and
+// fails the build if any network permission OTHER than the allowed set
+// (INTERNET + ACCESS_NETWORK_STATE, which back the opt-in VVM IMAP client)
+// appears. The detection logic is mirrored verbatim by
+// app/src/test/java/com/piercingxx/xxdialer/util/VvmInternetGuardTest.kt —
 // keep the two in sync.
 // ---------------------------------------------------------------------------
 
@@ -69,28 +70,49 @@ val xxAapt2: File? = listOf("35.0.0", "37.0.0")
     .map { File(xxSdkDir, "build-tools/$it/aapt2") }
     .firstOrNull { it.isFile }
 
-fun internetViolations(dump: String): List<String> =
+// The only network permissions the dialer may declare (todo.md D1): INTERNET +
+// ACCESS_NETWORK_STATE back the opt-in VVM IMAP client. Any other network
+// permission (WIFI/BLUETOOTH/NFC/CHANGE_NETWORK_STATE/...) is a signal of
+// network use outside VVM and fails the build.
+val xxForbiddenNetworkPermissions = listOf(
+    "android.permission.CHANGE_NETWORK_STATE",
+    "android.permission.ACCESS_WIFI_STATE",
+    "android.permission.CHANGE_WIFI_STATE",
+    "android.permission.CHANGE_WIFI_MULTICAST_STATE",
+    "android.permission.ACCESS_WIFI_MULTICAST_STATE",
+    "android.permission.BLUETOOTH",
+    "android.permission.BLUETOOTH_ADMIN",
+    "android.permission.BLUETOOTH_SCAN",
+    "android.permission.BLUETOOTH_CONNECT",
+    "android.permission.NFC",
+    "android.permission.USE_WIFI_P2P",
+)
+
+fun networkViolations(dump: String): List<String> =
     dump.lineSequence()
         .map { it.trim() }
-        .filter { it.contains("android.permission.INTERNET", ignoreCase = true) }
+        .filter { line ->
+            xxForbiddenNetworkPermissions.any { line.contains(it, ignoreCase = true) }
+        }
         .toList()
 
-val verifyNoInternet = tasks.register("verifyNoInternet") {
+val verifyVvmInternetOnly = tasks.register("verifyVvmInternetOnly") {
     group = "verification"
     description =
-        "Fails the build if the debug APK declares android.permission.INTERNET (design R8/D8)."
+        "Fails the build if the debug APK declares a network permission outside " +
+            "the opt-in VVM set (INTERNET + ACCESS_NETWORK_STATE). (todo.md D1)"
     // Captured Provider — safe under the configuration cache; resolved lazily.
     val apkDir = layout.buildDirectory.dir("outputs/apk/debug")
 
     doLast {
         val aapt2 = requireNotNull(xxAapt2) {
-            "[verifyNoInternet] aapt2 not found under $xxSdkDir/build-tools (tried 35.0.0, 37.0.0)"
+            "[verifyVvmInternetOnly] aapt2 not found under $xxSdkDir/build-tools (tried 35.0.0, 37.0.0)"
         }
         val apks = apkDir.get().asFileTree.matching { include("*-debug.apk") }
             .files.sortedBy { it.name }
         if (apks.isEmpty()) {
             throw GradleException(
-                "[verifyNoInternet] no *-debug.apk found in ${apkDir.get().asFile}",
+                "[verifyVvmInternetOnly] no *-debug.apk found in ${apkDir.get().asFile}",
             )
         }
         apks.forEach { apk ->
@@ -101,20 +123,21 @@ val verifyNoInternet = tasks.register("verifyNoInternet") {
             val exit = process.waitFor()
             if (exit != 0) {
                 throw GradleException(
-                    "[verifyNoInternet] aapt2 exited $exit for ${apk.name}:\n$dump",
+                    "[verifyVvmInternetOnly] aapt2 exited $exit for ${apk.name}:\n$dump",
                 )
             }
-            if (internetViolations(dump).isNotEmpty()) {
+            if (networkViolations(dump).isNotEmpty()) {
                 throw GradleException(
-                    "[verifyNoInternet] FAILED: ${apk.name} declares " +
-                        "android.permission.INTERNET — forbidden by design.md R8/D8.",
+                    "[verifyVvmInternetOnly] FAILED: ${apk.name} declares a network " +
+                        "permission outside the opt-in VVM set (INTERNET + " +
+                        "ACCESS_NETWORK_STATE) — forbidden by todo.md D1.",
                 )
             }
             println(
-                "[verifyNoInternet] OK (${project.path}): ${apk.name} declares " +
-                    "no INTERNET permission. Full permission dump:",
+                "[verifyVvmInternetOnly] OK (${project.path}): ${apk.name} declares " +
+                    "no network permission outside the opt-in VVM set. Full permission dump:",
             )
-            dump.trimEnd().lines().forEach { println("[verifyNoInternet]   $it") }
+            dump.trimEnd().lines().forEach { println("[verifyVvmInternetOnly]   $it") }
         }
     }
 }
@@ -122,7 +145,7 @@ val verifyNoInternet = tasks.register("verifyNoInternet") {
 // finalizedBy (not dependsOn): verification always runs after the APK exists,
 // and the wiring holds under the configuration cache.
 tasks.matching { it.name == "assembleDebug" }.configureEach {
-    finalizedBy(verifyNoInternet)
+    finalizedBy(verifyVvmInternetOnly)
 }
 
 dependencies {
