@@ -34,6 +34,14 @@
         android:protectionLevel="signature"/>
     <uses-permission android:name="com.piercingxx.xxlauncher.permission.THEME_SYNC"/>
 
+    <!-- TxxT reads the Business tier and window through TierExportProvider.
+         Signature so only family apps signed with this key can see who is
+         marked Business; install-order declare+uses like THEME_SYNC. -->
+    <permission
+        android:name="com.piercingxx.xxdialer.permission.TIER_SYNC"
+        android:protectionLevel="signature"/>
+    <uses-permission android:name="com.piercingxx.xxdialer.permission.TIER_SYNC"/>
+
     <application
         android:name=".XxApplication"
         android:label="@string/app_name"
@@ -150,6 +158,12 @@
              Exported because the sender is another app; B3-safe: the payload
              is a theme name and a color, so the worst a forged broadcast can
              do is recolor the UI — no privileged action is reachable. -->
+        <provider
+            android:name=".data.TierExportProvider"
+            android:authorities="com.piercingxx.xxdialer.tier"
+            android:exported="true"
+            android:permission="com.piercingxx.xxdialer.permission.TIER_SYNC"/>
+
         <receiver
             android:name=".theme.ThemeSyncReceiver"
             android:exported="true"
