@@ -25,7 +25,21 @@
          and keeping the touchscreen from hearing a cheek. Normal protection
          level, granted at install, no prompt, no runtime request. -->
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
-    <!-- deliberately NO android.permission.INTERNET (design §13, R8) -->
+    <!-- Opt-in VVM permission set (todo.md "Permissions", D1). The dialer is
+         offline by default: no INTERNET, no network sockets. When the user
+         turns the Visual voicemail toggle ON, the client talks to the carrier
+         mailbox over IMAP — INTERNET + ACCESS_NETWORK_STATE are declared ONLY
+         for that opt-in path (verifyVvmInternetOnly, todo.md D1). ADD_VOICEMAIL
+         / READ_VOICEMAIL / WRITE_VOICEMAIL back VoicemailContract (D3);
+         SEND_SMS is the ACTIVATE/DEACTIVATE/query channel. BIND_VISUAL_
+         VOICEMAIL_SERVICE is NOT here — it belongs on the <service> tag, not
+         uses-permission (todo.md "Permissions"). -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+    <uses-permission android:name="android.permission.ADD_VOICEMAIL"/>
+    <uses-permission android:name="android.permission.READ_VOICEMAIL"/>
+    <uses-permission android:name="android.permission.WRITE_VOICEMAIL"/>
+    <uses-permission android:name="android.permission.SEND_SMS"/>
 
     <!-- Family theme-sync. XX-Launcher sendBroadcast()s with this signature
          permission; uses-permission is required to receive it. -->
