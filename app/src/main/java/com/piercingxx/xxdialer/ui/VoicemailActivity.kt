@@ -5,6 +5,8 @@ import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import com.piercingxx.xxdialer.R
 import com.piercingxx.xxdialer.vvm.VvmAudioPlayer
+import com.piercingxx.xxdialer.vvm.VvmListQuery
+import com.piercingxx.xxdialer.vvm.VvmListRow
 
 /**
  * Voicemail tab (design §12): the fifth tab, reachable only while the
@@ -16,6 +18,16 @@ import com.piercingxx.xxdialer.vvm.VvmAudioPlayer
 class VoicemailActivity : AppCompatActivity() {
 
     private val audioPlayer: VvmAudioPlayer by lazy { VvmAudioPlayer(this) }
+
+    private val listQuery: VvmListQuery by lazy { VvmListQuery(this) }
+
+    /**
+     * T2: reads the mailbox rows from VoicemailContract and resolves each caller
+     * name (via the live PhoneLookup path). The list/detail UI (V7) calls this
+     * to render the voicemail list; [VvmListState] decides which honest state the
+     * screen shows from the query result.
+     */
+    fun queryList(): List<VvmListRow> = listQuery.readRows()
 
     /**
      * T3: plays the voicemail at [uri], fetching its audio first when the row
