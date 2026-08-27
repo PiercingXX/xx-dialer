@@ -33,9 +33,10 @@ class VvmAudioFetcher(private val context: Context) {
 
     /**
      * Reads the HASCONTENT flag for the voicemail row at [uri], or null when the
-     * row cannot be read (missing, or the provider is unavailable).
+     * row cannot be read (missing, or the provider is unavailable). Internal so
+     * [VvmAudioPlayer] can share the single read path instead of duplicating it.
      */
-    private fun readHasContent(uri: Uri): Boolean? =
+    internal fun readHasContent(uri: Uri): Boolean? =
         runCatching {
             context.contentResolver.query(uri, arrayOf(VoicemailContract.Voicemails.HAS_CONTENT), null, null, null)
                 ?.use { cursor ->
