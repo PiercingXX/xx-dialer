@@ -81,7 +81,20 @@ class VvmAudioFetcherTest {
         }
 
         assertTrue("sync must return the written row URIs for the fetcher", written.isNotEmpty())
-        val fetched = VvmAudioFetcher(context).fetchIfMissingContent(written.first())
+        // IMAP delivers message metadata only — the written row must carry
+        // HASCONTENT 0, which is exactly why the fetcher must broadcast a fetch.
+        val rowUri = written.first()
+        val resolver = context.contentResolver
+        resolver.query(rowUri, arrayOf(VoicemailContract.Voicemails.HAS_CONTENT), null, null, null)
+            ?.use { cursor ->
+                assertTrue("the written voicemail row must be queryable", cursor.moveToFirst())
+                assertEquals(
+                    "a synced (IMAP-delivered) voicemail must carry HASCONTENT 0",
+                    0,
+                    cursor.getInt(cursor.getColumnIndexOrThrow(VoicemailContract.Voicemails.HAS_CONTENT)),
+                )
+            }
+        val fetched = VvmAudioFetcher(context).fetchIfMissingContent(rowUri)
         assertTrue("a synced (content-less) voicemail must trigger a fetch", fetched)
         val broadcast = shadowOf(context.applicationContext as android.app.Application)
             .broadcastIntents
