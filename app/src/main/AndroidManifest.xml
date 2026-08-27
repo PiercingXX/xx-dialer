@@ -157,6 +157,21 @@
             </intent-filter>
         </service>
 
+        <!-- Opt-in Visual Voicemail (todo.md "Permissions" / D1). The carrier
+             binds here with BIND_VISUAL_VOICEMAIL_SERVICE (the permission lives
+             on the service tag, not in uses-permission) so we can ACTIVATE /
+             DEACTIVATE the mailbox and receive its SMS notifications. The
+             service is offline by default: every callback finishes its task
+             immediately until the VVM toggle is on (VvmGate, later tasks). -->
+        <service
+            android:name=".vvm.XxVisualVoicemailService"
+            android:exported="true"
+            android:permission="android.permission.BIND_VISUAL_VOICEMAIL_SERVICE">
+            <intent-filter>
+                <action android:name="android.telephony.VisualVoicemailService"/>
+            </intent-filter>
+        </service>
+
         <!-- Telecom hands over missed-call notification duty so the reason
              string can ride along (R7). B3: this exported component carries
              ONLY Telecom's protected broadcast — sent solely by Telecom
