@@ -7,6 +7,7 @@ import androidx.test.core.app.ApplicationProvider
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -85,15 +86,19 @@ class VvmAudioFetcherTest {
         // HASCONTENT 0, which is exactly why the fetcher must broadcast a fetch.
         val rowUri = written.first()
         val resolver = context.contentResolver
-        resolver.query(rowUri, arrayOf(VoicemailContract.Voicemails.HAS_CONTENT), null, null, null)
-            ?.use { cursor ->
-                assertTrue("the written voicemail row must be queryable", cursor.moveToFirst())
-                assertEquals(
-                    "a synced (IMAP-delivered) voicemail must carry HASCONTENT 0",
-                    0,
-                    cursor.getInt(cursor.getColumnIndexOrThrow(VoicemailContract.Voicemails.HAS_CONTENT)),
-                )
-            }
+        // A null cursor here means the row was not queryable — that is a failure,
+        // not a case to pass silently, so assert non-null rather than skipping the
+        // HASCONTENT check behind an optional chain.
+        val cursor = resolver.query(rowUri, arrayOf(VoicemailContract.Voicemails.HAS_CONTENT), null, null, null)
+        assertNotNull("the written voicemail row must be queryable", cursor)
+        cursor.use {
+            assertTrue("the written voicemail row must be queryable", it.moveToFirst())
+            assertEquals(
+                "a synced (IMAP-delivered) voicemail must carry HASCONTENT 0",
+                0,
+                it.getInt(it.getColumnIndexOrThrow(VoicemailContract.Voicemails.HAS_CONTENT)),
+            )
+        }
         val fetched = VvmAudioFetcher(context).fetchIfMissingContent(rowUri)
         assertTrue("a synced (content-less) voicemail must trigger a fetch", fetched)
         val broadcast = shadowOf(context.applicationContext as android.app.Application)
