@@ -81,7 +81,13 @@ class XxVisualVoicemailService : VisualVoicemailService() {
                     // T3: after persisting the credential, run the mailbox sync
                     // so the fetched messages land in VoicemailContract. The
                     // worker runs off the main thread under a wake lock.
-                    syncWorker.sync(sms)
+                    val written = syncWorker.sync(sms)
+                    // T2: IMAP delivers message metadata only — every written row
+                    // carries HASCONTENT 0, so its audio must be fetched from the
+                    // carrier by broadcasting ACTION_FETCH_VOICEMAIL. The fetcher
+                    // owns that broadcast and is reached here for each new row.
+                    val fetcher = VvmAudioFetcher(this@XxVisualVoicemailService)
+                    written.forEach { fetcher.fetchIfMissingContent(it) }
                 }
             }
         }
