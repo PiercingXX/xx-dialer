@@ -27,13 +27,17 @@ object InMemoryVoicemailProvider {
 
     /**
      * Registers an in-memory [ContentProvider] for the VoicemailContract authority
-     * the tests build their source URIs against (the application's package name).
-     * Call from a @Before so every test starts from a provider that answers
-     * collection and row URI queries.
+     * the tests build their source URIs against. The URIs carry the platform
+     * authority [VoicemailContract.AUTHORITY] ("com.android.voicemail"), not the
+     * application's package name — buildSourceUri(packageName) appends the package
+     * as a path segment under that authority — so the provider must be registered
+     * under the platform authority or the contentResolver never routes to it and
+     * every query returns null. Call from a @Before so every test starts from a
+     * provider that answers collection and row URI queries.
      */
     fun register() {
-        val context = ApplicationProvider.getApplicationContext<Context>()
-        val providerInfo = ProviderInfo().apply { authority = context.packageName }
+        ApplicationProvider.getApplicationContext<Context>()
+        val providerInfo = ProviderInfo().apply { authority = VoicemailContract.AUTHORITY }
         Robolectric.buildContentProvider(VoicemailProvider::class.java).create(providerInfo).get()
     }
 
