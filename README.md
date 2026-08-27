@@ -7,8 +7,12 @@ had to be a whole dialer because a screening app cannot change the ringtone —
 the system plays it, and only the default dialer owns the ringer. So the keypad,
 recents, contacts and in-call screen come along for the ride.
 
-All screening is local. No `INTERNET` permission, and `verifyNoInternet` fails
-the build if one ever appears — enforced, not asserted in prose.
+All screening is local. The dialer is offline by default: no network use, no
+sockets — and `verifyVvmInternetOnly` fails the build if any network permission
+or socket site ever appears outside the opt-in Visual voicemail feature. VVM is
+the single exception: it is off until you flip the toggle, at which point the
+client talks to your carrier mailbox over IMAP. Enforced, not asserted in
+prose.
 
 <img src="docs/images/screenshot.png" width="270" alt="XX-Dialer Recents screen on a Pixel 6, AMOLED Night">
 
