@@ -51,6 +51,13 @@ class XxVisualVoicemailService : VisualVoicemailService() {
             // parser is the single entry point for mailbox credentials.
             val sms = VvmSmsParser.parse(message.messageBody)
             if (sms != null) {
+                // T3: a STATUS notification names the mailbox host (`srv`); feed
+                // it into the host-constraint seam so the IMAP connect path (T5)
+                // may reach only this last STATUS host. A SYNC message carries no
+                // new host and must not widen the allowed set.
+                if (sms.type == "STATUS") {
+                    sms.fields["srv"]?.let { VvmImapHostPolicy.recordStatusHost(it) }
+                }
                 // T2: persist the credential to encrypted prefs so T3/T5 can
                 // open the IMAP connection to sms.fields["srv"]. The store
                 // encrypts at rest and strips the password from backup/log.
