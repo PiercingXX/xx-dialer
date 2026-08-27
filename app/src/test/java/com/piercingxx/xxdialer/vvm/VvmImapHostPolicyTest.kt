@@ -13,7 +13,7 @@ import kotlin.test.assertTrue
 class VvmImapHostPolicyTest {
 
     @Test
-    fun imapHostMustEqualStatusHost() {
+    fun allowedHostEqualsStatusHost() {
         val statusHost = "mail.example.com"
 
         VvmImapHostPolicy.recordStatusHost(statusHost)
