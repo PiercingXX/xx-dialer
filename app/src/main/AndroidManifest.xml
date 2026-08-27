@@ -31,8 +31,9 @@
          declared here unconditionally — but the app never opens a socket until
          the user turns the Visual voicemail toggle ON, at which point the client
          talks to the carrier mailbox over IMAP. The runtime opt-in gate is
-         enforced by verifyVvmInternetOnly (todo.md D1): the only socket site
-         in the tree lives in the …vvm/…voicemail package. ADD_VOICEMAIL /
+         enforced by verifyVvmInternetOnly (todo.md D1): the guard pins that no
+         socket site exists outside the VVM feature (the VVM client package
+         lands in V3). ADD_VOICEMAIL /
          READ_VOICEMAIL / WRITE_VOICEMAIL back VoicemailContract (D3);
          SEND_SMS is the ACTIVATE/DEACTIVATE/query channel. BIND_VISUAL_
          VOICEMAIL_SERVICE is NOT here — it belongs on the <service> tag, not

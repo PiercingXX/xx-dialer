@@ -82,6 +82,7 @@ object BackupJson {
         SettingsRepository.KEY_SILENCED_NOTIF_POLICY,
         SettingsRepository.KEY_ANSWER_INTERACTION,
         SettingsRepository.KEY_GROUP_RECENTS,
+        SettingsRepository.KEY_VISUAL_VOICEMAIL, // opt-in VVM toggle (§12, D1)
         "daily_silence_digest", // ring/SilencedNotifier daily-summary stash
         "canned_reply_1",       // ui/IncomingCallActivity canned replies
         "canned_reply_2",
