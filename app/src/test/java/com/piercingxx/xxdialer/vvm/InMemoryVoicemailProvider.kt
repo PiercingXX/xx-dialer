@@ -4,12 +4,13 @@ import android.content.ContentProvider
 import android.content.ContentUris
 import android.content.ContentValues
 import android.content.Context
+import android.content.pm.ProviderInfo
 import android.database.Cursor
 import android.database.MatrixCursor
 import android.net.Uri
 import android.provider.VoicemailContract
 import androidx.test.core.app.ApplicationProvider
-import org.robolectric.Shadows.shadowOf
+import org.robolectric.Robolectric
 
 /**
  * Registers an in-memory VoicemailContract provider for the completion gate
@@ -17,9 +18,10 @@ import org.robolectric.Shadows.shadowOf
  * VoicemailContract authority, so contentResolver.query() returns null for both
  * the collection and row URIs — which makes the audio fetcher/player tests fail
  * (readHasContent() returns null → fetchIfMissingContent()/play() return false).
- * This registers a minimal in-memory provider via ShadowContentResolver so the
- * insert/query/delete round-trip actually works under Robolectric, exercising
- * the real production read path instead of short-circuiting it.
+ * This registers a minimal in-memory provider via Robolectric's
+ * buildContentProvider(...).create(...) so the insert/query/delete round-trip
+ * actually works under Robolectric, exercising the real production read path
+ * instead of short-circuiting it.
  */
 object InMemoryVoicemailProvider {
 
@@ -31,7 +33,8 @@ object InMemoryVoicemailProvider {
      */
     fun register() {
         val context = ApplicationProvider.getApplicationContext<Context>()
-        shadowOf(context.contentResolver).registerProvider(context.packageName, VoicemailProvider())
+        val providerInfo = ProviderInfo().apply { authority = context.packageName }
+        Robolectric.buildContentProvider(VoicemailProvider::class.java).create(providerInfo).get()
     }
 
     /**
