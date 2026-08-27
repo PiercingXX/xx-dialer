@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- One voicemail row (todo.md V7 list): caller name, time, duration, then
+     the detail controls — play/pause, speaker, call back, delete. The controls
+     are the detail seams; the adapter wires each to VoicemailActivity's
+     corresponding action. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/vvm_row_root"
+    style="@style/Widget.Xx.ListRow"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingTop="10dp"
+    android:paddingBottom="10dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:id="@+id/vvm_row_caller"
+            style="@style/TextAppearance.Xx.Body"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:maxLines="1"
+            android:ellipsize="end"
+            android:text="@string/vvm_unknown_caller"/>
+
+        <TextView
+            android:id="@+id/vvm_row_time"
+            style="@style/TextAppearance.Xx.BodySmall"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"/>
+
+        <TextView
+            android:id="@+id/vvm_row_duration"
+            style="@style/TextAppearance.Xx.BodySmall"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:textColor="@color/pxx_white_50"/>
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/vvm_row_play"
+            style="@style/Widget.Xx.ButtonSecondary"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/vvm_play"/>
+
+        <Button
+            android:id="@+id/vvm_row_speaker"
+            style="@style/Widget.Xx.ButtonSecondary"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="8dp"
+            android:text="@string/vvm_speaker_off"/>
+
+        <Button
+            android:id="@+id/vvm_row_call_back"
+            style="@style/Widget.Xx.ButtonSecondary"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="8dp"
+            android:text="@string/vvm_call_back"/>
+
+        <Button
+            android:id="@+id/vvm_row_delete"
+            style="@style/Widget.Xx.ButtonSecondary"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="8dp"
+            android:text="@string/vvm_delete"/>
+    </LinearLayout>
+</LinearLayout>

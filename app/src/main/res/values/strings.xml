@@ -89,4 +89,27 @@
     <string name="vvm_caption">On: a Voicemail tab, carrier mailbox over the network. Off: long-press 1 only. Default off.</string>
     <string name="vvm_network_note">Visual voicemail talks to your carrier\'s mailbox. Leave it off if you do not want this app on the network. GrapheneOS can also revoke Network for this app.</string>
     <string name="tab_voicemail">Voicemail</string>
+
+    <!--
+         Voicemail tab honest states (todo.md "Tab states", V7). One message per
+         VvmListState so the list never pretends to be empty while the mailbox
+         is actually unavailable or not yet ready. The list is the only state
+         that shows rows; every other state explains itself instead of lying.
+    -->
+    <string name="vvm_state_no_config">No carrier voicemail config on this SIM</string>
+    <string name="vvm_state_activating">Voicemail mailbox is activating…</string>
+    <string name="vvm_state_network_revoked">Network access revoked — voicemail can\'t be reached</string>
+    <string name="vvm_state_imap_error">Couldn\'t reach the voicemail mailbox</string>
+    <string name="vvm_state_empty">No voicemails yet</string>
+    <string name="vvm_retry">Retry</string>
+
+    <!-- Voicemail row / detail (todo.md V7). -->
+    <string name="vvm_unknown_caller">Unknown caller</string>
+    <string name="vvm_play">Play</string>
+    <string name="vvm_pause">Pause</string>
+    <string name="vvm_speaker_on">Speaker on</string>
+    <string name="vvm_speaker_off">Speaker off</string>
+    <string name="vvm_call_back">Call back</string>
+    <string name="vvm_delete">Delete</string>
+    <string name="vvm_duration_format">%1$ds</string>
 </resources>
