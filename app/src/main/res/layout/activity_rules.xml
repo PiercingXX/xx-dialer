@@ -500,8 +500,57 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:checkable="true" />
+
+                    <!-- §12 gated hide-chip: present only while Visual voicemail
+                         is on. Off ⇒ the tab is gone entirely, so its hide-chip
+                         is gone too (todo.md: "Hide-chip for it is gone too"). -->
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chipTabVoicemail"
+                        style="@style/Widget.Xx.Chip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:checkable="true" />
                 </com.google.android.material.chip.ChipGroup>
+
+            <!-- Visual voicemail (§12): OPT-IN, off by default. One toggle, two
+                 effects — on shows the Voicemail tab AND starts the client; off
+                 the tab is absent entirely. The copy is honest about the network
+                 (todo.md: "Leave it off if you do not want this app on the
+                 network"). -->
+            <TextView
+                android:id="@+id/vvmLabel"
+                style="@style/TextAppearance.Xx.Body"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingTop="14dp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:id="@+id/vvmCaption"
+                    style="@style/TextAppearance.Xx.BodySmall"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1" />
+
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/vvmSwitch"
+                    style="@style/Widget.Xx.Switch"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" />
             </LinearLayout>
+
+            <TextView
+                android:id="@+id/vvmNetworkNote"
+                style="@style/TextAppearance.Xx.BodySmall"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingTop="6dp" />
+        </LinearLayout>
 
             <!-- pattern rules -->
             <TextView

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Voicemail tab (design §12): placeholder shell that hosts the shared tab
+     bar. The carrier-mailbox list/play/delete surface lands in a later task;
+     for now this is the reachable screen behind Tab.VOICEMAIL. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:fitsSystemWindows="true">
+
+    <TextView
+        android:id="@+id/voicemail_title"
+        style="@style/TextAppearance.Xx.Display"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:layout_marginStart="@dimen/xx_gutter"
+        android:layout_marginEnd="@dimen/xx_gutter"
+        android:text="@string/tab_voicemail"/>
+
+    <include layout="@layout/view_tab_bar"/>
+</LinearLayout>
