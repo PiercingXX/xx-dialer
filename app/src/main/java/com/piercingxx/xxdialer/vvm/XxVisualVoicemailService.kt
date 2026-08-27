@@ -51,7 +51,12 @@ class XxVisualVoicemailService : VisualVoicemailService() {
             // parser is the single entry point for mailbox credentials.
             val sms = VvmSmsParser.parse(message.messageBody)
             if (sms != null) {
-                // TODO T2: persist the credential; T3/T5: IMAP sync to sms.fields["srv"].
+                // T2: persist the credential to encrypted prefs so T3/T5 can
+                // open the IMAP connection to sms.fields["srv"]. The store
+                // encrypts at rest and strips the password from backup/log.
+                scope.launch {
+                    VvmCredentialStore(this@XxVisualVoicemailService).save(sms)
+                }
             }
         }
     }
