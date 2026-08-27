@@ -48,4 +48,24 @@ class VvmGateTest {
             "both off must not ACTIVATE",
         )
     }
+
+    @Test
+    fun shouldDeactivateOnlyWhenPreviouslyActivated() {
+        assertTrue(
+            VvmGate.shouldDeactivate(toggleOn = false, previouslyActivated = true),
+            "toggle off after a prior activation is the only state that DEACTIVATEs",
+        )
+        assertFalse(
+            VvmGate.shouldDeactivate(toggleOn = true, previouslyActivated = true),
+            "toggle still on must not DEACTIVATE the mailbox",
+        )
+        assertFalse(
+            VvmGate.shouldDeactivate(toggleOn = false, previouslyActivated = false),
+            "toggle off with no prior activation must not DEACTIVATE (nothing to undo)",
+        )
+        assertFalse(
+            VvmGate.shouldDeactivate(toggleOn = true, previouslyActivated = false),
+            "both on-and-never-activated must not DEACTIVATE",
+        )
+    }
 }

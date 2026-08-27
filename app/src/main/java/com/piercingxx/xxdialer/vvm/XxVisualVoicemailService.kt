@@ -49,7 +49,21 @@ class XxVisualVoicemailService : VisualVoicemailService() {
     }
 
     override fun onSimRemoved(task: VisualVoicemailTask, phoneAccountHandle: PhoneAccountHandle) {
-        gate(task) { /* T4: DEACTIVATE if previously activated, unregister, drop rows. */ }
+        // T4: toggle off after on — DEACTIVATE only if we previously ACTIVATEd,
+        // then unregister the source and drop provider rows. This teardown runs
+        // even when the toggle is now off (that is the point), so it reads the
+        // persisted "previously activated" flag directly rather than routing
+        // through [gate] (which requires the toggle to be on).
+        scope.launch {
+            val previouslyActivated = runCatching {
+                ServiceLocator.settings(this@XxVisualVoicemailService).visualVoicemailWasActivated()
+            }.getOrDefault(false)
+            if (VvmGate.shouldDeactivate(toggleOn = false, previouslyActivated = previouslyActivated)) {
+                // TODO T4: TelephonyManager.sendVisualVoicemailSms(DEACTIVATE),
+                // setVisualVoicemailSmsFilterSettings(null), drop provider rows.
+            }
+            task.finish()
+        }
     }
 
     override fun onStopped(task: VisualVoicemailTask) {
