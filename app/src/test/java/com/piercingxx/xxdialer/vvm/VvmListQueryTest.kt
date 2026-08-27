@@ -104,9 +104,27 @@ class VvmListQueryTest {
 
         // Fake the PhoneLookup result for the known number: the default resolver
         // (PhoneLookupName::resolve) queries CONTENT_FILTER_URI/<number>, so the
-        // cursor is registered under that exact URI.
-        val lookup = BaseCursor(arrayOf(Phone.DISPLAY_NAME))
-        lookup.setRows(listOf<Any>(arrayOf("Grace Hopper")))
+        // cursor is registered under that exact URI. BaseCursor is abstract in
+        // Robolectric 4.12, so a minimal subclass answers only the calls the
+        // resolver makes: count, moveToFirst, getColumnIndexOrThrow, getString.
+        val lookup = object : BaseCursor() {
+            private val columnNames = arrayOf(Phone.DISPLAY_NAME)
+            private val row = arrayOf<Any?>("Grace Hopper")
+            private var pos = -1
+            override fun getCount(): Int = 1
+            override fun moveToFirst(): Boolean {
+                pos = 0
+                return true
+            }
+            override fun getColumnIndexOrThrow(columnName: String): Int =
+                columnNames.indexOf(columnName).takeIf { it >= 0 }
+                    ?: throw IllegalArgumentException("no column $columnName")
+            override fun getString(columnIndex: Int): String = row[columnIndex] as String
+            // Kotlin's Cursor.use { } closes the cursor after the block; the
+            // base BaseCursor.close() throws UnsupportedOperationException, so
+            // the fake must accept the close as a no-op.
+            override fun close() {}
+        }
         shadow.setCursor(PhoneLookup.CONTENT_FILTER_URI.buildUpon().appendPath("+15551234567").build(), lookup)
 
         val rows = VvmListQuery(context).readRows()
