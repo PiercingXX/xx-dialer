@@ -2,6 +2,8 @@ package com.piercingxx.xxdialer.vvm
 
 import android.content.ContentValues
 import android.content.Context
+import android.provider.ContactsContract.CommonDataKinds.Phone
+import android.provider.ContactsContract.PhoneLookup
 import android.provider.VoicemailContract
 import androidx.test.core.app.ApplicationProvider
 import org.junit.Assert.assertEquals
@@ -11,7 +13,9 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
+import org.robolectric.fakes.BaseCursor
 
 /**
  * The voicemail list query (todo.md VVM list, T2): reads the mailbox rows from
@@ -85,13 +89,25 @@ class VvmListQueryTest {
      * The default resolver must use the live PhoneLookup path (the same query
      * ContactMirror uses at ring time): a number present in the contact store
      * resolves to its display name, and one absent from the store stays null.
+     * The PhoneLookup result is faked through the resolver (ShadowContentResolver)
+     * rather than Robolectric's real ContactsContract provider, which cannot host
+     * a PhoneLookup query against programmatically-inserted rows.
      */
     @Test
     fun defaultResolverUsesPhoneLookup() {
         val context = ApplicationProvider.getApplicationContext<Context>()
-        insertContact(context, number = "+15551234567", name = "Grace Hopper")
+        val resolver = context.contentResolver
+        val shadow = shadowOf(resolver)
+
         insertVoicemail(context, number = "+15551234567", date = 1_700_000_000_000L, duration = 42, isRead = 0)
         insertVoicemail(context, number = "+15559876543", date = 1_700_000_000_100L, duration = 17, isRead = 1)
+
+        // Fake the PhoneLookup result for the known number: the default resolver
+        // (PhoneLookupName::resolve) queries CONTENT_FILTER_URI/<number>, so the
+        // cursor is registered under that exact URI.
+        val lookup = BaseCursor(arrayOf(Phone.DISPLAY_NAME))
+        lookup.setRows(listOf<Any>(arrayOf("Grace Hopper")))
+        shadow.setCursor(PhoneLookup.CONTENT_FILTER_URI.buildUpon().appendPath("+15551234567").build(), lookup)
 
         val rows = VvmListQuery(context).readRows()
 
