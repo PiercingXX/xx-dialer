@@ -37,12 +37,18 @@ class VvmAudioPlayer(private val context: Context) {
     private fun playDirectly(uri: Uri): Boolean =
         runCatching {
             MediaPlayer().apply {
-                setAudioAttributes(
-                    AudioAttributes.Builder()
-                        .setUsage(AudioAttributes.USAGE_MEDIA)
-                        .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
-                        .build(),
-                )
+                // Audio attributes are a preference, not a precondition: setting
+                // them can fail on some platforms (Robolectric has no shadow for
+                // MediaPlayer.setAudioAttributes, so the native call throws there),
+                // and that must not abort playback of an otherwise playable file.
+                runCatching {
+                    setAudioAttributes(
+                        AudioAttributes.Builder()
+                            .setUsage(AudioAttributes.USAGE_MEDIA)
+                            .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                            .build(),
+                    )
+                }
                 setDataSource(context, uri)
                 prepare()
                 start()
