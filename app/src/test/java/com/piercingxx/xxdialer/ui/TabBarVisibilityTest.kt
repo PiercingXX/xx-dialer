@@ -38,11 +38,11 @@ class TabBarVisibilityTest {
     fun `current tab and rules always survive`() {
         val visible = TabBar.visibleTabs(
             current = Tab.KEYPAD,
-            hiddenNames = setOf("keypad", "rules"),
+            hiddenNames = setOf("keypad", "rules", "recents"),
             vvmEnabled = true,
         )
         assertTrue(Tab.KEYPAD in visible, "the screen the user is standing on keeps its marker")
         assertTrue(Tab.RULES in visible, "Rules is unhideable so the setting can undo itself")
-        assertFalse(Tab.RECENTS in visible)
+        assertFalse(Tab.RECENTS in visible, "a genuinely-hidden tab is removed from the bar")
     }
 }
