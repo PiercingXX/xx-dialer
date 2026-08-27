@@ -17,3 +17,6 @@ local.properties
 
 # OS noise
 .DS_Store
+
+# Skippy runtime bookkeeping — never tracked
+.skippy/
