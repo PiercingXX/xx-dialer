@@ -97,6 +97,7 @@
         <activity android:name=".ui.KeypadActivity" android:exported="false"/>
         <activity android:name=".ui.PeopleActivity" android:exported="false"/>
         <activity android:name=".ui.RulesActivity" android:exported="false"/>
+        <activity android:name=".ui.VoicemailActivity" android:exported="false"/>
         <!-- The two call surfaces live in their OWN task, not the dialer's.
              Both are always started with FLAG_ACTIVITY_NEW_TASK, and NEW_TASK
              with the default affinity does not mean "a new task" — it means
