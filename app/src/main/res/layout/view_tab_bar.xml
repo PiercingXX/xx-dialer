@@ -47,6 +47,14 @@
             android:layout_weight="1"
             android:background="@color/pxx_signal"
             android:visibility="invisible"/>
+
+        <View
+            android:id="@+id/tab_ind_voicemail"
+            android:layout_width="0dp"
+            android:layout_height="@dimen/xx_hairline"
+            android:layout_weight="1"
+            android:background="@color/pxx_signal"
+            android:visibility="invisible"/>
     </LinearLayout>
 
     <LinearLayout
@@ -93,5 +101,15 @@
             android:paddingTop="10dp"
             android:paddingBottom="12dp"
             android:text="@string/tab_rules"/>
+
+        <TextView
+            android:id="@+id/tab_voicemail"
+            style="@style/Widget.Xx.Tab"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:paddingTop="10dp"
+            android:paddingBottom="12dp"
+            android:text="@string/tab_voicemail"/>
     </LinearLayout>
 </LinearLayout>
