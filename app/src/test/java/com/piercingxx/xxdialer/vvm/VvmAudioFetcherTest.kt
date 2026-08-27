@@ -91,7 +91,11 @@ class VvmAudioFetcherTest {
         // HASCONTENT check behind an optional chain.
         val cursor = resolver.query(rowUri, arrayOf(VoicemailContract.Voicemails.HAS_CONTENT), null, null, null)
         assertNotNull("the written voicemail row must be queryable", cursor)
-        cursor.use {
+        // assertNotNull is a plain JUnit call with no Kotlin contract, so it does
+        // not smart-cast the nullable cursor; `!!` asserts the non-null the assert
+        // already guaranteed (deliberately NOT `?.` — a null row must fail, never
+        // silently skip the HASCONTENT check).
+        cursor!!.use {
             assertTrue("the written voicemail row must be queryable", it.moveToFirst())
             assertEquals(
                 "a synced (IMAP-delivered) voicemail must carry HASCONTENT 0",
