@@ -5,6 +5,7 @@ import android.content.Context
 import android.provider.VoicemailContract
 import androidx.test.core.app.ApplicationProvider
 import org.junit.After
+import org.junit.Before
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
@@ -27,6 +28,15 @@ import org.robolectric.shadows.util.DataSource
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
 class VvmAudioPlayerTest {
+
+    @Before
+    fun setUp() {
+        // Robolectric has no working VoicemailContract provider, so readHasContent()
+        // returns null and play() can never reach the direct-play or fetch branch.
+        // Register an in-memory provider so the insert/query round-trip exercises
+        // the real production read path (see InMemoryVoicemailProvider).
+        InMemoryVoicemailProvider.register()
+    }
 
     @After
     fun tearDown() {
