@@ -56,7 +56,7 @@ class VvmListQuery(
         val sourceUri = VoicemailContract.Voicemails.buildSourceUri(context.packageName)
         val cursor = try {
             resolver.query(sourceUri, PROJECTION, null, null, SORT_ORDER)
-        } catch (e: Throwable) {
+        } catch (e: Exception) {
             Log.w(TAG, "voicemail list query failed", e)
             null
         } ?: return emptyList()
@@ -93,21 +93,18 @@ class VvmListQuery(
  * The default caller-name resolver: one [PhoneLookup.CONTENT_FILTER_URI] query
  * per number, exactly the live path [ContactMirror] uses at ring time. A null or
  * empty result means the caller is unknown — the list renders the raw number
- * instead of a fabricated name.
+ * instead of a fabricated name. Any provider failure (e.g. a denied read) is
+ * propagated, not silently swallowed, so it surfaces as a real error rather
+ * than a fabricated "unknown" caller.
  */
 object PhoneLookupName {
 
-    fun resolve(context: Context, number: String): String? = try {
+    fun resolve(context: Context, number: String): String? {
         val uri = PhoneLookup.CONTENT_FILTER_URI.buildUpon().appendPath(number).build()
-        context.contentResolver.query(uri, arrayOf(Phone.DISPLAY_NAME), null, null, null)?.use { c ->
+        return context.contentResolver.query(uri, arrayOf(Phone.DISPLAY_NAME), null, null, null)?.use { c ->
             if (c.moveToFirst()) c.getString(c.getColumnIndexOrThrow(Phone.DISPLAY_NAME)) else null
         }
-    } catch (e: Throwable) {
-        Log.w(TAG, "phone lookup failed for $number", e)
-        null
     }
-
-    private const val TAG = "PhoneLookupName"
 }
 
 /**
