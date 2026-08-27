@@ -5,6 +5,7 @@ import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import com.piercingxx.xxdialer.R
 import com.piercingxx.xxdialer.vvm.VvmAudioPlayer
+import com.piercingxx.xxdialer.vvm.VvmDetailPlayer
 import com.piercingxx.xxdialer.vvm.VvmListQuery
 import com.piercingxx.xxdialer.vvm.VvmListRow
 
@@ -22,6 +23,14 @@ class VoicemailActivity : AppCompatActivity() {
     private val listQuery: VvmListQuery by lazy { VvmListQuery(this) }
 
     /**
+     * T3: the detail screen's action seams — play/pause, speaker, call back, and
+     * delete. [VvmDetailPlayer] owns its own self-contained MediaPlayer and drives
+     * playback directly from the voicemail's content URI (V6 fetch-then-play is
+     * not landed). The detail UI (V7) calls these when the user taps the controls.
+     */
+    private val detailPlayer: VvmDetailPlayer by lazy { VvmDetailPlayer(this) }
+
+    /**
      * T2: reads the mailbox rows from VoicemailContract and resolves each caller
      * name (via the live PhoneLookup path). The list/detail UI (V7) calls this
      * to render the voicemail list; [VvmListState] decides which honest state the
@@ -36,6 +45,29 @@ class VoicemailActivity : AppCompatActivity() {
      * decision and the MediaPlayer lifecycle.
      */
     fun playVoicemail(uri: Uri): Boolean = audioPlayer.play(uri)
+
+    /**
+     * T3: toggles play/pause for the voicemail at [uri] via the detail player's
+     * self-contained MediaPlayer. The detail UI (V7) calls this on the play/pause
+     * control.
+     */
+    fun toggleDetailPlay(uri: Uri): Boolean = detailPlayer.togglePlay(uri)
+
+    /**
+     * T3: routes detail playback through the speakerphone ([on] true) or the
+     * earpiece ([on] false).
+     */
+    fun setDetailSpeakerphone(on: Boolean): Boolean = detailPlayer.setSpeakerphone(on)
+
+    /**
+     * T3: dials the caller's [number] back from the detail screen.
+     */
+    fun callBackVoicemail(number: String): Boolean = detailPlayer.callBack(number)
+
+    /**
+     * T3: deletes the voicemail row at [uri] from the detail screen.
+     */
+    fun deleteVoicemail(uri: Uri): Boolean = detailPlayer.delete(uri)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
