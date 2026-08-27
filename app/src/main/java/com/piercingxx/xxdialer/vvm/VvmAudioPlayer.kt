@@ -48,7 +48,7 @@ class VvmAudioPlayer(private val context: Context) {
                             .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
                             .build(),
                     )
-                }
+                }.onFailure { Log.w(LOG_TAG, "vvm audio play: could not set audio attributes for $uri", it) }
                 setDataSource(context, uri)
                 prepare()
                 start()
