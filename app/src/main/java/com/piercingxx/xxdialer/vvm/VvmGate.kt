@@ -24,4 +24,15 @@ object VvmGate {
      */
     fun shouldActivate(toggleOn: Boolean, carrierConfigValid: Boolean): Boolean =
         toggleOn && carrierConfigValid
+
+    /**
+     * True only when the toggle has been turned OFF after a prior activation —
+     * the "toggle off after on" path (todo.md "Turning off after it was on").
+     * DEACTIVATE, unregister the voicemail source, and drop provider rows only
+     * when we previously ACTIVATEd and the user has now switched off; a toggle
+     * that was never on must not DEACTIVATE (nothing to undo), and a toggle
+     * still on must not tear the mailbox down.
+     */
+    fun shouldDeactivate(toggleOn: Boolean, previouslyActivated: Boolean): Boolean =
+        !toggleOn && previouslyActivated
 }
