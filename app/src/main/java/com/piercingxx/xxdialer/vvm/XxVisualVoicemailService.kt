@@ -45,7 +45,15 @@ class XxVisualVoicemailService : VisualVoicemailService() {
     }
 
     override fun onSmsReceived(task: VisualVoicemailTask, message: VisualVoicemailSms) {
-        gate(task) { /* T4: parse STATUS/SYNC; T5 IMAP sync. */ }
+        gate(task) {
+            // T4: parse the STATUS/SYNC notification into a credential record.
+            // A non-VVM or malformed body yields null and is dropped here — the
+            // parser is the single entry point for mailbox credentials.
+            val sms = VvmSmsParser.parse(message.messageBody)
+            if (sms != null) {
+                // TODO T2: persist the credential; T3/T5: IMAP sync to sms.fields["srv"].
+            }
+        }
     }
 
     override fun onSimRemoved(task: VisualVoicemailTask, phoneAccountHandle: PhoneAccountHandle) {
