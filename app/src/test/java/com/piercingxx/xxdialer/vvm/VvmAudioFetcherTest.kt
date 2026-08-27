@@ -4,6 +4,7 @@ import android.content.ContentValues
 import android.content.Context
 import android.provider.VoicemailContract
 import androidx.test.core.app.ApplicationProvider
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -51,13 +52,44 @@ class VvmAudioFetcherTest {
         val fetched = VvmAudioFetcher(context).fetchIfMissingContent(uri)
 
         assertFalse("a voicemail that already has content must not be fetched", fetched)
+        val fetchBroadcasts = shadowOf(context.applicationContext as android.app.Application)
+            .broadcastIntents
+            .filter { it.action == VoicemailContract.ACTION_FETCH_VOICEMAIL }
+        assertTrue(
+            "no fetch broadcast may be sent for a content-bearing voicemail",
+            fetchBroadcasts.isEmpty(),
+        )
+    }
+
+    /**
+     * Pins the live wiring: the IMAP sync worker writes each fetched message as a
+     * VoicemailContract row with HASCONTENT 0 and returns its URI; the service
+     * then hands that URI to [VvmAudioFetcher], which must broadcast
+     * ACTION_FETCH_VOICEMAIL for it. This is the exact path
+     * XxVisualVoicemailService.onSmsReceived uses, so it fails if the fetcher is
+     * ever unreachable from the running application.
+     */
+    @Test
+    fun syncRowIsFetchedAfterWrite() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val worker = VvmImapSyncWorker(context) {
+            listOf(VvmMailboxMessage(number = "+15551234567", timestampMillis = 1_700_000_000_000L, durationSeconds = 42, isRead = false))
+        }
+
+        val written = runBlocking {
+            worker.sync(VvmSms(type = "STATUS", fields = mapOf("srv" to "mail.example.com")))
+        }
+
+        assertTrue("sync must return the written row URIs for the fetcher", written.isNotEmpty())
+        val fetched = VvmAudioFetcher(context).fetchIfMissingContent(written.first())
+        assertTrue("a synced (content-less) voicemail must trigger a fetch", fetched)
         val broadcast = shadowOf(context.applicationContext as android.app.Application)
             .broadcastIntents
-            .firstOrNull { it.action == VoicemailContract.ACTION_FETCH_VOICEMAIL }
+            .single { it.action == VoicemailContract.ACTION_FETCH_VOICEMAIL }
         assertEquals(
-            "no fetch broadcast may be sent for a content-bearing voicemail",
-            null,
-            broadcast,
+            "the fetch broadcast must target the synced voicemail row",
+            written.first(),
+            broadcast.data,
         )
     }
 

@@ -2,6 +2,7 @@ package com.piercingxx.xxdialer.vvm
 
 import android.content.ContentValues
 import android.content.Context
+import android.net.Uri
 import android.os.PowerManager
 import android.provider.VoicemailContract
 import android.util.Log
@@ -41,11 +42,14 @@ class VvmImapSyncWorker(
 
     /**
      * Runs one mailbox sync: acquires the wake lock, fetches the messages off the
-     * main thread, and writes each as a VoicemailContract row. The whole body runs
-     * on Dispatchers.IO so no socket or provider I/O ever touches the main thread.
+     * main thread, and writes each as a VoicemailContract row. Returns the row URI
+     * of every written message so the caller can fetch the missing audio for each
+     * ([VvmAudioFetcher] — IMAP delivers metadata, never the audio itself). The
+     * whole body runs on Dispatchers.IO so no socket or provider I/O ever touches
+     * the main thread.
      */
-    suspend fun sync(creds: VvmSms) {
-        withContext(Dispatchers.IO) {
+    suspend fun sync(creds: VvmSms): List<Uri> {
+        return withContext(Dispatchers.IO) {
             val lock = acquireWakeLock()
             try {
                 writeRows(fetch(creds))
@@ -66,10 +70,10 @@ class VvmImapSyncWorker(
             .onFailure { Log.w(LOG_TAG, "vvm wake lock release failed", it) }
     }
 
-    private fun writeRows(messages: List<VvmMailboxMessage>) {
+    private fun writeRows(messages: List<VvmMailboxMessage>): List<Uri> {
         val resolver = context.contentResolver
         val sourceUri = VoicemailContract.Voicemails.buildSourceUri(context.packageName)
-        for (message in messages) {
+        return messages.mapNotNull { message ->
             val values = ContentValues().apply {
                 put(VoicemailContract.Voicemails.NUMBER, message.number)
                 put(VoicemailContract.Voicemails.DATE, message.timestampMillis)
