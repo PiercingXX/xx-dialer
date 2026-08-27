@@ -7,8 +7,8 @@ import androidx.test.core.app.ApplicationProvider
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -87,15 +87,13 @@ class VvmAudioFetcherTest {
         val rowUri = written.first()
         val resolver = context.contentResolver
         // A null cursor here means the row was not queryable — that is a failure,
-        // not a case to pass silently, so assert non-null rather than skipping the
-        // HASCONTENT check behind an optional chain.
+        // not a case to pass silently. `?: fail` both fails on null AND smart-casts
+        // the non-null cursor (a plain JUnit assertNotNull has no Kotlin contract,
+        // so it cannot smart-cast); deliberately NOT `?.`, which would silently
+        // skip the HASCONTENT check.
         val cursor = resolver.query(rowUri, arrayOf(VoicemailContract.Voicemails.HAS_CONTENT), null, null, null)
-        assertNotNull("the written voicemail row must be queryable", cursor)
-        // assertNotNull is a plain JUnit call with no Kotlin contract, so it does
-        // not smart-cast the nullable cursor; `!!` asserts the non-null the assert
-        // already guaranteed (deliberately NOT `?.` — a null row must fail, never
-        // silently skip the HASCONTENT check).
-        cursor!!.use {
+            ?: fail("the written voicemail row must be queryable")
+        cursor.use {
             assertTrue("the written voicemail row must be queryable", it.moveToFirst())
             assertEquals(
                 "a synced (IMAP-delivered) voicemail must carry HASCONTENT 0",
