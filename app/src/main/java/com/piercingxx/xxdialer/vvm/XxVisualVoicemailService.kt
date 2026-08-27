@@ -27,6 +27,21 @@ class XxVisualVoicemailService : VisualVoicemailService() {
     /** Off-main gate reads: the toggle lives in the Room `setting` table. */
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
+    /**
+     * T3: the mailbox sync worker. Runs the IMAP fetch off the main thread under
+     * a wake lock and writes the fetched messages into VoicemailContract. The
+     * fetch seam is the real IMAP client entry point (T5); until that lands the
+     * sync runs and writes nothing — the worker's own invariants are pinned by
+     * VvmImapSyncWorkerTest.
+     */
+    private val syncWorker: VvmImapSyncWorker by lazy {
+        VvmImapSyncWorker(this) { _ ->
+            // T5 implements the real IMAP fetch (VvmImapClient). Until then the
+            // sync runs and writes no rows.
+            emptyList()
+        }
+    }
+
     override fun onDestroy() {
         scope.cancel()
         super.onDestroy()
@@ -63,6 +78,10 @@ class XxVisualVoicemailService : VisualVoicemailService() {
                 // encrypts at rest and strips the password from backup/log.
                 scope.launch {
                     VvmCredentialStore(this@XxVisualVoicemailService).save(sms)
+                    // T3: after persisting the credential, run the mailbox sync
+                    // so the fetched messages land in VoicemailContract. The
+                    // worker runs off the main thread under a wake lock.
+                    syncWorker.sync(sms)
                 }
             }
         }
