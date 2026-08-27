@@ -1,3 +1,4 @@
 BLOCKED: no adb device attached — adb binary unavailable in the build sandbox, so the VVM carrier-config dump cannot be captured on the target SIM. Re-run T1 on a host with a connected device (`adb shell dumpsys carrier_config | grep -i vvm`) to produce the dump.
 BLOCKED: no adb device attached — adb binary unavailable in the build sandbox
 BLOCKED: no adb device attached — adb binary unavailable in the build sandbox
+BLOCKED: no adb device attached — adb binary unavailable in the build sandbox
