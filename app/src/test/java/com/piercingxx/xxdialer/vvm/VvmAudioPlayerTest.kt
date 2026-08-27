@@ -14,6 +14,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.shadows.ShadowMediaPlayer
+import org.robolectric.shadows.util.DataSource
 
 /**
  * The audio player (todo.md VVM audio, T3) must play a content-bearing voicemail
@@ -48,7 +49,10 @@ class VvmAudioPlayerTest {
         // read from). Register the row's URI so prepare()/start() can succeed and
         // the direct-play path is actually exercised rather than swallowed by the
         // player's runCatching.
-        ShadowMediaPlayer.addMediaInfo(contentUri, ShadowMediaPlayer.MediaInfo(1, 1000))
+        ShadowMediaPlayer.addMediaInfo(
+            DataSource.toDataSource(context, contentUri),
+            ShadowMediaPlayer.MediaInfo(1, 1000),
+        )
         val played = VvmAudioPlayer(context).play(contentUri)
         assertTrue("a content-bearing voicemail must play directly", played)
         assertNotNull("playback must create a MediaPlayer", created)
