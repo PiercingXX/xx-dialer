@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Voicemail tab (design §12): placeholder shell that hosts the shared tab
-     bar. The carrier-mailbox list/play/delete surface lands in a later task;
-     for now this is the reachable screen behind Tab.VOICEMAIL. -->
+<!-- Voicemail tab (design §12, todo.md V7): title, then either the honest-state
+     message (no config / activating / network revoked / IMAP error / empty) or
+     the mailbox list, then the shared tab bar. The list is the only state that
+     shows rows; every other state explains itself instead of lying. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -17,6 +18,25 @@
         android:layout_marginStart="@dimen/xx_gutter"
         android:layout_marginEnd="@dimen/xx_gutter"
         android:text="@string/tab_voicemail"/>
+
+    <TextView
+        android:id="@+id/vvm_empty_state"
+        style="@style/TextAppearance.Xx.Body"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:layout_marginStart="@dimen/xx_gutter"
+        android:layout_marginEnd="@dimen/xx_gutter"
+        android:visibility="gone"/>
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/vvm_list"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:layout_marginTop="8dp"
+        android:clipToPadding="false"
+        android:visibility="gone"/>
 
     <include layout="@layout/view_tab_bar"/>
 </LinearLayout>
