@@ -112,4 +112,15 @@
     <string name="vvm_call_back">Call back</string>
     <string name="vvm_delete">Delete</string>
     <string name="vvm_duration_format">%1$ds</string>
+
+    <!--
+         Detail-action failure copy (todo.md VVM detail, T2). One message per
+         failed detail action so the screen says what actually went wrong instead
+         of a silent no-op: play, speaker, call back, and delete each explain
+         themselves when their seam returns false.
+    -->
+    <string name="vvm_detail_play_failed">Couldn\'t play this voicemail</string>
+    <string name="vvm_detail_speaker_failed">Couldn\'t switch the speaker</string>
+    <string name="vvm_detail_callback_failed">Couldn\'t call back</string>
+    <string name="vvm_detail_delete_failed">Couldn\'t delete this voicemail</string>
 </resources>

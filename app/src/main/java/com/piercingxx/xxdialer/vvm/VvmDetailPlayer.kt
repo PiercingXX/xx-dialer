@@ -20,7 +20,7 @@ import com.piercingxx.xxdialer.telecom.CallManager
  * Every Android-touching behaviour is an injectable seam with a live default, so
  * the class is JVM-testable without Robolectric shadowing the whole stack:
  * - [mediaPlayer] is the playback engine [togglePlay] drives.
- * - [audioManager] is where [setSpeakerphone] routes audio.
+ * - [speaker] is the speakerphone seam [setSpeakerphone] routes through.
  * - [dial] is the call-back seam, defaulting to [CallManager.place] (the app's only
  *   outgoing-call path — never ACTION_CALL).
  * - [deleteRow] is the delete seam, defaulting to a VoicemailContract row delete.
@@ -33,6 +33,11 @@ class VvmDetailPlayer(
     private val context: Context,
     private val mediaPlayer: MediaPlayer = MediaPlayer(),
     private val audioManager: AudioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager,
+    private val speaker: (Boolean) -> Boolean = { on ->
+        audioManager.mode = AudioManager.MODE_IN_COMMUNICATION
+        audioManager.isSpeakerphoneOn = on
+        true
+    },
     private val dial: (String) -> Boolean = { number ->
         val activity = context as? Activity
         activity != null && CallManager.place(activity, number)
@@ -60,11 +65,9 @@ class VvmDetailPlayer(
      * ([on] false). Returns true when the mode was applied, false when the audio
      * service refused it.
      */
-    fun setSpeakerphone(on: Boolean): Boolean = runCatching {
-        audioManager.mode = AudioManager.MODE_IN_COMMUNICATION
-        audioManager.isSpeakerphoneOn = on
-        true
-    }.onFailure { Log.w(TAG, "vvm detail: could not set speakerphone=$on", it) }.getOrDefault(false)
+    fun setSpeakerphone(on: Boolean): Boolean = runCatching { speaker(on) }
+        .onFailure { Log.w(TAG, "vvm detail: could not set speakerphone=$on", it) }
+        .getOrDefault(false)
 
     /**
      * Dials the caller's [number] back. Returns true when the call was placed,
