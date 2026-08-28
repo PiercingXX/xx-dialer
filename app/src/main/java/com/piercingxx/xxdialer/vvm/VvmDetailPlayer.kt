@@ -1,6 +1,7 @@
 package com.piercingxx.xxdialer.vvm
 
 import android.app.Activity
+import android.content.ContentUris
 import android.content.Context
 import android.media.AudioAttributes
 import android.media.AudioManager
@@ -8,6 +9,7 @@ import android.media.MediaPlayer
 import android.net.Uri
 import android.util.Log
 import com.piercingxx.xxdialer.telecom.CallManager
+import kotlinx.coroutines.runBlocking
 
 /**
  * The voicemail detail screen's action seams (todo.md VVM detail, T3): play/pause,
@@ -24,6 +26,11 @@ import com.piercingxx.xxdialer.telecom.CallManager
  * - [dial] is the call-back seam, defaulting to [CallManager.place] (the app's only
  *   outgoing-call path — never ACTION_CALL).
  * - [deleteRow] is the delete seam, defaulting to a VoicemailContract row delete.
+ * - [uploader] is the carrier-sync seam (V8 T3): when present, a delete uploads a
+ *   DELETE to the carrier before the row is removed, and a played voicemail uploads
+ *   a MARK_SEEN so the server-side message state stays in sync with what the user
+ *   did locally. When null (no carrier sync configured) the delete falls back to
+ *   [deleteRow] and play does not upload.
  *
  * Failure direction (§15): every action returns false rather than crashing when its
  * seam fails, and logs the reason, so the detail screen can surface an honest
@@ -40,18 +47,22 @@ class VvmDetailPlayer(
     private val deleteRow: (Uri) -> Boolean = { uri ->
         context.contentResolver.delete(uri, null, null) > 0
     },
+    private val uploader: VvmMailboxUploader? = null,
 ) {
 
     /**
      * Toggles playback of the voicemail at [uri]: starts playing when it is not
-     * playing, pauses when it is. Returns true when the state change was applied,
-     * false when the row could not be played (e.g. no content) or paused.
+     * playing, pauses when it is. Starting playback marks the voicemail seen —
+     * the played voicemail uploads a MARK_SEEN to the carrier so the server-side
+     * state stays in sync. Returns true when the state change was applied, false
+     * when the row could not be played (e.g. no content) or paused.
      */
     fun togglePlay(uri: Uri): Boolean {
         if (mediaPlayer.isPlaying) {
             mediaPlayer.pause()
             return true
         }
+        markSeen(uri)
         return playDirectly(uri)
     }
 
@@ -76,10 +87,31 @@ class VvmDetailPlayer(
     }
 
     /**
-     * Deletes the voicemail row at [uri]. Returns true when a row was deleted,
-     * false when nothing was removed.
+     * Deletes the voicemail row at [uri]. With a carrier uploader configured the
+     * delete uploads a DELETE to the carrier first and only removes the row once
+     * the carrier accepts it; without one it falls back to the [deleteRow] seam.
+     * Returns true when the row was deleted, false when the upload was refused or
+     * nothing was removed.
      */
-    fun delete(uri: Uri): Boolean = deleteRow(uri)
+    fun delete(uri: Uri): Boolean {
+        val uploader = uploader
+        if (uploader == null) return deleteRow(uri)
+        val rowId = ContentUris.parseId(uri)
+        // The uploader reflects the accepted delete into VoicemailContract itself,
+        // so a successful upload is what removes the row.
+        return runBlocking { uploader.upload(rowId, delete = true, markSeen = false) }
+    }
+
+    /**
+     * Uploads a MARK_SEEN for the voicemail at [uri] so the carrier learns it was
+     * played. Best-effort: a refused or failed seen-mark must not abort playback,
+     * so a failure is logged and swallowed.
+     */
+    private fun markSeen(uri: Uri) {
+        val uploader = uploader ?: return
+        val rowId = ContentUris.parseId(uri)
+        runBlocking { uploader.upload(rowId, delete = false, markSeen = true) }
+    }
 
     /** Releases the underlying [MediaPlayer] — call when the detail screen closes. */
     fun release() {
