@@ -84,17 +84,33 @@ object InMemoryVoicemailProvider {
 
         @Synchronized
         override fun delete(uri: Uri, selection: String?, selectionArgs: Array<String>?): Int {
-            val cleared = rows.size
-            rows.clear()
-            return cleared
+            val rowId = runCatching { ContentUris.parseId(uri) }.getOrDefault(-1L)
+            if (rowId < 0) {
+                // A collection delete clears the whole table (the tests reset between cases).
+                val cleared = rows.size
+                rows.clear()
+                return cleared
+            }
+            // A row-URI delete removes just that row — the V8 uploader deletes the
+            // single voicemail the user acted on, and the count must reflect it.
+            val before = rows.size
+            rows.removeAll { it.getAsLong(VoicemailContract.Voicemails._ID) == rowId }
+            return before - rows.size
         }
 
+        @Synchronized
         override fun update(
             uri: Uri,
             values: ContentValues?,
             selection: String?,
             selectionArgs: Array<String>?,
-        ): Int = 0
+        ): Int {
+            val rowId = runCatching { ContentUris.parseId(uri) }.getOrDefault(-1L)
+            if (rowId < 0 || values == null) return 0
+            val target = rows.firstOrNull { it.getAsLong(VoicemailContract.Voicemails._ID) == rowId } ?: return 0
+            target.putAll(values)
+            return 1
+        }
 
         override fun getType(uri: Uri): String? = null
 
