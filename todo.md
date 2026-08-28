@@ -1,5 +1,7 @@
 XX-Dialer visual voicemail (Skippy)
 
+> Repair inventory (2026-08-27): [TODO-REPAIR-2026-08-27.md](TODO-REPAIR-2026-08-27.md). This file remains the VVM product brief.
+
 Repo: `/media/Working-Storage/GitHub/Phone-Projects/android/xx-dialer`
 Package: `com.piercingxx.xxdialer`
 Target: Pixel 9 Pro (`caiman`), GrapheneOS, Android 17 / SDK 37, live SIM.

@@ -29,6 +29,18 @@
         android:layout_marginEnd="@dimen/xx_gutter"
         android:visibility="gone"/>
 
+    <!-- Detail-action failure copy (todo.md VVM detail, T2): shown when a detail
+         action (play / speaker / call back / delete) fails, so the screen says
+         what went wrong instead of a silent no-op. -->
+    <TextView
+        android:id="@+id/vvm_detail_failure"
+        style="@style/TextAppearance.Xx.Body"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/xx_gutter"
+        android:layout_marginEnd="@dimen/xx_gutter"
+        android:visibility="gone"/>
+
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/vvm_list"
         android:layout_width="match_parent"
