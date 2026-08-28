@@ -99,7 +99,9 @@ class VvmDetailPlayer(
         val rowId = ContentUris.parseId(uri)
         // The uploader reflects the accepted delete into VoicemailContract itself,
         // so a successful upload is what removes the row.
-        return runBlocking { uploader.upload(rowId, delete = true, markSeen = false) }
+        return runCatching {
+            runBlocking { uploader.upload(rowId, delete = true, markSeen = false) }
+        }.onFailure { Log.w(TAG, "vvm detail: could not delete $uri", it) }.getOrDefault(false)
     }
 
     /**
@@ -110,7 +112,9 @@ class VvmDetailPlayer(
     private fun markSeen(uri: Uri) {
         val uploader = uploader ?: return
         val rowId = ContentUris.parseId(uri)
-        runBlocking { uploader.upload(rowId, delete = false, markSeen = true) }
+        runCatching {
+            runBlocking { uploader.upload(rowId, delete = false, markSeen = true) }
+        }.onFailure { Log.w(TAG, "vvm detail: could not mark $uri seen", it) }
     }
 
     /** Releases the underlying [MediaPlayer] — call when the detail screen closes. */
