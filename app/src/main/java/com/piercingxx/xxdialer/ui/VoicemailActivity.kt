@@ -20,6 +20,12 @@ import com.piercingxx.xxdialer.vvm.VvmListState
 import com.piercingxx.xxdialer.vvm.VvmNetworkRevoked
 
 /**
+ * The voicemail detail actions that can fail (todo.md VVM detail, T2). Each maps
+ * to one honest failure message so the screen says what actually went wrong.
+ */
+enum class DetailAction { PLAY, SPEAKER, CALL_BACK, DELETE }
+
+/**
  * Voicemail tab (design §12, todo.md V7): the fifth tab, reachable only while
  * the Visual voicemail toggle is on (todo.md: "TabBar omits it when setting is
  * 0"). This is the list/detail surface: it renders every honest [VvmListState]
@@ -81,25 +87,62 @@ class VoicemailActivity : AppCompatActivity() {
     /**
      * T3: toggles play/pause for the voicemail at [uri] via the detail player's
      * self-contained MediaPlayer. The list rows (V7) call this on the play/pause
-     * control.
+     * control. T2: when playback cannot start, surfaces the honest failure copy.
      */
-    fun toggleDetailPlay(uri: Uri): Boolean = detail().togglePlay(uri)
+    fun toggleDetailPlay(uri: Uri): Boolean {
+        val ok = detail().togglePlay(uri)
+        if (!ok) showDetailActionFailure(DetailAction.PLAY)
+        return ok
+    }
 
     /**
      * T3: routes detail playback through the speakerphone ([on] true) or the
-     * earpiece ([on] false).
+     * earpiece ([on] false). T2: when the audio service refuses it, surfaces the
+     * honest failure copy.
      */
-    fun setDetailSpeakerphone(on: Boolean): Boolean = detail().setSpeakerphone(on)
+    fun setDetailSpeakerphone(on: Boolean): Boolean {
+        val ok = detail().setSpeakerphone(on)
+        if (!ok) showDetailActionFailure(DetailAction.SPEAKER)
+        return ok
+    }
 
     /**
-     * T3: dials the caller's [number] back from the detail screen.
+     * T3: dials the caller's [number] back from the detail screen. T2: when the
+     * call cannot be placed, surfaces the honest failure copy.
      */
-    fun callBackVoicemail(number: String): Boolean = detail().callBack(number)
+    fun callBackVoicemail(number: String): Boolean {
+        val ok = detail().callBack(number)
+        if (!ok) showDetailActionFailure(DetailAction.CALL_BACK)
+        return ok
+    }
 
     /**
-     * T3: deletes the voicemail row at [uri] from the detail screen.
+     * T3: deletes the voicemail row at [uri] from the detail screen. T2: when
+     * nothing was removed, surfaces the honest failure copy.
      */
-    fun deleteVoicemail(uri: Uri): Boolean = detail().delete(uri)
+    fun deleteVoicemail(uri: Uri): Boolean {
+        val ok = detail().delete(uri)
+        if (!ok) showDetailActionFailure(DetailAction.DELETE)
+        return ok
+    }
+
+    /**
+     * T2: surfaces honest copy when a detail action fails. The detail seams call
+     * this when the player returns false, so the user sees why the action did not
+     * happen instead of a silent no-op. The failure copy is driven by the player's
+     * Boolean result, so a failing player makes it observable without a live
+     * mailbox.
+     */
+    fun showDetailActionFailure(action: DetailAction) {
+        val res = when (action) {
+            DetailAction.PLAY -> R.string.vvm_detail_play_failed
+            DetailAction.SPEAKER -> R.string.vvm_detail_speaker_failed
+            DetailAction.CALL_BACK -> R.string.vvm_detail_callback_failed
+            DetailAction.DELETE -> R.string.vvm_detail_delete_failed
+        }
+        binding.vvmDetailFailure.setText(res)
+        binding.vvmDetailFailure.visibility = View.VISIBLE
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
