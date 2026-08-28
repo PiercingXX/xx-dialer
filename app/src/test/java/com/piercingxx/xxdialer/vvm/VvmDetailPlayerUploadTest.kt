@@ -117,8 +117,34 @@ class VvmDetailPlayerUploadTest {
             queryRow(resolver, source, seenRowId)!!.second,
         )
 
+        // --- A refused upload must not delete the row locally. ---
+        val refusedRowId = insertRow(resolver, source)
+        val refusedRowUri = ContentUris.withAppendedId(source, refusedRowId)
+        var refusedDeleteRan = false
+        val refusedPlayer = VvmDetailPlayer(
+            context = context,
+            deleteRow = { _ ->
+                refusedDeleteRan = true
+                true
+            },
+            uploader = VvmMailboxUploader(context) { _, _ -> false },
+        )
+        assertTrue(
+            "a delete must fail when the carrier refuses the upload",
+            !refusedPlayer.delete(refusedRowUri),
+        )
+        assertTrue(
+            "the local delete must not run when the carrier refuses the upload",
+            !refusedDeleteRan,
+        )
+        assertTrue(
+            "the voicemail must remain in VoicemailContract when the upload is refused",
+            queryRow(resolver, source, refusedRowId) != null,
+        )
+
         seenPlayer.release()
         player.release()
+        refusedPlayer.release()
     }
 
     private fun insertRow(resolver: ContentResolver, source: Uri): Long {
