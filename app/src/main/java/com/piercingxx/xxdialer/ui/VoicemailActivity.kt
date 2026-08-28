@@ -17,6 +17,7 @@ import com.piercingxx.xxdialer.vvm.VvmDetailPlayer
 import com.piercingxx.xxdialer.vvm.VvmListQuery
 import com.piercingxx.xxdialer.vvm.VvmListRow
 import com.piercingxx.xxdialer.vvm.VvmListState
+import com.piercingxx.xxdialer.vvm.VvmNetworkRevoked
 
 /**
  * Voicemail tab (design §12, todo.md V7): the fifth tab, reachable only while
@@ -58,6 +59,16 @@ class VoicemailActivity : AppCompatActivity() {
      * screen shows from the query result.
      */
     fun queryList(): List<VvmListRow> = listQuery.readRows()
+
+    /**
+     * T1: detects whether the carrier mailbox is unreachable because the app's
+     * INTERNET permission has been revoked via GrapheneOS Network revoke
+     * (todo.md "Tab states", scenario 5). The state computation (T3) feeds this
+     * into [VvmListState.decide] so the tab shows the honest "network revoked"
+     * explanation instead of crashing or lying with a fake-empty list.
+     */
+    fun isNetworkRevoked(internetPermissionGranted: Boolean): Boolean =
+        VvmNetworkRevoked.isRevoked(internetPermissionGranted)
 
     /**
      * T3: plays the voicemail at [uri], fetching its audio first when the row
