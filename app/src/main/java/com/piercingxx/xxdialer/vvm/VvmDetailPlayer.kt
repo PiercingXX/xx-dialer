@@ -9,6 +9,7 @@ import android.media.MediaPlayer
 import android.net.Uri
 import android.util.Log
 import com.piercingxx.xxdialer.telecom.CallManager
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.runBlocking
 
 /**
@@ -98,10 +99,17 @@ class VvmDetailPlayer(
         if (uploader == null) return deleteRow(uri)
         val rowId = ContentUris.parseId(uri)
         // The uploader reflects the accepted delete into VoicemailContract itself,
-        // so a successful upload is what removes the row.
-        return runCatching {
+        // so a successful upload is what removes the row. A refused upload leaves the
+        // row in place and reports false so the detail screen can tell the user the
+        // delete did not sync. Cancellation is never swallowed — it propagates.
+        return try {
             runBlocking { uploader.upload(rowId, delete = true, markSeen = false) }
-        }.onFailure { Log.w(TAG, "vvm detail: could not delete $uri", it) }.getOrDefault(false)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(TAG, "vvm detail: could not delete $uri", e)
+            false
+        }
     }
 
     /**
@@ -112,9 +120,15 @@ class VvmDetailPlayer(
     private fun markSeen(uri: Uri) {
         val uploader = uploader ?: return
         val rowId = ContentUris.parseId(uri)
-        runCatching {
+        // Best-effort: a refused or failed seen-mark must not abort playback, so an
+        // upload failure is logged and swallowed. Cancellation is never swallowed.
+        try {
             runBlocking { uploader.upload(rowId, delete = false, markSeen = true) }
-        }.onFailure { Log.w(TAG, "vvm detail: could not mark $uri seen", it) }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(TAG, "vvm detail: could not mark $uri seen", e)
+        }
     }
 
     /** Releases the underlying [MediaPlayer] — call when the detail screen closes. */
