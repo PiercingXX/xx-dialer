@@ -1,5 +1,7 @@
 package com.piercingxx.xxdialer.ui
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
 import android.provider.VoicemailContract
@@ -158,6 +160,28 @@ class VoicemailActivity : AppCompatActivity() {
         )
         binding.vvmList.layoutManager = LinearLayoutManager(this)
         binding.vvmList.adapter = adapter
+        // T3: compute and render the honest state on load so the tab explains
+        // itself the moment it opens instead of showing a blank list.
+        renderStateOnLoad()
+    }
+
+    /**
+     * T3: computes and renders the honest [VvmListState] on load, so the final
+     * copy is reachable from the running app instead of a blank screen. The
+     * network-revoke check runs first (a revoked INTERNET permission means the
+     * mailbox cannot be reached at all); otherwise the mailbox rows are queried
+     * and rendered, which maps an empty mailbox to the honest Empty state and a
+     * non-empty one to the list. Called from [onCreate] so the tab explains
+     * itself the moment it opens.
+     */
+    fun renderStateOnLoad() {
+        val internetGranted = checkSelfPermission(Manifest.permission.INTERNET) ==
+            PackageManager.PERMISSION_GRANTED
+        if (isNetworkRevoked(internetGranted)) {
+            renderState(VvmListState.NetworkRevoked)
+        } else {
+            renderRows(queryList())
+        }
     }
 
     override fun onStart() {
