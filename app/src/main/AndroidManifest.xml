@@ -45,11 +45,8 @@
     <uses-permission android:name="android.permission.WRITE_VOICEMAIL"/>
     <uses-permission android:name="android.permission.SEND_SMS"/>
 
-    <!-- Family theme-sync. XX-Launcher sendBroadcast()s with this signature
-         permission; uses-permission is required to receive it. -->
-    <permission
-        android:name="com.piercingxx.xxlauncher.permission.THEME_SYNC"
-        android:protectionLevel="signature"/>
+    <!-- Family theme-sync. XX-Launcher defines and sendBroadcast()s with this
+         signature permission; uses-permission is required to receive it. -->
     <uses-permission android:name="com.piercingxx.xxlauncher.permission.THEME_SYNC"/>
 
     <!-- TxxT reads the Business tier and window through TierExportProvider.
