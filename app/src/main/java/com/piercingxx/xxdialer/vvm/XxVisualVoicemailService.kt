@@ -1,5 +1,6 @@
 package com.piercingxx.xxdialer.vvm
 
+import android.provider.VoicemailContract
 import android.telecom.PhoneAccountHandle
 import android.telephony.CarrierConfigManager
 import android.telephony.SubscriptionManager
@@ -7,6 +8,7 @@ import android.telephony.TelephonyManager
 import android.telephony.VisualVoicemailService
 import android.telephony.VisualVoicemailService.VisualVoicemailTask
 import android.telephony.VisualVoicemailSms
+import android.telephony.VisualVoicemailSmsFilterSettings
 import com.piercingxx.xxdialer.ServiceLocator
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -30,15 +32,17 @@ class XxVisualVoicemailService : VisualVoicemailService() {
     /**
      * T3: the mailbox sync worker. Runs the IMAP fetch off the main thread under
      * a wake lock and writes the fetched messages into VoicemailContract. The
-     * fetch seam is the real IMAP client entry point (T5); until that lands the
-     * sync runs and writes nothing — the worker's own invariants are pinned by
-     * VvmImapSyncWorkerTest.
+     * fetch seam is the real IMAP client entry point (T5): it loads the encrypted
+     * STATUS credentials and opens a socket to the carrier mailbox — a socket
+     * that is only ever opened after VvmImapHostPolicy allows the STATUS host.
+     * The worker's own invariants are pinned by VvmImapSyncWorkerTest.
      */
     private val syncWorker: VvmImapSyncWorker by lazy {
-        VvmImapSyncWorker(this) { _ ->
-            // T5 implements the real IMAP fetch (VvmImapClient). Until then the
-            // sync runs and writes no rows.
-            emptyList()
+        VvmImapSyncWorker(this) { creds ->
+            // T5: the real IMAP client. It consults VvmImapHostPolicy before any
+            // socket opens and VvmImapPolicy for the TLS preference, then returns
+            // the fetched messages for the worker to write into VoicemailContract.
+            VvmImapClient(creds).fetch()
         }
     }
 
@@ -49,12 +53,12 @@ class XxVisualVoicemailService : VisualVoicemailService() {
 
     override fun onCellServiceConnected(task: VisualVoicemailTask, phoneAccountHandle: PhoneAccountHandle) {
         gate(task) {
-            // T3: ACTIVATE only when the toggle is on AND the carrier config is
+            // T4: ACTIVATE only when the toggle is on AND the carrier config is
             // valid (D5: protocol from KEY_VVM_TYPE_STRING). The gate owns the
             // toggle clause; this reads the carrier half and feeds the decision.
             val carrierConfigValid = carrierConfigValid(phoneAccountHandle)
             if (VvmGate.shouldActivate(toggleOn = true, carrierConfigValid = carrierConfigValid)) {
-                // TODO T4: TelephonyManager.sendVisualVoicemailSms(ACTIVATE).
+                activateMailbox(phoneAccountHandle)
             }
         }
     }
@@ -104,8 +108,7 @@ class XxVisualVoicemailService : VisualVoicemailService() {
                 ServiceLocator.settings(this@XxVisualVoicemailService).visualVoicemailWasActivated()
             }.getOrDefault(false)
             if (VvmGate.shouldDeactivate(toggleOn = false, previouslyActivated = previouslyActivated)) {
-                // TODO T4: TelephonyManager.sendVisualVoicemailSms(DEACTIVATE),
-                // setVisualVoicemailSmsFilterSettings(null), drop provider rows.
+                deactivateMailbox(phoneAccountHandle)
             }
             task.finish()
         }
@@ -114,6 +117,74 @@ class XxVisualVoicemailService : VisualVoicemailService() {
     override fun onStopped(task: VisualVoicemailTask) {
         // Task-lifecycle callback, not VVM work: always finish, no gate.
         task.finish()
+    }
+
+    /**
+     * T4: send the OMTP ACTIVATE SMS and register the SMS filter so the carrier's
+     * STATUS/SYNC notifications reach [onSmsReceived]. Runs only when the gate
+     * (toggle on + valid carrier config) has already passed — never when the
+     * toggle is off. Persists the "previously activated" flag so a later
+     * toggle-off can DEACTIVATE.
+     */
+    private fun activateMailbox(phoneAccountHandle: PhoneAccountHandle) {
+        val telephony = getSystemService(TelephonyManager::class.java) ?: return
+        val subscriptionId = telephony.getSubscriptionId(phoneAccountHandle)
+        if (subscriptionId == SubscriptionManager.INVALID_SUBSCRIPTION_ID) return
+        // OMTP ACTIVATE: the carrier's VVM client asks the platform to send the
+        // activation SMS to the voicemail number, then filter the reply.
+        val voicemailNumber = telephony.voiceMailNumber
+        runCatching {
+            telephony.sendVisualVoicemailSms(
+                voicemailNumber,
+                VOICEMAIL_SMS_PORT,
+                ACTIVATE_SMS_BODY,
+                null,
+            )
+        }
+        runCatching {
+            telephony.setVisualVoicemailSmsFilterSettings(
+                VisualVoicemailSmsFilterSettings.Builder()
+                    .setClientPrefix("//VVM:")
+                    .build(),
+            )
+        }
+        scope.launch {
+            runCatching {
+                ServiceLocator.settings(this@XxVisualVoicemailService).setVisualVoicemailActivated(true)
+            }
+        }
+    }
+
+    /**
+     * T4: tear the mailbox down after a toggle-off (or SIM removal): send the
+     * OMTP DEACTIVATE SMS, clear the SMS filter so no further notifications are
+     * routed here, drop every VoicemailContract row this package wrote, and clear
+     * the "previously activated" flag. Runs even when the toggle is now off —
+     * that is the point.
+     */
+    private fun deactivateMailbox(phoneAccountHandle: PhoneAccountHandle) {
+        val telephony = getSystemService(TelephonyManager::class.java)
+        val voicemailNumber = telephony?.voiceMailNumber
+        runCatching {
+            telephony?.sendVisualVoicemailSms(
+                voicemailNumber,
+                VOICEMAIL_SMS_PORT,
+                DEACTIVATE_SMS_BODY,
+                null,
+            )
+        }
+        runCatching {
+            telephony?.setVisualVoicemailSmsFilterSettings(null)
+        }
+        runCatching {
+            val sourceUri = VoicemailContract.Voicemails.buildSourceUri(packageName)
+            contentResolver.delete(sourceUri, null, null)
+        }
+        scope.launch {
+            runCatching {
+                ServiceLocator.settings(this@XxVisualVoicemailService).setVisualVoicemailActivated(false)
+            }
+        }
     }
 
     /**
@@ -146,5 +217,14 @@ class XxVisualVoicemailService : VisualVoicemailService() {
             }
             task.finish()
         }
+    }
+
+    private companion object {
+        /** OMTP VVM SMS port; the platform routes the activation reply. */
+        const val VOICEMAIL_SMS_PORT = -1
+        /** OMTP ACTIVATE body (todo.md D5). */
+        const val ACTIVATE_SMS_BODY = "//VVM:ACTIVATE:"
+        /** OMTP DEACTIVATE body (todo.md D5). */
+        const val DEACTIVATE_SMS_BODY = "//VVM:DEACTIVATE:"
     }
 }
