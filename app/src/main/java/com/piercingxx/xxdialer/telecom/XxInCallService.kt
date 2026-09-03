@@ -19,11 +19,14 @@ import com.piercingxx.xxdialer.ServiceLocator
 import com.piercingxx.xxdialer.core.Mode
 import com.piercingxx.xxdialer.core.Reason
 import com.piercingxx.xxdialer.core.RingPolicy
+import com.piercingxx.xxdialer.core.RingRepeat
+import com.piercingxx.xxdialer.core.RingRepeatPolicy
 import com.piercingxx.xxdialer.core.Tone
 import com.piercingxx.xxdialer.core.Verdict
 import com.piercingxx.xxdialer.data.ContactMirror
 import com.piercingxx.xxdialer.data.ContactMirrorEntity
 import com.piercingxx.xxdialer.data.ScreenLogEntity
+import com.piercingxx.xxdialer.ring.CallRinger
 import com.piercingxx.xxdialer.ring.NotifIds
 import com.piercingxx.xxdialer.ring.RingRouter
 import com.piercingxx.xxdialer.ring.SilencedNotifier
@@ -113,6 +116,12 @@ class XxInCallService : InCallService() {
     private val proximity by lazy { ProximityGuard(this) }
 
     /**
+     * Repeating ringtone for twice / until-voicemail. Once-only stays on the
+     * CallStyle channel. Stopped on answer, decline, silence, or teardown.
+     */
+    private val ringer by lazy { CallRinger(this) }
+
+    /**
      * Last route Telecom pushed, from EITHER routing API (§12 ships both).
      * UNKNOWN until the first push; [currentRoute] re-reads the live audio
      * state before deciding, so that window is narrower than it looks.
@@ -186,6 +195,7 @@ class XxInCallService : InCallService() {
         // another live call's ring/silence presentation must survive.
         if (presentedIncoming?.call === call) {
             presentedIncoming = null
+            ringer.stop()
             notificationManager().cancel(NotifIds.INCOMING)
         }
         if (entry != null) scope.launch { runCatching { finalize(entry) } }
@@ -200,6 +210,7 @@ class XxInCallService : InCallService() {
      */
     override fun onSilenceRinger() {
         super.onSilenceRinger()
+        ringer.stop()
         val presented = presentedIncoming ?: return
         val call = presented.call
         if (entries[call] == null || call.state != Call.STATE_RINGING) return
@@ -226,6 +237,7 @@ class XxInCallService : InCallService() {
         // an unbind, a crash on the way down — must not leave the display held
         // off with nothing left in the process watching the sensor.
         proximity.releaseNow()
+        ringer.stop()
         scope.cancel()
         presentedIncoming = null
         tracked.clear()
@@ -306,6 +318,7 @@ class XxInCallService : InCallService() {
     private fun dismissIncomingFor(call: Call) {
         if (presentedIncoming?.call !== call) return
         presentedIncoming = null
+        ringer.stop()
         notificationManager().cancel(NotifIds.INCOMING)
     }
 
@@ -495,14 +508,25 @@ class XxInCallService : InCallService() {
         val registry = ServiceLocator.channelRegistry(this)
         val waitingOverActive = hasOffHookPeer(call)
 
+        val repeat = runCatching {
+            ServiceLocator.settings(this).ringRepeat()
+        }.getOrDefault(RingRepeat.ONCE)
+
         when (val choice = RingRouter(registry).route(effective, facts, mirror)) {
-            is RingRouter.Choice.Ring ->
+            is RingRouter.Choice.Ring -> {
+                val replay = RingRepeatPolicy.insistent(repeat) && !waitingOverActive
                 postIncoming(
                     call,
-                    if (waitingOverActive) registry.channelIdFor(PURPOSE_RING_SILENT) else choice.channelId,
+                    if (waitingOverActive || replay) {
+                        registry.channelIdFor(PURPOSE_RING_SILENT)
+                    } else {
+                        choice.channelId
+                    },
                     displayName, line, number, cnap, LogRows.tier(facts),
                     fullScreen = !waitingOverActive,
                 )
+                if (replay) startRepeatingRing(choice, repeat)
+            }
             RingRouter.Choice.Silent ->
                 postIncoming(
                     call,
@@ -567,6 +591,19 @@ class XxInCallService : InCallService() {
         return true
     }
 
+    /**
+     * Twice / until-voicemail: the CallStyle card is already on the silent
+     * channel so this is the only tone. URI comes from the contact override
+     * or the live channel sound — never a second MediaPlayer.
+     */
+    private fun startRepeatingRing(choice: RingRouter.Choice.Ring, repeat: RingRepeat) {
+        val tone = choice.customTone
+            ?: runCatching { notificationManager().getNotificationChannel(choice.channelId)?.sound }
+                .getOrNull()
+            ?: return
+        ringer.start(tone, repeat)
+    }
+
     /** R9 for the ringer: this process owns ringing, so a thrown pipeline must still present. */
     private fun presentFailOpen(call: Call) {
         if (call.state != Call.STATE_RINGING) return
@@ -578,8 +615,13 @@ class XxInCallService : InCallService() {
                     ?: details.callerDisplayName?.takeIf { it.isNotBlank() }
                     ?: details.handle?.schemeSpecificPart
                     ?: WITHHELD_LABEL
-                val channelId = ServiceLocator.channelRegistry(this@XxInCallService)
-                    .channelIdFor(PURPOSE_RING_DEFAULT)
+                val registry = ServiceLocator.channelRegistry(this@XxInCallService)
+                val repeat = runCatching {
+                    ServiceLocator.settings(this@XxInCallService).ringRepeat()
+                }.getOrDefault(RingRepeat.ONCE)
+                val replay = RingRepeatPolicy.insistent(repeat) && !hasOffHookPeer(call)
+                val ringingId = registry.channelIdFor(PURPOSE_RING_DEFAULT)
+                val channelId = if (replay) registry.channelIdFor(PURPOSE_RING_SILENT) else ringingId
                 val presented = postIncoming(
                     call, channelId, name, getString(R.string.app_name),
                     DetailsCodec.numberE164(details.handle?.schemeSpecificPart),
@@ -587,6 +629,9 @@ class XxInCallService : InCallService() {
                     null,
                     fullScreen = !hasOffHookPeer(call),
                 )
+                if (replay) {
+                    startRepeatingRing(RingRouter.Choice.Ring(ringingId, null), repeat)
+                }
                 if (!presented) Log.w(TAG, "fail-open present produced no card")
             }.onFailure { Log.w(TAG, "fail-open present failed", it) }
         }
@@ -628,6 +673,7 @@ class XxInCallService : InCallService() {
     private fun clearIncomingIfUnpresented() {
         if (entries.isNotEmpty()) return // another live call may be presenting (or about to)
         presentedIncoming = null
+        ringer.stop()
         notificationManager().cancel(NotifIds.INCOMING)
     }
 
@@ -765,7 +811,11 @@ class XxInCallService : InCallService() {
         PendingIntent.getActivity(
             this, RC_IN_CALL,
             Intent(this, InCallActivity::class.java)
-                .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),
+                .addFlags(
+                    Intent.FLAG_ACTIVITY_NEW_TASK or
+                        Intent.FLAG_ACTIVITY_SINGLE_TOP or
+                        Intent.FLAG_ACTIVITY_CLEAR_TOP,
+                ),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
 

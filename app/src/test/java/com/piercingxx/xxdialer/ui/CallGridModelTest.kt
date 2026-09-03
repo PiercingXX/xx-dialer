@@ -158,3 +158,37 @@ class DurationFormatTest {
         assertNull(onHoldingForSwap(null, "a"))
     }
 }
+
+/** Audio-route sheet: only extras open a picker; built-in names stay ours. */
+class RouteSheetTest {
+
+    @Test
+    fun phone_and_speaker_alone_do_not_open_a_sheet() {
+        assertFalse(shouldShowRouteSheet(listOf(RouteKind.SPEAKER, RouteKind.EARPIECE)))
+        assertFalse(shouldShowRouteSheet(listOf(RouteKind.SPEAKER)))
+        assertFalse(shouldShowRouteSheet(emptyList()))
+    }
+
+    @Test
+    fun any_accessory_opens_the_sheet() {
+        assertTrue(shouldShowRouteSheet(listOf(RouteKind.SPEAKER, RouteKind.BLUETOOTH)))
+        assertTrue(shouldShowRouteSheet(listOf(RouteKind.WIRED)))
+        assertTrue(shouldShowRouteSheet(listOf(RouteKind.STREAMING, RouteKind.EARPIECE)))
+    }
+
+    @Test
+    fun built_in_labels_are_ours_not_the_pixel_endpoint_names() {
+        assertEquals("Speaker", routeLabel(RouteKind.SPEAKER, "Speakerphone"))
+        assertEquals("Phone", routeLabel(RouteKind.EARPIECE, "Earpiece"))
+        assertEquals("Bluetooth", routeLabel(RouteKind.BLUETOOTH, "Bluetooth"))
+        assertEquals("Pixel Buds", routeLabel(RouteKind.BLUETOOTH, "Pixel Buds"))
+        assertEquals("Wired headset", routeLabel(RouteKind.WIRED, "Wired headset"))
+    }
+
+    @Test
+    fun generic_system_names_are_recognized() {
+        assertTrue(isGenericRouteName("Earpiece"))
+        assertTrue(isGenericRouteName(" SPEAKERPHONE "))
+        assertFalse(isGenericRouteName("Pixel Buds Pro"))
+    }
+}

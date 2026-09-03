@@ -54,23 +54,20 @@
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:fillViewport="true">
+        android:fillViewport="true"
+        android:clipToPadding="false">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:paddingBottom="48dp">
+            android:paddingTop="8dp"
+            android:paddingBottom="40dp">
 
-            <!-- enforcement switch + observe-week offer -->
+            <!-- Silencing + expecting a call (D15) -->
             <LinearLayout
-                style="@style/Widget.Xx.Card"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginLeft="@dimen/xx_gutter"
-                android:layout_marginRight="@dimen/xx_gutter"
-                android:layout_marginTop="16dp"
-                android:orientation="vertical">
+                style="@style/Widget.Xx.RulesCard"
+                android:layout_marginTop="16dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -97,143 +94,149 @@
                     style="@style/TextAppearance.Xx.BodySmall"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp" />
+                    android:layout_marginTop="@dimen/xx_chip_gap" />
 
                 <Button
                     android:id="@+id/enforceOfferButton"
                     style="@style/Widget.Xx.ButtonPrimary"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="14dp"
+                    android:layout_marginTop="@dimen/xx_stack_gap"
                     android:visibility="gone" />
+
+                <Button
+                    android:id="@+id/expectButton"
+                    style="@style/Widget.Xx.ButtonSecondary"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/xx_stack_gap"
+                    android:text="@string/expecting_a_call" />
+
+                <TextView
+                    android:id="@+id/expectCountdown"
+                    style="@style/TextAppearance.Xx.Duration"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/xx_chip_gap"
+                    android:gravity="center"
+                    android:visibility="gone" />
+
+                <TextView
+                    android:id="@+id/bypassLabel"
+                    style="@style/TextAppearance.Xx.BodySmall"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/xx_stack_gap" />
+
+                <com.google.android.material.chip.ChipGroup
+                    android:id="@+id/bypassGroup"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/xx_chip_gap"
+                    app:singleSelection="true">
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chipBypass30"
+                        style="@style/Widget.Xx.Chip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chipBypass2h"
+                        style="@style/Widget.Xx.Chip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chipBypass8h"
+                        style="@style/Widget.Xx.Chip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" />
+                </com.google.android.material.chip.ChipGroup>
             </LinearLayout>
-
-            <!-- expecting a call (D15) -->
-            <Button
-                android:id="@+id/expectButton"
-                style="@style/Widget.Xx.ButtonSecondary"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginLeft="@dimen/xx_gutter"
-                android:layout_marginRight="@dimen/xx_gutter"
-                android:layout_marginTop="12dp"
-                android:text="@string/expecting_a_call" />
-
-            <TextView
-                android:id="@+id/expectCountdown"
-                style="@style/TextAppearance.Xx.Duration"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:gravity="center"
-                android:visibility="gone" />
 
             <!-- §6 precedence list -->
             <TextView
                 android:id="@+id/precedEyebrow"
-                style="@style/TextAppearance.Xx.Chip"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginLeft="@dimen/xx_gutter"
-                android:layout_marginTop="24dp" />
+                style="@style/Widget.Xx.SectionEyebrow" />
 
             <LinearLayout
                 android:id="@+id/precedList"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginLeft="@dimen/xx_gutter"
-                android:layout_marginRight="@dimen/xx_gutter"
-                android:layout_marginTop="6dp"
-                android:background="@drawable/bg_card"
+                style="@style/Widget.Xx.RulesCard"
+                android:padding="0dp"
                 android:divider="@drawable/divider_hairline"
-                android:showDividers="middle"
-                android:orientation="vertical" />
+                android:showDividers="middle" />
 
             <!-- windows -->
             <TextView
                 android:id="@+id/windowsEyebrow"
-                style="@style/TextAppearance.Xx.Chip"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginLeft="@dimen/xx_gutter"
-                android:layout_marginTop="24dp" />
+                style="@style/Widget.Xx.SectionEyebrow" />
 
             <LinearLayout
-                android:id="@+id/windowUnknownRow"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:minHeight="@dimen/xx_row_height"
-                android:layout_marginLeft="@dimen/xx_gutter"
-                android:layout_marginRight="@dimen/xx_gutter"
-                android:layout_marginTop="6dp"
-                android:background="@drawable/bg_list_row"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:paddingLeft="16dp"
-                android:paddingRight="16dp">
+                style="@style/Widget.Xx.RulesCard"
+                android:padding="0dp"
+                android:divider="@drawable/divider_hairline"
+                android:showDividers="middle">
 
-                <TextView
-                    android:id="@+id/windowUnknownTitle"
-                    style="@style/TextAppearance.Xx.Body"
-                    android:layout_width="0dp"
+                <LinearLayout
+                    android:id="@+id/windowUnknownRow"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1" />
+                    android:minHeight="@dimen/xx_row_height"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingLeft="16dp"
+                    android:paddingRight="16dp">
 
-                <TextView
-                    android:id="@+id/windowUnknownDetail"
-                    style="@style/TextAppearance.Xx.BodySmall"
-                    android:layout_width="wrap_content"
+                    <TextView
+                        android:id="@+id/windowUnknownTitle"
+                        style="@style/TextAppearance.Xx.Body"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1" />
+
+                    <TextView
+                        android:id="@+id/windowUnknownDetail"
+                        style="@style/TextAppearance.Xx.BodySmall"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="12dp"
+                        android:gravity="end" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/windowBusinessRow"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp"
-                    android:gravity="end" />
+                    android:minHeight="@dimen/xx_row_height"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingLeft="16dp"
+                    android:paddingRight="16dp">
+
+                    <TextView
+                        android:id="@+id/windowBusinessTitle"
+                        style="@style/TextAppearance.Xx.Body"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1" />
+
+                    <TextView
+                        android:id="@+id/windowBusinessDetail"
+                        style="@style/TextAppearance.Xx.BodySmall"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="12dp"
+                        android:gravity="end" />
+                </LinearLayout>
             </LinearLayout>
 
-            <LinearLayout
-                android:id="@+id/windowBusinessRow"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:minHeight="@dimen/xx_row_height"
-                android:layout_marginLeft="@dimen/xx_gutter"
-                android:layout_marginRight="@dimen/xx_gutter"
-                android:background="@drawable/bg_list_row"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:paddingLeft="16dp"
-                android:paddingRight="16dp">
-
-                <TextView
-                    android:id="@+id/windowBusinessTitle"
-                    style="@style/TextAppearance.Xx.Body"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1" />
-
-                <TextView
-                    android:id="@+id/windowBusinessDetail"
-                    style="@style/TextAppearance.Xx.BodySmall"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp"
-                    android:gravity="end" />
-            </LinearLayout>
-
-            <!-- unknown-caller tone -->
+            <!-- ringing: unknown-caller tone + how many times -->
             <TextView
                 android:id="@+id/toneEyebrow"
-                style="@style/TextAppearance.Xx.Chip"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginLeft="@dimen/xx_gutter"
-                android:layout_marginTop="24dp" />
+                style="@style/Widget.Xx.SectionEyebrow" />
 
-            <LinearLayout
-                style="@style/Widget.Xx.Card"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginLeft="@dimen/xx_gutter"
-                android:layout_marginRight="@dimen/xx_gutter"
-                android:layout_marginTop="6dp"
-                android:orientation="vertical">
+            <LinearLayout style="@style/Widget.Xx.RulesCard">
 
                 <TextView
                     android:id="@+id/toneCurrent"
@@ -246,26 +249,48 @@
                     style="@style/Widget.Xx.ButtonSecondary"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp" />
+                    android:layout_marginTop="@dimen/xx_chip_gap" />
+
+                <TextView
+                    android:id="@+id/ringRepeatLabel"
+                    style="@style/TextAppearance.Xx.BodySmall"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/xx_stack_gap" />
+
+                <com.google.android.material.chip.ChipGroup
+                    android:id="@+id/ringRepeatGroup"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/xx_chip_gap"
+                    app:singleSelection="true">
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chipRingOnce"
+                        style="@style/Widget.Xx.Chip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chipRingTwice"
+                        style="@style/Widget.Xx.Chip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chipRingUntilVm"
+                        style="@style/Widget.Xx.Chip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" />
+                </com.google.android.material.chip.ChipGroup>
             </LinearLayout>
 
-            <!-- policies -->
+            <!-- screening policies only -->
             <TextView
                 android:id="@+id/policiesEyebrow"
-                style="@style/TextAppearance.Xx.Chip"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginLeft="@dimen/xx_gutter"
-                android:layout_marginTop="24dp" />
+                style="@style/Widget.Xx.SectionEyebrow" />
 
-            <LinearLayout
-                style="@style/Widget.Xx.Card"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginLeft="@dimen/xx_gutter"
-                android:layout_marginRight="@dimen/xx_gutter"
-                android:layout_marginTop="6dp"
-                android:orientation="vertical">
+            <LinearLayout style="@style/Widget.Xx.RulesCard">
 
                 <TextView
                     android:id="@+id/hiddenPolicyLabel"
@@ -277,7 +302,7 @@
                     android:id="@+id/hiddenPolicyGroup"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
+                    android:layout_marginTop="@dimen/xx_chip_gap"
                     app:singleSelection="true">
 
                     <com.google.android.material.chip.Chip
@@ -299,52 +324,53 @@
                         android:layout_height="wrap_content" />
                 </com.google.android.material.chip.ChipGroup>
 
-                <TextView
-                    android:id="@+id/stirLabel"
-                    style="@style/TextAppearance.Xx.BodySmall"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:paddingTop="14dp" />
+                <LinearLayout style="@style/Widget.Xx.RuleStack">
 
-                <com.google.android.material.chip.ChipGroup
-                    android:id="@+id/stirGroup"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    app:singleSelection="true">
-
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/chipStirBlock"
-                        style="@style/Widget.Xx.Chip"
-                        android:layout_width="wrap_content"
+                    <TextView
+                        android:id="@+id/stirLabel"
+                        style="@style/TextAppearance.Xx.BodySmall"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content" />
 
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/chipStirSilence"
-                        style="@style/Widget.Xx.Chip"
+                    <com.google.android.material.chip.ChipGroup
+                        android:id="@+id/stirGroup"
                         android:layout_width="wrap_content"
-                        android:layout_height="wrap_content" />
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/xx_chip_gap"
+                        app:singleSelection="true">
 
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/chipStirOff"
-                        style="@style/Widget.Xx.Chip"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content" />
-                </com.google.android.material.chip.ChipGroup>
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/chipStirBlock"
+                            style="@style/Widget.Xx.Chip"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content" />
+
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/chipStirSilence"
+                            style="@style/Widget.Xx.Chip"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content" />
+
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/chipStirOff"
+                            style="@style/Widget.Xx.Chip"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content" />
+                    </com.google.android.material.chip.ChipGroup>
+                </LinearLayout>
 
                 <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
+                    style="@style/Widget.Xx.RuleStack"
                     android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:paddingTop="14dp">
+                    android:gravity="center_vertical">
 
                     <TextView
                         android:id="@+id/repeatLabel"
                         style="@style/TextAppearance.Xx.BodySmall"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:layout_weight="1" />
+                        android:layout_weight="1"
+                        android:layout_marginEnd="12dp" />
 
                     <com.google.android.material.materialswitch.MaterialSwitch
                         android:id="@+id/repeatSwitch"
@@ -353,51 +379,60 @@
                         android:layout_height="wrap_content" />
                 </LinearLayout>
 
-                <TextView
-                    android:id="@+id/notifLabel"
-                    style="@style/TextAppearance.Xx.BodySmall"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:paddingTop="14dp" />
+                <LinearLayout style="@style/Widget.Xx.RuleStack">
 
-                <com.google.android.material.chip.ChipGroup
-                    android:id="@+id/notifGroup"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    app:singleSelection="true">
-
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/chipNotifImmediate"
-                        style="@style/Widget.Xx.Chip"
-                        android:layout_width="wrap_content"
+                    <TextView
+                        android:id="@+id/notifLabel"
+                        style="@style/TextAppearance.Xx.BodySmall"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content" />
 
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/chipNotifDaily"
-                        style="@style/Widget.Xx.Chip"
+                    <com.google.android.material.chip.ChipGroup
+                        android:id="@+id/notifGroup"
                         android:layout_width="wrap_content"
-                        android:layout_height="wrap_content" />
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/xx_chip_gap"
+                        app:singleSelection="true">
 
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/chipNotifNever"
-                        style="@style/Widget.Xx.Chip"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content" />
-                </com.google.android.material.chip.ChipGroup>
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/chipNotifImmediate"
+                            style="@style/Widget.Xx.Chip"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content" />
+
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/chipNotifDaily"
+                            style="@style/Widget.Xx.Chip"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content" />
+
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/chipNotifNever"
+                            style="@style/Widget.Xx.Chip"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content" />
+                    </com.google.android.material.chip.ChipGroup>
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- phone chrome: answer gesture, recents, tab hiding -->
+            <TextView
+                android:id="@+id/phoneEyebrow"
+                style="@style/Widget.Xx.SectionEyebrow" />
+
+            <LinearLayout style="@style/Widget.Xx.RulesCard">
 
                 <TextView
                     android:id="@+id/answerLabel"
                     style="@style/TextAppearance.Xx.BodySmall"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:paddingTop="14dp" />
+                    android:layout_height="wrap_content" />
 
                 <com.google.android.material.chip.ChipGroup
                     android:id="@+id/answerGroup"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
+                    android:layout_marginTop="@dimen/xx_chip_gap"
                     app:singleSelection="true">
 
                     <com.google.android.material.chip.Chip
@@ -413,52 +448,18 @@
                         android:layout_height="wrap_content" />
                 </com.google.android.material.chip.ChipGroup>
 
-                <TextView
-                    android:id="@+id/bypassLabel"
-                    style="@style/TextAppearance.Xx.BodySmall"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:paddingTop="14dp" />
-
-                <com.google.android.material.chip.ChipGroup
-                    android:id="@+id/bypassGroup"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    app:singleSelection="true">
-
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/chipBypass30"
-                        style="@style/Widget.Xx.Chip"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content" />
-
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/chipBypass2h"
-                        style="@style/Widget.Xx.Chip"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content" />
-
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/chipBypass8h"
-                        style="@style/Widget.Xx.Chip"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content" />
-                </com.google.android.material.chip.ChipGroup>
-
                 <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
+                    style="@style/Widget.Xx.RuleStack"
                     android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:paddingTop="14dp">
+                    android:gravity="center_vertical">
 
                     <TextView
                         android:id="@+id/groupRecentsLabel"
                         style="@style/TextAppearance.Xx.BodySmall"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:layout_weight="1" />
+                        android:layout_weight="1"
+                        android:layout_marginEnd="12dp" />
 
                     <com.google.android.material.materialswitch.MaterialSwitch
                         android:id="@+id/groupRecentsSwitch"
@@ -467,111 +468,108 @@
                         android:layout_height="wrap_content" />
                 </LinearLayout>
 
-                <TextView
-                    android:id="@+id/tabsLabel"
-                    style="@style/TextAppearance.Xx.BodySmall"
+                <LinearLayout style="@style/Widget.Xx.RuleStack">
+
+                    <TextView
+                        android:id="@+id/tabsLabel"
+                        style="@style/TextAppearance.Xx.BodySmall"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content" />
+
+                    <com.google.android.material.chip.ChipGroup
+                        android:id="@+id/tabsGroup"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/xx_chip_gap">
+
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/chipTabRecents"
+                            style="@style/Widget.Xx.Chip"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:checkable="true" />
+
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/chipTabKeypad"
+                            style="@style/Widget.Xx.Chip"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:checkable="true" />
+
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/chipTabPeople"
+                            style="@style/Widget.Xx.Chip"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:checkable="true" />
+
+                        <!-- §12 gated hide-chip: present only while Visual voicemail
+                             is on. Off ⇒ the tab is gone entirely, so its hide-chip
+                             is gone too (todo.md: "Hide-chip for it is gone too"). -->
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/chipTabVoicemail"
+                            style="@style/Widget.Xx.Chip"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:checkable="true" />
+                    </com.google.android.material.chip.ChipGroup>
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- Visual voicemail (§12): OPT-IN, own section — not a policy chip. -->
+            <TextView
+                android:id="@+id/vvmEyebrow"
+                style="@style/Widget.Xx.SectionEyebrow" />
+
+            <LinearLayout style="@style/Widget.Xx.RulesCard">
+
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:paddingTop="14dp" />
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
 
-                <com.google.android.material.chip.ChipGroup
-                    android:id="@+id/tabsGroup"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp">
-
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/chipTabRecents"
-                        style="@style/Widget.Xx.Chip"
-                        android:layout_width="wrap_content"
+                    <TextView
+                        android:id="@+id/vvmLabel"
+                        style="@style/TextAppearance.Xx.Body"
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:checkable="true" />
+                        android:layout_weight="1"
+                        android:layout_marginEnd="12dp" />
 
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/chipTabKeypad"
-                        style="@style/Widget.Xx.Chip"
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/vvmSwitch"
+                        style="@style/Widget.Xx.Switch"
                         android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:checkable="true" />
-
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/chipTabPeople"
-                        style="@style/Widget.Xx.Chip"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:checkable="true" />
-
-                    <!-- §12 gated hide-chip: present only while Visual voicemail
-                         is on. Off ⇒ the tab is gone entirely, so its hide-chip
-                         is gone too (todo.md: "Hide-chip for it is gone too"). -->
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/chipTabVoicemail"
-                        style="@style/Widget.Xx.Chip"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:checkable="true" />
-                </com.google.android.material.chip.ChipGroup>
-
-            <!-- Visual voicemail (§12): OPT-IN, off by default. One toggle, two
-                 effects — on shows the Voicemail tab AND starts the client; off
-                 the tab is absent entirely. The copy is honest about the network
-                 (todo.md: "Leave it off if you do not want this app on the
-                 network"). -->
-            <TextView
-                android:id="@+id/vvmLabel"
-                style="@style/TextAppearance.Xx.Body"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:paddingTop="14dp" />
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical">
+                        android:layout_height="wrap_content" />
+                </LinearLayout>
 
                 <TextView
                     android:id="@+id/vvmCaption"
                     style="@style/TextAppearance.Xx.BodySmall"
-                    android:layout_width="0dp"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1" />
+                    android:layout_marginTop="@dimen/xx_chip_gap" />
 
-                <com.google.android.material.materialswitch.MaterialSwitch
-                    android:id="@+id/vvmSwitch"
-                    style="@style/Widget.Xx.Switch"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content" />
+                <TextView
+                    android:id="@+id/vvmNetworkNote"
+                    style="@style/TextAppearance.Xx.BodySmall"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/xx_chip_gap" />
             </LinearLayout>
-
-            <TextView
-                android:id="@+id/vvmNetworkNote"
-                style="@style/TextAppearance.Xx.BodySmall"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:paddingTop="6dp" />
-        </LinearLayout>
 
             <!-- pattern rules -->
             <TextView
                 android:id="@+id/patternsEyebrow"
-                style="@style/TextAppearance.Xx.Chip"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginLeft="@dimen/xx_gutter"
-                android:layout_marginTop="24dp" />
+                style="@style/Widget.Xx.SectionEyebrow" />
 
             <LinearLayout
                 android:id="@+id/patternsBox"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginLeft="@dimen/xx_gutter"
-                android:layout_marginRight="@dimen/xx_gutter"
-                android:layout_marginTop="6dp"
-                android:background="@drawable/bg_card"
+                style="@style/Widget.Xx.RulesCard"
+                android:padding="0dp"
                 android:divider="@drawable/divider_hairline"
-                android:showDividers="middle"
-                android:orientation="vertical" />
+                android:showDividers="middle" />
 
             <TextView
                 android:id="@+id/exemptionNote"
@@ -580,7 +578,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginLeft="@dimen/xx_gutter"
                 android:layout_marginRight="@dimen/xx_gutter"
-                android:layout_marginTop="8dp" />
+                android:layout_marginTop="@dimen/xx_chip_gap" />
 
             <Button
                 android:id="@+id/neighborButton"
@@ -589,7 +587,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginLeft="@dimen/xx_gutter"
                 android:layout_marginRight="@dimen/xx_gutter"
-                android:layout_marginTop="12dp" />
+                android:layout_marginTop="@dimen/xx_stack_gap" />
 
             <Button
                 android:id="@+id/addPatternButton"
@@ -598,26 +596,17 @@
                 android:layout_height="wrap_content"
                 android:layout_marginLeft="@dimen/xx_gutter"
                 android:layout_marginRight="@dimen/xx_gutter"
-                android:layout_marginTop="12dp" />
+                android:layout_marginTop="@dimen/xx_chip_gap" />
 
-            <!-- system blocklist link -->
+            <!-- system blocklist + offline import -->
             <TextView
                 android:id="@+id/blockedEyebrow"
-                style="@style/TextAppearance.Xx.Chip"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginLeft="@dimen/xx_gutter"
-                android:layout_marginTop="24dp" />
+                style="@style/Widget.Xx.SectionEyebrow" />
 
             <LinearLayout
                 android:id="@+id/blockedLinkRow"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
+                style="@style/Widget.Xx.RulesCard"
                 android:minHeight="@dimen/xx_row_height"
-                android:layout_marginLeft="@dimen/xx_gutter"
-                android:layout_marginRight="@dimen/xx_gutter"
-                android:layout_marginTop="6dp"
-                android:background="@drawable/bg_list_row"
                 android:gravity="center_vertical"
                 android:orientation="horizontal"
                 android:paddingLeft="16dp"
@@ -638,24 +627,24 @@
                     android:layout_marginStart="12dp" />
             </LinearLayout>
 
+            <Button
+                android:id="@+id/importBlocklistButton"
+                style="@style/Widget.Xx.ButtonSecondary"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="@dimen/xx_gutter"
+                android:layout_marginRight="@dimen/xx_gutter"
+                android:layout_marginTop="@dimen/xx_chip_gap" />
+
             <!-- test a number -->
             <TextView
                 android:id="@+id/testEyebrowRow"
-                style="@style/TextAppearance.Xx.Chip"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginLeft="@dimen/xx_gutter"
-                android:layout_marginTop="24dp" />
+                style="@style/Widget.Xx.SectionEyebrow" />
 
             <LinearLayout
                 android:id="@+id/testRow"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
+                style="@style/Widget.Xx.RulesCard"
                 android:minHeight="@dimen/xx_row_height"
-                android:layout_marginLeft="@dimen/xx_gutter"
-                android:layout_marginRight="@dimen/xx_gutter"
-                android:layout_marginTop="6dp"
-                android:background="@drawable/bg_list_row"
                 android:gravity="center_vertical"
                 android:orientation="horizontal"
                 android:paddingLeft="16dp"
@@ -679,19 +668,10 @@
             <!-- weekly tallies -->
             <TextView
                 android:id="@+id/tallyEyebrow"
-                style="@style/TextAppearance.Xx.Chip"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginLeft="@dimen/xx_gutter"
-                android:layout_marginTop="24dp" />
+                style="@style/Widget.Xx.SectionEyebrow" />
 
             <LinearLayout
-                style="@style/Widget.Xx.Card"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginLeft="@dimen/xx_gutter"
-                android:layout_marginRight="@dimen/xx_gutter"
-                android:layout_marginTop="6dp"
+                style="@style/Widget.Xx.RulesCard"
                 android:orientation="horizontal">
 
                 <LinearLayout
@@ -710,7 +690,8 @@
                         android:id="@+id/tallyScreenedLabel"
                         style="@style/TextAppearance.Xx.Chip"
                         android:layout_width="wrap_content"
-                        android:layout_height="wrap_content" />
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp" />
                 </LinearLayout>
 
                 <LinearLayout
@@ -729,7 +710,8 @@
                         android:id="@+id/tallySilencedLabel"
                         style="@style/TextAppearance.Xx.Chip"
                         android:layout_width="wrap_content"
-                        android:layout_height="wrap_content" />
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp" />
                 </LinearLayout>
 
                 <LinearLayout
@@ -749,38 +731,34 @@
                         android:id="@+id/tallyBlockedLabel"
                         style="@style/TextAppearance.Xx.Chip"
                         android:layout_width="wrap_content"
-                        android:layout_height="wrap_content" />
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp" />
                 </LinearLayout>
             </LinearLayout>
 
             <!-- screening log -->
             <TextView
                 android:id="@+id/logEyebrow"
-                style="@style/TextAppearance.Xx.Chip"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginLeft="@dimen/xx_gutter"
-                android:layout_marginTop="24dp" />
+                style="@style/Widget.Xx.SectionEyebrow" />
 
             <LinearLayout
                 android:id="@+id/logBox"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginLeft="@dimen/xx_gutter"
-                android:layout_marginRight="@dimen/xx_gutter"
-                android:layout_marginTop="6dp"
-                android:background="@drawable/bg_card"
+                style="@style/Widget.Xx.RulesCard"
+                android:padding="0dp"
                 android:divider="@drawable/divider_hairline"
-                android:showDividers="middle"
-                android:orientation="vertical" />
+                android:showDividers="middle" />
 
-            <!-- backup / restore -->
+            <!-- backup / restore / wipes -->
+            <TextView
+                android:id="@+id/dataEyebrow"
+                style="@style/Widget.Xx.SectionEyebrow" />
+
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginLeft="@dimen/xx_gutter"
                 android:layout_marginRight="@dimen/xx_gutter"
-                android:layout_marginTop="20dp"
+                android:layout_marginTop="@dimen/xx_eyebrow_gap"
                 android:orientation="horizontal">
 
                 <Button
@@ -799,24 +777,12 @@
                     android:layout_marginStart="12dp" />
             </LinearLayout>
 
-            <!-- offline blocklist import (§8, R8): one number per line, on-device -->
-            <Button
-                android:id="@+id/importBlocklistButton"
-                style="@style/Widget.Xx.ButtonSecondary"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginLeft="@dimen/xx_gutter"
-                android:layout_marginRight="@dimen/xx_gutter"
-                android:layout_marginTop="12dp" />
-
-            <!-- privacy controls: both confirm before wiping -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginLeft="@dimen/xx_gutter"
                 android:layout_marginRight="@dimen/xx_gutter"
-                android:layout_marginTop="12dp"
-                android:layout_marginBottom="8dp"
+                android:layout_marginTop="@dimen/xx_chip_gap"
                 android:orientation="horizontal">
 
                 <Button

@@ -35,6 +35,8 @@ import com.piercingxx.xxdialer.core.HiddenCallerPolicy
 import com.piercingxx.xxdialer.core.Mode
 import com.piercingxx.xxdialer.core.Reason
 import com.piercingxx.xxdialer.core.RingPolicy
+import com.piercingxx.xxdialer.core.RingRepeat
+import com.piercingxx.xxdialer.core.RingRepeatPolicy
 import com.piercingxx.xxdialer.core.Rules
 import com.piercingxx.xxdialer.core.StirAction
 import com.piercingxx.xxdialer.core.Verdict
@@ -268,9 +270,16 @@ class RulesActivity : AppCompatActivity() {
         binding.windowsEyebrow.text = "WINDOWS"
         binding.windowUnknownTitle.text = "Unknown callers"
         binding.windowBusinessTitle.text = "Business tier"
-        binding.toneEyebrow.text = "UNKNOWN-CALLER TONE"
+        binding.toneEyebrow.text = "RINGING"
         binding.tonePick.text = "Change tone"
+        binding.ringRepeatLabel.text = getString(R.string.ring_repeat_label)
+        binding.chipRingOnce.text = getString(R.string.ring_repeat_once)
+        binding.chipRingTwice.text = getString(R.string.ring_repeat_twice)
+        binding.chipRingUntilVm.text = getString(R.string.ring_repeat_until_vm)
         binding.policiesEyebrow.text = "POLICIES"
+        binding.phoneEyebrow.text = "PHONE"
+        binding.vvmEyebrow.text = "VOICEMAIL"
+        binding.dataEyebrow.text = "DATA"
         binding.hiddenPolicyLabel.text = getString(R.string.hidden_caller_label)
         // Chips label the CHOICE, never the constant behind it. Printing
         // HiddenCallerPolicy.name / StirAction.name / the persisted notif
@@ -687,6 +696,18 @@ class RulesActivity : AppCompatActivity() {
                 if (group.checkedChipId == R.id.chipAnswerSlide) ANSWER_SLIDER else ANSWER_TAP,
             )
         }
+        binding.ringRepeatGroup.setOnCheckedStateChangeListener { group, _ ->
+            if (suppressPolicies) return@setOnCheckedStateChangeListener
+            restyleGroup(group)
+            persistSetting(
+                SettingsRepository.KEY_RING_REPEAT,
+                when (group.checkedChipId) {
+                    R.id.chipRingTwice -> RingRepeatPolicy.TOKEN_TWICE
+                    R.id.chipRingUntilVm -> RingRepeatPolicy.TOKEN_UNTIL_VOICEMAIL
+                    else -> RingRepeatPolicy.TOKEN_ONCE
+                },
+            )
+        }
         binding.bypassGroup.setOnCheckedStateChangeListener { group, _ ->
             if (suppressPolicies) return@setOnCheckedStateChangeListener
             restyleGroup(group)
@@ -772,6 +793,14 @@ class RulesActivity : AppCompatActivity() {
             binding.answerGroup.check(
                 if (answer == ANSWER_SLIDER) R.id.chipAnswerSlide else R.id.chipAnswerTap,
             )
+            val ringRepeat = runCatching { settings.ringRepeat() }.getOrDefault(RingRepeat.ONCE)
+            binding.ringRepeatGroup.check(
+                when (ringRepeat) {
+                    RingRepeat.TWICE -> R.id.chipRingTwice
+                    RingRepeat.UNTIL_VOICEMAIL -> R.id.chipRingUntilVm
+                    RingRepeat.ONCE -> R.id.chipRingOnce
+                },
+            )
             val bypassMinutes = runCatching { settings.bypassDurationMinutes() }.getOrDefault(120)
             binding.bypassGroup.check(
                 when (bypassMinutes) {
@@ -795,7 +824,7 @@ class RulesActivity : AppCompatActivity() {
             binding.vvmSwitch.isChecked = vvmEnabled
             syncVoicemailGate()
             listOf(binding.hiddenPolicyGroup, binding.stirGroup, binding.notifGroup,
-                binding.answerGroup, binding.bypassGroup)
+                binding.answerGroup, binding.bypassGroup, binding.ringRepeatGroup)
                 .forEach(::restyleGroup)
             suppressPolicies = false
         }

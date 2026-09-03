@@ -179,6 +179,34 @@
         <item name="android:padding">16dp</item>
     </style>
 
+    <!-- Rules section label: chip type, consistent gap above the next card. -->
+    <style name="Widget.Xx.SectionEyebrow" parent="">
+        <item name="android:textAppearance">@style/TextAppearance.Xx.Chip</item>
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginLeft">@dimen/xx_gutter</item>
+        <item name="android:layout_marginRight">@dimen/xx_gutter</item>
+        <item name="android:layout_marginTop">@dimen/xx_section_gap</item>
+    </style>
+
+    <!-- Slate card sitting under a section eyebrow. -->
+    <style name="Widget.Xx.RulesCard" parent="Widget.Xx.Card">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginLeft">@dimen/xx_gutter</item>
+        <item name="android:layout_marginRight">@dimen/xx_gutter</item>
+        <item name="android:layout_marginTop">@dimen/xx_eyebrow_gap</item>
+        <item name="android:orientation">vertical</item>
+    </style>
+
+    <!-- Next control group inside a Rules card. -->
+    <style name="Widget.Xx.RuleStack" parent="">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">@dimen/xx_stack_gap</item>
+        <item name="android:orientation">vertical</item>
+    </style>
+
     <!-- Switch: Material3 mechanics, monochrome track/thumb (no hue) -->
     <style name="Widget.Xx.Switch" parent="Widget.Material3.CompoundButton.Switch">
         <item name="thumbTint">@color/xx_switch_thumb</item>

@@ -116,10 +116,14 @@
             android:name=".ui.IncomingCallActivity"
             android:exported="false"
             android:launchMode="singleTop"
+            android:showWhenLocked="true"
+            android:turnScreenOn="true"
             android:taskAffinity="com.piercingxx.xxdialer.call"/>
         <activity
             android:name=".ui.InCallActivity"
             android:exported="false"
+            android:showWhenLocked="true"
+            android:turnScreenOn="true"
             android:taskAffinity="com.piercingxx.xxdialer.call"/>
         <activity android:name=".ui.SetupActivity" android:exported="false"/>
 
