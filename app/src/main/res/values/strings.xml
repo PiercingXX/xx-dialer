@@ -76,6 +76,10 @@
     <string name="silenced_notif_daily">Daily summary</string>
     <string name="silenced_notif_never">Never</string>
     <string name="bypass_label">Expecting a call lasts</string>
+    <string name="ring_repeat_label">Ringtone plays</string>
+    <string name="ring_repeat_once">Once</string>
+    <string name="ring_repeat_twice">Twice</string>
+    <string name="ring_repeat_until_vm">Until voicemail</string>
 
     <!--
          Visual voicemail (§12). OPT-IN, off by default: the dialer holds no

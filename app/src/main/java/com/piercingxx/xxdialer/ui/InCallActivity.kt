@@ -1,13 +1,15 @@
 package com.piercingxx.xxdialer.ui
 
 import android.content.Intent
+import android.content.res.ColorStateList
+import android.graphics.Color
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.telecom.Call
 import android.view.Gravity
 import android.view.HapticFeedbackConstants
 import android.view.View
+import android.view.WindowManager
 import android.widget.GridLayout
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -19,6 +21,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
 import androidx.core.widget.TextViewCompat
 import com.google.android.material.bottomsheet.BottomSheetDialog
+import com.google.android.material.button.MaterialButton
 import com.piercingxx.xxdialer.R
 import com.piercingxx.xxdialer.databinding.ActivityInCallBinding
 
@@ -63,6 +66,13 @@ class InCallActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Same lockscreen contract as IncomingCallActivity: a live call must
+        // stay reachable without unlocking. Screen-off-at-the-ear is the
+        // proximity lock; this is "the keypad is still there when I pull
+        // the phone away / when the display times out on speaker".
+        setShowWhenLocked(true)
+        setTurnScreenOn(true)
+        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         binding = ActivityInCallBinding.inflate(layoutInflater)
         setContentView(binding.root)
         val padLeft = binding.root.paddingLeft
@@ -82,7 +92,7 @@ class InCallActivity : AppCompatActivity() {
 
         binding.btnEnd.setOnClickListener { CallGrid.endActive() }
         binding.btnMute.setOnClickListener { toggleMute() }
-        binding.btnSpeaker.setOnClickListener { showRouteSheet() }
+        binding.btnSpeaker.setOnClickListener { onAudioClicked() }
         binding.btnKeypad.setOnClickListener { toggleDtmf() }
         binding.btnSwap.setOnClickListener { CallGrid.swap() }
         binding.btnAnswerWaiting.setOnClickListener { CallGrid.answerWaiting() }
@@ -180,19 +190,30 @@ class InCallActivity : AppCompatActivity() {
         binding.btnEnd.isEnabled = liveCall || CallGrid.snapshot().waiting != null
     }
 
-    /** Emphasis-invert marks an engaged control (§12.1: inversion, not hue). */
+    /**
+     * Emphasis-invert marks an engaged control (§12.1: inversion, not hue).
+     *
+     * These are Material outlined buttons. Replacing `background` (or setting
+     * it to null) leaves `backgroundTint` transparent and then paints the
+     * label ink — mute / keypad / speaker vanish the moment they arm.
+     * Tint + stroke are the APIs the style already owns.
+     */
     private fun setArmed(view: TextView, armed: Boolean) {
-        view.background = if (armed) {
-            ContextCompat.getDrawable(this, R.drawable.bg_emphasis_invert)
+        val ink = ContextCompat.getColor(this, R.color.pxx_emphasis_fg)
+        val paper = ContextCompat.getColor(this, R.color.pxx_emphasis_bg)
+        val idle = ContextCompat.getColor(this, R.color.pxx_white_90)
+        val hairline = ContextCompat.getColor(this, R.color.pxx_white_25)
+        view.setTextColor(if (armed) ink else idle)
+        if (view is MaterialButton) {
+            view.backgroundTintList = ColorStateList.valueOf(if (armed) paper else Color.TRANSPARENT)
+            view.strokeColor = ColorStateList.valueOf(if (armed) paper else hairline)
         } else {
-            null
+            view.background = if (armed) {
+                ContextCompat.getDrawable(this, R.drawable.bg_emphasis_invert)
+            } else {
+                ContextCompat.getDrawable(this, R.drawable.bg_decline_block)
+            }
         }
-        view.setTextColor(
-            ContextCompat.getColor(
-                this,
-                if (armed) R.color.pxx_emphasis_fg else R.color.pxx_white_90,
-            ),
-        )
     }
 
     private fun toggleMute() {
@@ -224,6 +245,15 @@ class InCallActivity : AppCompatActivity() {
 
     // ---- audio routing bottom sheet (both paths, §12) ------------------------------
 
+    /**
+     * Phone + Speaker are always on the device. A two-row sheet that names
+     * them "Earpiece" / "Speakerphone" is just a speaker toggle with extra
+     * taps. Open the sheet only when a headset or other extra is attached.
+     */
+    private fun onAudioClicked() {
+        if (CallGrid.hasExternalRoutes()) showRouteSheet() else CallGrid.toggleSpeaker()
+    }
+
     private fun showRouteSheet() {
         val routes = CallGrid.routes()
         if (routes.isEmpty()) return
@@ -234,10 +264,11 @@ class InCallActivity : AppCompatActivity() {
             val pad = resources.getDimensionPixelSize(R.dimen.xx_gutter)
             setPadding(pad, pad, pad, pad)
         }
+        val current = CallGrid.currentRouteKind()
         routes.forEachIndexed { index, route ->
             list.addView(
                 TextView(this).apply {
-                    text = route.label
+                    text = if (route.kind == current) "${route.label} · current" else route.label
                     TextViewCompat.setTextAppearance(this, R.style.TextAppearance_Xx_Body)
                     minHeight = resources.getDimensionPixelSize(R.dimen.xx_row_height)
                     gravity = Gravity.CENTER_VERTICAL

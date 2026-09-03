@@ -3,6 +3,8 @@ package com.piercingxx.xxdialer.data
 import com.google.gson.Gson
 import com.piercingxx.xxdialer.core.HiddenCallerPolicy
 import com.piercingxx.xxdialer.core.Mode
+import com.piercingxx.xxdialer.core.RingRepeat
+import com.piercingxx.xxdialer.core.RingRepeatPolicy
 import com.piercingxx.xxdialer.core.StirAction
 import com.piercingxx.xxdialer.core.Window
 import java.time.Instant
@@ -71,6 +73,13 @@ class SettingsRepository(private val dao: SettingDao) {
         dao.get(KEY_VISUAL_VOICEMAIL)?.trim() == "1"
 
     /**
+     * How many times the ringtone plays. Absent or garbage is [RingRepeat.ONCE]
+     * — the platform CallStyle one-shot, which is the shipped default.
+     */
+    suspend fun ringRepeat(): RingRepeat =
+        RingRepeatPolicy.parse(dao.get(KEY_RING_REPEAT))
+
+    /**
      * T4: whether the mailbox was ACTIVATEd in a prior run — the persisted
      * "previously activated" flag that decides DEACTIVATE on toggle-off.
      * Absent or garbage reads false (nothing to undo). Set when ACTIVATE is
@@ -112,6 +121,7 @@ class SettingsRepository(private val dao: SettingDao) {
         const val KEY_HIDDEN_TABS = "hidden_tabs"
         const val KEY_VISUAL_VOICEMAIL = "visual_voicemail"
         const val KEY_VISUAL_VOICEMAIL_ACTIVATED = "visual_voicemail_activated"
+        const val KEY_RING_REPEAT = "ring_repeat"
 
         private val gson = Gson()
         private const val DEFAULT_BYPASS_MINUTES = 120
@@ -148,6 +158,7 @@ class SettingsRepository(private val dao: SettingDao) {
             // (the runtime opt-in gate, not a manifest-level one — Android has
             // no conditional uses-permission).
             KEY_VISUAL_VOICEMAIL to "0",
+            KEY_RING_REPEAT to RingRepeatPolicy.TOKEN_ONCE,
         )
 
         /** {"startMinute":540,"endMinute":1020,"daysMask":127} ↔ core.Window (§7). */

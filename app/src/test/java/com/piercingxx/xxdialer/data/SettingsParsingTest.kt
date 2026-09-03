@@ -124,6 +124,7 @@ class SettingsParsingTest {
         assertEquals("UNKNOWN", defaults[SettingsRepository.KEY_HIDDEN_CALLER_POLICY])
         assertEquals("BLOCK", defaults[SettingsRepository.KEY_STIR_ACTION])
         assertEquals("immediate", defaults[SettingsRepository.KEY_SILENCED_NOTIF_POLICY])
+        assertEquals("once", defaults[SettingsRepository.KEY_RING_REPEAT])
         assertFalse(defaults.containsKey(SettingsRepository.KEY_BYPASS_UNTIL), "bypass_until ships absent")
     }
 

@@ -321,7 +321,12 @@ object CallGrid {
     // ---- audio routing (§12: both paths) ------------------------------------------
 
     /** One routable destination, whichever implementation produced it. */
-    data class Route(val label: String, val endpoint: CallEndpoint?, val legacyRoute: Int) {
+    data class Route(
+        val label: String,
+        val endpoint: CallEndpoint?,
+        val legacyRoute: Int,
+        val kind: RouteKind,
+    ) {
         val isLegacy: Boolean get() = endpoint == null
     }
 
@@ -329,18 +334,61 @@ object CallGrid {
      * Available destinations. API 34+ prefers real CallEndpoints (BLE Audio
      * and hearing aids included, §12); below that — or when the service has
      * pushed nothing — synthesize from the supported-route mask.
+     *
+     * Labels are ours, not Telecom's: Pixel names the built-in pair
+     * "Speakerphone" and "Earpiece" even when no accessory is attached.
+     * A Bluetooth name is the one endpointName worth keeping.
      */
     @Suppress("DEPRECATION") // §12: the legacy CallAudioState path is required, not accidental
     fun routes(): List<Route> {
         if (Build.VERSION.SDK_INT >= 34 && endpoints.isNotEmpty()) {
-            return endpoints.map { Route(it.endpointName?.toString() ?: typeLabel(it.endpointType), it, -1) }
+            return endpoints.map { endpoint ->
+                val kind = kindOfEndpoint(endpoint.endpointType)
+                Route(
+                    label = routeLabel(kind, endpoint.endpointName?.toString()),
+                    endpoint = endpoint,
+                    legacyRoute = -1,
+                    kind = kind,
+                )
+            }
         }
         val mask = runCatching { service?.callAudioState?.supportedRouteMask }.getOrNull()
             ?: return emptyList()
         val current = runCatching { service?.callAudioState?.route }.getOrDefault(0)
-        return legacyOptions(mask).map { (label, route) ->
+        return legacyOptions(mask).map { (kind, route) ->
+            val label = routeLabel(kind, null)
             val shown = if (route == current) "$label · current" else label
-            Route(shown, null, route)
+            Route(shown, null, route, kind)
+        }
+    }
+
+    /** True when a headset or other extra device is actually attached. */
+    fun hasExternalRoutes(): Boolean = shouldShowRouteSheet(routes().map { it.kind })
+
+    /** Flip speaker ↔ phone without a two-item sheet of always-present built-ins. */
+    fun toggleSpeaker() {
+        val options = routes()
+        val speaker = options.firstOrNull { it.kind == RouteKind.SPEAKER }
+        val phone = options.firstOrNull { it.kind == RouteKind.EARPIECE }
+            ?: options.firstOrNull { it.kind != RouteKind.SPEAKER }
+        val target = if (isSpeakerOn()) phone else speaker
+        target?.let(::requestRoute)
+    }
+
+    @Suppress("DEPRECATION")
+    fun isSpeakerOn(): Boolean = currentRouteKind() == RouteKind.SPEAKER
+
+    @Suppress("DEPRECATION")
+    fun currentRouteKind(): RouteKind? {
+        if (Build.VERSION.SDK_INT >= 34) currentEndpoint?.let { return kindOfEndpoint(it.endpointType) }
+        val route = runCatching { service?.callAudioState?.route }.getOrNull() ?: return null
+        return when (route) {
+            CallAudioState.ROUTE_SPEAKER -> RouteKind.SPEAKER
+            CallAudioState.ROUTE_BLUETOOTH -> RouteKind.BLUETOOTH
+            CallAudioState.ROUTE_WIRED_HEADSET -> RouteKind.WIRED
+            CallAudioState.ROUTE_STREAMING -> RouteKind.STREAMING
+            CallAudioState.ROUTE_EARPIECE -> RouteKind.EARPIECE
+            else -> RouteKind.OTHER
         }
     }
 
@@ -371,25 +419,16 @@ object CallGrid {
             route == CallAudioState.ROUTE_STREAMING
     }
 
-    private fun legacyOptions(mask: Int): List<Pair<String, Int>> = listOfNotNull(
+    private fun legacyOptions(mask: Int): List<Pair<RouteKind, Int>> = listOfNotNull(
         CallAudioState.ROUTE_SPEAKER.takeIf { mask and CallAudioState.ROUTE_SPEAKER != 0 }
-            ?.let { "Speaker" to it },
+            ?.let { RouteKind.SPEAKER to it },
         CallAudioState.ROUTE_BLUETOOTH.takeIf { mask and CallAudioState.ROUTE_BLUETOOTH != 0 }
-            ?.let { "Bluetooth" to it },
+            ?.let { RouteKind.BLUETOOTH to it },
         CallAudioState.ROUTE_WIRED_HEADSET.takeIf { mask and CallAudioState.ROUTE_WIRED_HEADSET != 0 }
-            ?.let { "Wired headset" to it },
+            ?.let { RouteKind.WIRED to it },
         CallAudioState.ROUTE_EARPIECE.takeIf { mask and CallAudioState.ROUTE_EARPIECE != 0 }
-            ?.let { "Phone" to it },
+            ?.let { RouteKind.EARPIECE to it },
     )
-
-    private fun typeLabel(type: Int): String = when (type) {
-        CallEndpoint.TYPE_BLUETOOTH -> "Bluetooth"
-        CallEndpoint.TYPE_SPEAKER -> "Speaker"
-        CallEndpoint.TYPE_WIRED_HEADSET -> "Wired headset"
-        CallEndpoint.TYPE_STREAMING -> "Streaming"
-        CallEndpoint.TYPE_EARPIECE -> "Phone"
-        else -> "Audio output"
-    }
 
     private fun notifyChange() {
         handler.post { listeners.forEach { it() } }
@@ -397,6 +436,47 @@ object CallGrid {
 
     private const val WITHHELD_LABEL = "Unknown caller"
     private const val SWAP_UNHOLD_FALLBACK_MS = 800L
+}
+
+/** Built-in vs accessory destinations. Pure so the sheet/toggle rule is JVM-tested. */
+enum class RouteKind { SPEAKER, EARPIECE, BLUETOOTH, WIRED, STREAMING, OTHER }
+
+/** A sheet is only worth opening when something beyond Phone/Speaker is attached. */
+fun shouldShowRouteSheet(kinds: Collection<RouteKind>): Boolean =
+    kinds.any { it != RouteKind.SPEAKER && it != RouteKind.EARPIECE }
+
+/**
+ * House labels, not Telecom's. Pixel's endpointName for the built-in pair is
+ * "Speakerphone" / "Earpiece" whether or not an accessory is connected; those
+ * strings stay off the sheet. A Bluetooth device name is the exception.
+ */
+fun routeLabel(kind: RouteKind, endpointName: String?): String {
+    val name = endpointName?.trim()?.takeIf { it.isNotEmpty() }
+    return when (kind) {
+        RouteKind.SPEAKER -> "Speaker"
+        RouteKind.EARPIECE -> "Phone"
+        RouteKind.WIRED -> "Wired headset"
+        RouteKind.STREAMING -> "Streaming"
+        RouteKind.BLUETOOTH ->
+            if (name != null && !isGenericRouteName(name)) name else "Bluetooth"
+        RouteKind.OTHER -> name ?: "Audio output"
+    }
+}
+
+fun kindOfEndpoint(type: Int): RouteKind = when (type) {
+    CallEndpoint.TYPE_BLUETOOTH -> RouteKind.BLUETOOTH
+    CallEndpoint.TYPE_SPEAKER -> RouteKind.SPEAKER
+    CallEndpoint.TYPE_WIRED_HEADSET -> RouteKind.WIRED
+    CallEndpoint.TYPE_STREAMING -> RouteKind.STREAMING
+    CallEndpoint.TYPE_EARPIECE -> RouteKind.EARPIECE
+    else -> RouteKind.OTHER
+}
+
+fun isGenericRouteName(name: String): Boolean = when (name.trim().lowercase()) {
+    "earpiece", "speakerphone", "speaker", "phone",
+    "wired headset", "bluetooth", "streaming",
+    -> true
+    else -> false
 }
 
 /** Hold this key, then unhold [parkedKey] once HOLDING is reported. */

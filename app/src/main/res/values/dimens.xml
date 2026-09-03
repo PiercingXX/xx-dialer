@@ -25,4 +25,11 @@
     <dimen name="xx_radius_card">8dp</dimen>
     <dimen name="xx_hairline">1dp</dimen>
 
+    <!-- Rules screen rhythm: section → eyebrow → card → next section.
+         Stack is the gap between control groups inside a card. -->
+    <dimen name="xx_section_gap">32dp</dimen>
+    <dimen name="xx_eyebrow_gap">10dp</dimen>
+    <dimen name="xx_stack_gap">20dp</dimen>
+    <dimen name="xx_chip_gap">8dp</dimen>
+
 </resources>
