@@ -83,6 +83,19 @@ Record in this file or `PROBE.md`.
 - **Accept:** dated notes. README may drop “Not proven against a live SIM”
   only after this list is filled.
 
+### V6 — Why silenced
+
+The policy engine is the product. Recents must say why a row was quiet.
+
+- [ ] Silenced / screened Recents row shows a one-line reason
+  (`window` / `unknown` / `pattern` / `blocklist` / `voicemail` — the
+  actual `RingPolicy` verdict, not a guess).
+- [ ] Tap the reason opens Rules on the matching surface (window chip,
+  pattern, blocklist). Starred rows never need this.
+- **Accept:** unknown caller in a closed window → Recents says so.
+  A pattern match names the pattern. Enforce-off / observe still logs
+  honestly.
+
 ### V5 — Docs / tests
 
 - [ ] `design.md` header is no longer “specification only.”
@@ -107,7 +120,8 @@ Record in this file or `PROBE.md`.
 ## Suggested order
 
 1. V3 (cheap, user-visible)
-2. V1 + V2 (the client is unfinished)
-3. V0 on the Pixel as soon as a SIM is in it
-4. V4 dogfood
-5. V5 last
+2. V6 why-silenced (daily Recents)
+3. V1 + V2 (the client is unfinished)
+4. V0 on the Pixel as soon as a SIM is in it
+5. V4 dogfood
+6. V5 last
