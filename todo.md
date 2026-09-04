@@ -1,182 +1,113 @@
-XX-Dialer visual voicemail (Skippy)
+# XX-Dialer — Remaining work
 
-> Repair inventory (2026-08-27): [TODO-REPAIR-2026-08-27.md](TODO-REPAIR-2026-08-27.md). This file remains the VVM product brief.
+**2026-09-04.** Core dialer + ring policy exist. Ring-repeat, lock-screen
+in-call, and audio-route polish landed (`c19f6b6`). This file is no longer
+only a VVM brief — it is the remaining product work.
 
-Repo: `/media/Working-Storage/GitHub/Phone-Projects/android/xx-dialer`
-Package: `com.piercingxx.xxdialer`
-Target: Pixel 9 Pro (`caiman`), GrapheneOS, Android 17 / SDK 37, live SIM.
+Package: `com.piercingxx.xxdialer`  
+Target: Pixel 9 Pro (`caiman`), GrapheneOS, live SIM.  
+Spec: [design.md](design.md). Repair archaeology: [TODO-REPAIR-2026-08-27.md](TODO-REPAIR-2026-08-27.md).
 
-Existing product: default dialer + call screening. Tabs today: Recents · Keypad · People · Rules. Long-press `1` on the keypad already dials `voicemail:` via `CallManager.placeVoicemail`. **That path stays forever**, including when visual voicemail is off.
+```
+Status: default dialer + screening + Rules engine are built. Visual
+voicemail is a partial client. Live-SIM / WS0 carrier dump never recorded.
+design.md header still says “nothing built.”
+```
 
-Skippy reads `design.md`, `todo.md`, `TabBar.kt`, `RulesActivity.kt`, `SettingsRepository.kt`, `CallManager.kt`, `KeypadActivity.kt`, and `app/build.gradle.kts` (`verifyNoInternet`) before writing code.
-
----
-
-## Product: opt-in visual voicemail
-
-Visual voicemail is **off by default**. A user who never wants the dialer on the network leaves the toggle off. A user who wants an inbox turns it on.
-
-**Settings toggle** (Rules screen — that is this app’s settings):
-
-Label: **Visual voicemail**
-Annotation: **On: a Voicemail tab, carrier mailbox over the network. Off: long-press 1 only. Default off.**
-
-| Toggle | Tab | Telephony | Network |
-|---|---|---|---|
-| **Off (default)** | Voicemail tab **absent** (not hidden — gone). Hide-chip for it is gone too. | `VisualVoicemailService` methods **return immediately** (`task.finish()`). No ACTIVATE SMS. No IMAP. No sockets. | Zero use of INTERNET even if the OS granted Network |
-| **On** | Voicemail tab **appears** (hideable like Recents). Functionality runs. | Cell-connect / VVM SMS handled. ACTIVATE if needed. IMAP sync. | IMAP only to the host in the carrier STATUS SMS |
-
-Turning **off** after it was on: send DEACTIVATE SMS if we previously activated, unregister the voicemail source, drop or stop displaying provider rows from our package, remove the tab, never open another socket.
-
-`SEND_TO_VOICEMAIL` on a contact (ring policy row 2) is unrelated — that is “send this caller to the mailbox,” not the inbox UI.
+Screening stays **local**. VVM is the only opt-in network feature. Long-press
+`1` → `voicemail:` **never** breaks, including when VVM is off.
 
 ---
 
-## INTERNET permission (be honest in the UI)
-
-Android cannot add `INTERNET` at runtime. The APK **declares** `INTERNET` + `ACCESS_NETWORK_STATE` so IMAP can work **after** the toggle. Declaring it is not the same as using it.
-
-- **In-app toggle off** = this process never opens a network socket. That is the product control.
-- **GrapheneOS App info → Network** = OS kill switch. If the user revokes Network, the toggle may be on but IMAP fails; the Voicemail tab says so and points at long-press 1.
-- Setup / Rules copy must say both: *Visual voicemail talks to your carrier’s mailbox. Leave it off if you do not want this app on the network. GrapheneOS can also revoke Network for this app.*
-
-Replace `verifyNoInternet` with **`verifyVvmInternetOnly`**: INTERNET is allowed; fail the build if any *other* unexpected network permission appears; unit-test that the IMAP stack is the only socket site (package prefix `…vvm` / `…voicemail`). Update README: screening stays local; VVM is the one opt-in network feature.
-
-Default off is how “each user decides.” Do not phone home, do not use INTERNET for screening, contacts, or telemetry.
-
----
-
-## Locked decisions
+## Locked now (2026-09-04)
 
 | ID | Decision |
 |---|---|
-| D1 | Toggle **off** by default. Key e.g. `SettingsRepository.KEY_VISUAL_VOICEMAIL` = `"0"` in `designDefaults`. Backup JSON whitelist the key. |
-| D2 | Toggle **on** shows the Voicemail tab **and** starts the VVM client. One setting, two effects. No tab without functionality, no IMAP without the tab. |
-| D3 | `VoicemailContract` is the store. No Room table of audio. |
-| D4 | Implement `VisualVoicemailService`. When the toggle is off, every callback no-ops and finishes. Telephony may still bind the default dialer; we must not activate. |
-| D5 | Protocols: OMTP 1.1, CVVM, VVM3 as CarrierConfig `KEY_VVM_TYPE_STRING`. IMAP credentials **only** from STATUS SMS. Prefer TLS if offered; never log `pw`. |
-| D6 | Cellular data when `KEY_VVM_CELLULAR_DATA_REQUIRED_BOOLEAN`. |
-| D7 | If `KEY_CARRIER_VVM_PACKAGE_NAME_STRING` is installed, do not fight it unless the user enabled our toggle anyway (then we are the default dialer and own the bind). |
-| D8 | Fail honest: empty / activating / no carrier config / network denied / IMAP failed. Always keep long-press 1. |
-| D9 | No greeting editor, no PIN UI, no cloud transcription, no archive. Carrier `text/plain` transcription column is OK to show. |
+| V1 | **Finish VVM end-to-end, then live-SIM dogfood.** Do not park the client. |
+| D1–D9 | Still as the old brief: off by default, `VoicemailContract` store, fail-honest states, IMAP host from STATUS SMS only, no greeting/PIN/transcription cloud. |
 
----
-
-## Cleanroom (Skippy does this himself)
-
-**Study:** [AOSP VVM](https://source.android.com/docs/core/permissions/voicemail), `VoicemailContract`, `VisualVoicemailService`, `VisualVoicemailSms`, `TelephonyManager.setVisualVoicemailSmsFilterSettings` / `sendVisualVoicemailSms`, CarrierConfig `KEY_VVM_*`, GSMA OMTP VVM spec. AOSP Dialer `java/com/android/voicemail` is **Apache-2.0** — read for STATUS/IMAP algorithms, **reimplement** in `com.piercingxx.xxdialer.vvm`. NOTICE if derived. Do not copy Dagger, layouts, icons, loggers.
-
-**Never open:** Fossify/Simple/Koler/Emerald (GPL), Google Phone APK, carrier VVM APKs.
-
----
-
-## Permissions
-
-android.permission.INTERNET android.permission.ACCESS_NETWORK_STATE android.permission.ADD_VOICEMAIL android.permission.READ_VOICEMAIL android.permission.WRITE_VOICEMAIL android.permission.SEND_SMS          // ACTIVATE / DEACTIVATE / query
-
-`CHANGE_NETWORK_STATE` only if cellular-bind cannot be done without it.
-`BIND_VISUAL_VOICEMAIL_SERVICE` is on the **service** tag (others bind to us), not uses-permission.
-
-Confirm on GrapheneOS whether ROLE_DIALER auto-grants ADD_VOICEMAIL; if not, Setup asks when the user first turns the toggle on (not at first launch).
-
----
-
-## Architecture
-
-Rules: Visual voicemail [ off | on ]     ← single gate, default off
-        │
-        ├ off → Tab.VOICEMAIL omitted from TabBar
-        │       XxVisualVoicemailService: finish immediately
-        │       no SMS, no IMAP, no sockets
-        │
-        └ on  → Tab.VOICEMAIL visible
-                onCellServiceConnected → ACTIVATE if CarrierConfig valid
-                onSmsReceived → STATUS/SYNC → creds + sync
-                IMAP → VoicemailContract
-                VoicemailActivity list/play/delete
-                ACTION_FETCH_VOICEMAIL on play if !HAS_CONTENT
-
-`VisualVoicemailTask.finish()` always. IMAP off main thread (WorkManager or app coroutine + WAKE_LOCK). Encrypted prefs for IMAP password. Not in BackupJson.
-
-Filter settings registered only while toggle is on; cleared when turned off.
-
----
-
-## UI
-
-**Rules row:** switch “Visual voicemail” + annotation above. Turning on the first time: one line that this uses the carrier network. No second confirm dialog unless you already have a confirm pattern in Rules.
-
-**Tab:** `Voicemail`, fifth tab, hideable. When toggle is off, `TabBar` must not show a blank slot.
-
-**Tab states (only if toggle on):** off-is-impossible here; no carrier config; activating; network revoked; IMAP error + Retry; empty; list (name via ContactMirror/PhoneLookup, time, duration, unread). Detail: play/pause, speaker, call back, delete, transcription if present.
-
-**Notification:** only if toggle on. Channel `voicemail_v1`, SECRET, tap → tab.
-
-Theme: existing dialer theme-sync. Views, not Compose.
-
----
-
-## Tests
-
-**JVM:** STATUS/SYNC parsers; `shouldRunVvm(toggle)` false ⇒ no activate; toggle off after on ⇒ deactivate requested; IMAP host must equal STATUS host.
-
-**Manifest / source:** service + BIND + action; INTERNET declared; `verifyVvmInternetOnly`; Tab.VOICEMAIL; TabBar omits it when setting is 0; long-press 1 still `placeVoicemail`; default key is off.
-
-**Device (do first):**
-`adb shell dumpsys carrier_config | grep -i vvm`
-Record type/destination/port/cellular-required. Empty type ⇒ ship client + “this SIM does not publish VVM”; do not fake an inbox.
-
-**Live SIM after code:**
-
-1. Fresh install: no Voicemail tab, logcat no IMAP/ACTIVATE.
-2. Toggle on: tab appears; ACTIVATE on cellular.
-3. Leave a voicemail from another phone; row; play; delete.
-4. Toggle off: tab gone; no further sockets; long-press 1 still works.
-5. GrapheneOS revoke Network, toggle on: tab explains failure, no crash.
+Recent on-device work (routes / mute armed / lock-screen hang-up / ring once)
+is in the tree. Do not reopen unless it regresses.
 
 ---
 
 ## Workstreams
 
-| WS | Scope |
-|---|---|
-| V0 | CarrierConfig dump on the Pixel; write findings in `todo.md` |
-| V1 | Permission + `KEY_VISUAL_VOICEMAIL` default 0 + `verifyVvmInternetOnly` + README |
-| V2 | Rules toggle + TabBar show/hide (no IMAP yet) |
-| V3 | `XxVisualVoicemailService` gated on the toggle; ACTIVATE/DEACTIVATE |
-| V4 | STATUS/SYNC parser + encrypted creds |
-| V5 | IMAP → VoicemailContract |
-| V6 | Fetch audio + player |
-| V7 | List/detail UI |
-| V8 | Delete/seen upload |
-| V9 | New-voicemail notification |
-| V10 | Error/empty copy + live-SIM dogfood |
+### V0 — Carrier dump (blocks honest IMAP)
 
-V2 can land before IMAP so the operator can see the tab appear/disappear.
+- [ ] Run the probe on caiman (`PROBE.md`). Capture `docs/vvm-carrier-config.txt`
+  (today: seven BLOCKED lines).
+- [ ] Record `KEY_VVM_TYPE_STRING`, STATUS SMS shape, IMAP host, cellular-required.
+- **Accept:** a real STATUS transcript in-repo, or a written “this SIM has no
+  VVM” and the UI stays on the NoCarrierConfig state.
+
+### V1 — Toggle-off teardown
+
+- [ ] Rules toggle **off** sends DEACTIVATE if we previously activated, clears
+  the SMS filter, stops displaying our package’s `VoicemailContract` rows,
+  resets `visual_voicemail_activated`, removes the tab.
+- [ ] Today only `onSimRemoved` tears down. Persisting `"0"` is not teardown.
+- **Accept:** toggle on → inbox works → toggle off → zero sockets, no tab,
+  long-press 1 still dials the carrier mailbox.
+
+### V2 — Fetch + play + honest states
+
+- [ ] `ACTION_FETCH_VOICEMAIL` has a receiver (or the fetcher is called
+  in-process). `HAS_CONTENT` flips; `VvmDetailPlayer` can play.
+- [ ] `VoicemailActivity` goes through `VvmListState.decide()` — Activating /
+  NoCarrierConfig / ImapError / network-revoked are **shown**, not skipped.
+- [ ] `VvmImapPolicy.canSync` (cellular-required) is actually consulted.
+- [ ] New-voicemail notification (`voicemail_v1`) fires once per new row.
+- [ ] First toggle-on requests `ADD_VOICEMAIL` / `SEND_SMS` if ROLE_DIALER
+  did not auto-grant.
+- **Accept:** leave a VM, see the row, tap, hear it, delete. GrapheneOS
+  Network revoke shows the honest copy and points at long-press 1.
+
+### V3 — TabBar
+
+- [ ] Hide `tab_ind_*` with the labels when VVM is off (no blank fifth slot).
+- [ ] Persist `"voicemail"` in the hidden-tabs set (listener currently omits it).
+- **Accept:** toggle off → four tabs, no ghost indicator. Hide Voicemail,
+  kill process, it stays hidden.
+
+### V4 — Live-SIM gate (after V1–V3)
+
+Record in this file or `PROBE.md`.
+
+- [ ] Restricted Settings / default-dialer grant on GrapheneOS.
+- [ ] Starred always rings; unknown uses the unknown channel + window.
+- [ ] STIR / screening statuses look like the network, not a fake.
+- [ ] Contact Scopes: denied contacts do not leak into People as a lie.
+- [ ] xx-contacts Recents **Save** still opens the contacts editor (F1).
+- [ ] VVM dogfood: fresh install, toggle on/off, leave/play/delete, Network revoke.
+- **Accept:** dated notes. README may drop “Not proven against a live SIM”
+  only after this list is filled.
+
+### V5 — Docs / tests
+
+- [ ] `design.md` header is no longer “specification only.”
+- [ ] Retire or rewrite `NoInternetGuardTest` (VVM made INTERNET legal).
+  Keep `verifyVvmInternetOnly`.
+- [ ] compileSdk/targetSdk: 35 in Gradle vs 37 in docs — pick one and match.
+- **Accept:** a stranger can read README and know screening is local and
+  VVM is opt-in.
 
 ---
 
 ## Stop conditions
 
-- IMAP or ACTIVATE while the toggle is off → reject.
-- Socket to a host not in the last STATUS SMS → reject.
-- Removing long-press 1 → reject.
-- Copying AOSP Dialer files verbatim, or any GPL dialer → reject.
-- Using INTERNET for anything except VVM IMAP → reject.
-
-
+- Network used for screening, contacts, or telemetry → reject.
+- IMAP to a host that was not in the last STATUS SMS → reject.
+- Breaking long-press 1 → reject.
+- GPL dialer source → reject.
+- Tick VVM DONE without V0 + V2 on a real SIM → reject.
 
 ---
 
-## VVM findings (V0 — device dump)
+## Suggested order
 
-**Carrier-config dump: BLOCKED.** No adb device is attached in the build sandbox, so
-`adb shell dumpsys carrier_config | grep -i vvm` could not be run against the target SIM.
-See `docs/vvm-carrier-config.txt` for the BLOCKED marker. Re-run V0 on a host with the
-Pixel 9 Pro connected to capture `KEY_VVM_TYPE_STRING` / destination / port / cellular-required.
-
-**Empty-type decision (recorded now):** if the carrier publishes no
-`KEY_VVM_TYPE_STRING` (empty `vvm_type`), ship the client anyway and surface the honest
-"this SIM does not publish VVM" state from D8 — do not fake an inbox. The client must
-tolerate an empty `vvm_type` and never activate or open IMAP without a real carrier
-config.
+1. V3 (cheap, user-visible)
+2. V1 + V2 (the client is unfinished)
+3. V0 on the Pixel as soon as a SIM is in it
+4. V4 dogfood
+5. V5 last
