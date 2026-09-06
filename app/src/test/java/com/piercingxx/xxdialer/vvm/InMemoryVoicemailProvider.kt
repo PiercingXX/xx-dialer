@@ -123,6 +123,7 @@ object InMemoryVoicemailProvider {
                 VoicemailContract.Voicemails.IS_READ,
                 VoicemailContract.Voicemails.HAS_CONTENT,
                 VoicemailContract.Voicemails.TRANSCRIPTION,
+                VoicemailContract.Voicemails.SOURCE_DATA,
             )
         }
     }

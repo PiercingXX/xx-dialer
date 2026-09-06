@@ -123,6 +123,10 @@
          of a silent no-op: play, speaker, call back, and delete each explain
          themselves when their seam returns false.
     -->
+    <string name="vvm_notif_channel">Voicemail</string>
+    <string name="vvm_notif_title">New voicemail</string>
+    <string name="vvm_notif_text">From %1$s</string>
+
     <string name="vvm_detail_play_failed">Couldn\'t play this voicemail</string>
     <string name="vvm_detail_speaker_failed">Couldn\'t switch the speaker</string>
     <string name="vvm_detail_callback_failed">Couldn\'t call back</string>

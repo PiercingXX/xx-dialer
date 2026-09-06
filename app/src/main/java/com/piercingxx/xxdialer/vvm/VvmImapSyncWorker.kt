@@ -6,6 +6,7 @@ import android.net.Uri
 import android.os.PowerManager
 import android.provider.VoicemailContract
 import android.util.Log
+import com.piercingxx.xxdialer.ServiceLocator
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -22,6 +23,8 @@ data class VvmMailboxMessage(
     val durationSeconds: Int,
     val isRead: Boolean,
     val transcription: String? = null,
+    /** IMAP UID (or other carrier identity) stored as VoicemailContract SOURCE_DATA. */
+    val sourceData: String? = null,
 )
 
 /**
@@ -37,6 +40,15 @@ data class VvmMailboxMessage(
  */
 class VvmImapSyncWorker(
     private val context: Context,
+    private val notifyNew: (toggleOn: Boolean, caller: String?, timestampMillis: Long) -> Unit =
+        { toggleOn, caller, timestampMillis ->
+            runCatching {
+                VvmVoicemailNotifier(context).notifyNewVoicemail(toggleOn, caller, timestampMillis)
+            }
+        },
+    private val toggleOn: suspend () -> Boolean = {
+        runCatching { ServiceLocator.settings(context).visualVoicemailEnabled() }.getOrDefault(false)
+    },
     private val fetch: suspend (VvmSms) -> List<VvmMailboxMessage>,
 ) {
 
@@ -49,10 +61,11 @@ class VvmImapSyncWorker(
      * the main thread.
      */
     suspend fun sync(creds: VvmSms): List<Uri> {
+        val enabled = runCatching { toggleOn() }.getOrDefault(false)
         return withContext(Dispatchers.IO) {
             val lock = acquireWakeLock()
             try {
-                writeRows(fetch(creds))
+                writeRows(fetch(creds), enabled)
             } finally {
                 releaseWakeLock(lock)
             }
@@ -70,7 +83,7 @@ class VvmImapSyncWorker(
             .onFailure { Log.w(LOG_TAG, "vvm wake lock release failed", it) }
     }
 
-    private fun writeRows(messages: List<VvmMailboxMessage>): List<Uri> {
+    private fun writeRows(messages: List<VvmMailboxMessage>, toggleOn: Boolean): List<Uri> {
         val resolver = context.contentResolver
         val sourceUri = VoicemailContract.Voicemails.buildSourceUri(context.packageName)
         return messages.mapNotNull { message ->
@@ -83,8 +96,15 @@ class VvmImapSyncWorker(
                 message.transcription?.let {
                     put(VoicemailContract.Voicemails.TRANSCRIPTION, it)
                 }
+                message.sourceData?.let {
+                    put(VoicemailContract.Voicemails.SOURCE_DATA, it)
+                }
             }
-            resolver.insert(sourceUri, values)
+            val uri = resolver.insert(sourceUri, values)
+            if (uri != null) {
+                notifyNew(toggleOn, message.number, message.timestampMillis)
+            }
+            uri
         }
     }
 

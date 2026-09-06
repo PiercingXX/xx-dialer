@@ -69,6 +69,10 @@ class VvmDetailPlayer(
             return true
         }
         markSeen(uri)
+        if (playDirectly(uri)) return true
+        // No content yet: fetch in-process so HAS_CONTENT can flip when IMAP
+        // returns audio, then try again. Missing carrier audio stays a failure.
+        runCatching { VvmAudioFetcher(context).fetchIfMissingContent(uri) }
         return playDirectly(uri)
     }
 

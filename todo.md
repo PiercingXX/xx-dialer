@@ -1,8 +1,9 @@
 # XX-Dialer — Remaining work
 
-**2026-09-04.** Core dialer + ring policy exist. Ring-repeat, lock-screen
-in-call, and audio-route polish landed (`c19f6b6`). This file is no longer
-only a VVM brief — it is the remaining product work.
+**2026-09-05.** Core dialer + ring policy exist. Ring-repeat, lock-screen
+in-call, and audio-route polish landed (`c19f6b6`). Recents chips, missed
+clear, hide-voicemail persist, and VvmListState.decide landed (`d3870d7`).
+V1 toggle-off teardown + V2 fetch/notify honesty landed in this pass.
 
 Package: `com.piercingxx.xxdialer`  
 Target: Pixel 9 Pro (`caiman`), GrapheneOS, live SIM.  
@@ -10,8 +11,9 @@ Spec: [design.md](design.md). Repair archaeology: [TODO-REPAIR-2026-08-27.md](TO
 
 ```
 Status: default dialer + screening + Rules engine are built. Visual
-voicemail is a partial client. Live-SIM / WS0 carrier dump never recorded.
-design.md header still says “nothing built.”
+voicemail is a code-complete client that still needs a live-SIM STATUS
+transcript (V0) before IMAP can fetch real audio. design.md header still
+says “nothing built.”
 ```
 
 Screening stays **local**. VVM is the only opt-in network feature. Long-press
@@ -43,30 +45,38 @@ is in the tree. Do not reopen unless it regresses.
 
 ### V1 — Toggle-off teardown
 
-- [ ] Rules toggle **off** sends DEACTIVATE if we previously activated, clears
+- [x] Rules toggle **off** sends DEACTIVATE if we previously activated, clears
   the SMS filter, stops displaying our package’s `VoicemailContract` rows,
   resets `visual_voicemail_activated`, removes the tab.
-- [ ] Today only `onSimRemoved` tears down. Persisting `"0"` is not teardown.
+- [x] Shared `VvmActivationController` — SIM yank and the Rules switch both
+  tear down. Persisting `"0"` is no longer the only off path.
 - **Accept:** toggle on → inbox works → toggle off → zero sockets, no tab,
-  long-press 1 still dials the carrier mailbox.
+  long-press 1 still dials the carrier mailbox. Live-SIM half is V4.
 
 ### V2 — Fetch + play + honest states
 
-- [ ] `ACTION_FETCH_VOICEMAIL` has a receiver (or the fetcher is called
-  in-process). `HAS_CONTENT` flips; `VvmDetailPlayer` can play.
-- [ ] `VoicemailActivity` goes through `VvmListState.decide()` — Activating /
+- [x] `ACTION_FETCH_VOICEMAIL` has a non-exported receiver (`VvmFetchHandler`)
+  and the fetcher also runs the downloader in-process. `HAS_CONTENT` flips
+  only when IMAP returns audio. No STATUS host / credentials ⇒ fail honest
+  (never invent IMAP host).
+- [x] `VoicemailActivity` goes through `VvmListState.decide()` — Activating /
   NoCarrierConfig / ImapError / network-revoked are **shown**, not skipped.
-- [ ] `VvmImapPolicy.canSync` (cellular-required) is actually consulted.
-- [ ] New-voicemail notification (`voicemail_v1`) fires once per new row.
-- [ ] First toggle-on requests `ADD_VOICEMAIL` / `SEND_SMS` if ROLE_DIALER
+- [x] `VvmImapPolicy.canSync` (cellular-required) is consulted before any
+  IMAP socket (`VvmImapClient.fetch` / `fetchAudio` / `VvmAudioDownloader`).
+- [x] New-voicemail notification (`voicemail_v1`, SECRET/1000) fires once per
+  new row when a row appears, gated on the toggle.
+- [x] First toggle-on requests `ADD_VOICEMAIL` / `SEND_SMS` if ROLE_DIALER
   did not auto-grant.
 - **Accept:** leave a VM, see the row, tap, hear it, delete. GrapheneOS
   Network revoke shows the honest copy and points at long-press 1.
+  **Needs live SIM (V0 + V4).** Code path is wired; audio cannot land without
+  a real STATUS `srv`/`u`/`pw`.
 
 ### V3 — TabBar
 
-- [ ] Hide `tab_ind_*` with the labels when VVM is off (no blank fifth slot).
-- [ ] Persist `"voicemail"` in the hidden-tabs set (listener currently omits it).
+- [x] Hide `tab_ind_*` with the labels when VVM is off (no blank fifth slot).
+- [x] Persist `"voicemail"` in the hidden-tabs set (`TabBar.hiddenNames` +
+  Rules listener). Hide Voicemail survives process death.
 - **Accept:** toggle off → four tabs, no ghost indicator. Hide Voicemail,
   kill process, it stays hidden.
 
@@ -87,14 +97,15 @@ Record in this file or `PROBE.md`.
 
 The policy engine is the product. Recents must say why a row was quiet.
 
-- [ ] Silenced / screened Recents row shows a one-line reason
-  (`window` / `unknown` / `pattern` / `blocklist` / `voicemail` — the
-  actual `RingPolicy` verdict, not a guess).
+- [x] Silenced / screened Recents row shows a one-line reason via
+  `VerdictLines` (`Unknown, outside 09–17` / pattern mask / blocklist /
+  send-to-voicemail — the `screen_log` / `RingPolicy` reason, not a guess).
 - [ ] Tap the reason opens Rules on the matching surface (window chip,
-  pattern, blocklist). Starred rows never need this.
+  pattern, blocklist). Starred rows never need this. Left as a follow-up —
+  not a small add (Rules has no deep-link extras yet).
 - **Accept:** unknown caller in a closed window → Recents says so.
   A pattern match names the pattern. Enforce-off / observe still logs
-  honestly.
+  honestly. Display half is done; tap-to-Rules is leftover.
 
 ### V5 — Docs / tests
 
@@ -119,9 +130,9 @@ The policy engine is the product. Recents must say why a row was quiet.
 
 ## Suggested order
 
-1. V3 (cheap, user-visible)
-2. V6 why-silenced (daily Recents)
-3. V1 + V2 (the client is unfinished)
+1. ~~V3 (cheap, user-visible)~~
+2. V6 tap-to-Rules (display is done)
+3. ~~V1 + V2 code~~ — live-SIM still V0/V4
 4. V0 on the Pixel as soon as a SIM is in it
 5. V4 dogfood
 6. V5 last

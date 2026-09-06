@@ -34,6 +34,7 @@ class VvmImapHostPolicyTest {
 
     @Test
     fun refusesAnyHostBeforeFirstStatus() {
+        VvmImapHostPolicy.clear()
         // No STATUS notification seen yet — no mailbox host may be reached.
         assertFalse(
             VvmImapHostPolicy.canConnectTo("mail.example.com"),

@@ -12,6 +12,8 @@ import android.os.SystemClock
 import android.provider.BlockedNumberContract
 import android.provider.CallLog
 import android.telecom.TelecomManager
+import android.telephony.CarrierConfigManager
+import android.telephony.SubscriptionManager
 import android.telephony.TelephonyManager
 import android.text.format.DateUtils
 import android.view.View
@@ -56,6 +58,10 @@ import com.piercingxx.xxdialer.telecom.FactSource
 import com.piercingxx.xxdialer.telecom.LogRows
 import com.piercingxx.xxdialer.util.BlocklistImport
 import com.piercingxx.xxdialer.util.E164
+import com.piercingxx.xxdialer.vvm.VvmActivationController
+import com.piercingxx.xxdialer.vvm.VvmCarrierConfig
+import com.piercingxx.xxdialer.vvm.VvmGate
+import com.piercingxx.xxdialer.vvm.VvmRuntimePermissions
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -150,6 +156,17 @@ class RulesActivity : AppCompatActivity() {
      * number per line → normalize on-device (R8) → insert survivors into
      * BlockedNumberContract (D6). Role refused ⇒ honest toast, no pretending.
      */
+    /**
+     * First VVM toggle-on: request ADD_VOICEMAIL / SEND_SMS if ROLE_DIALER
+     * did not auto-grant them, then ACTIVATE. The result is re-audited; a
+     * refusal leaves the toggle on (the tab exists) and the mailbox honest
+     * about Activating / ImapError rather than inventing credentials.
+     */
+    private val vvmPermissionLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
+            lifecycleScope.launch { maybeActivateVvm() }
+        }
+
     private val importBlocklistDoc =
         registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
             if (uri == null) return@registerForActivityResult
@@ -727,16 +744,14 @@ class RulesActivity : AppCompatActivity() {
                 if (checked) "1" else "0",
             )
         }
-        // Visual voicemail (§12): OPT-IN. Flipping the toggle persists the
-        // setting; the Voicemail hide-chip's visibility is re-gated on it in
-        // syncPolicyControls via RulesScreenVoicemail.voicemailHideChipVisible.
+        // Visual voicemail (§12): OPT-IN. On: persist, request missing
+        // ADD_VOICEMAIL/SEND_SMS, ACTIVATE. Off: DEACTIVATE if we previously
+        // ACTIVATEd, clear the SMS filter, drop our VoicemailContract rows,
+        // reset visual_voicemail_activated, remove the tab. Persisting "0"
+        // alone is not teardown.
         binding.vvmSwitch.setOnCheckedChangeListener { _, checked ->
             if (suppressPolicies) return@setOnCheckedChangeListener
-            persistSetting(
-                SettingsRepository.KEY_VISUAL_VOICEMAIL,
-                if (checked) "1" else "0",
-            )
-            syncVoicemailGate()
+            lifecycleScope.launch { applyVisualVoicemailToggle(checked) }
         }
         // Multi-select: checked chip = hidden tab. Rules itself is absent by
         // construction — the setting can always be reached to undo itself.
@@ -837,6 +852,55 @@ class RulesActivity : AppCompatActivity() {
             runCatching { ServiceLocator.settings(this@RulesActivity).setString(key, value) }
         }
     }
+
+    /**
+     * Rules VVM toggle. On requests missing runtime permissions then ACTIVATE;
+     * off tears the mailbox down through [VvmActivationController] so the SMS
+     * filter, provider rows, and activated flag do not survive `"0"`.
+     */
+    private suspend fun applyVisualVoicemailToggle(enabled: Boolean) {
+        val settings = ServiceLocator.settings(this)
+        runCatching {
+            settings.setString(
+                SettingsRepository.KEY_VISUAL_VOICEMAIL,
+                if (enabled) "1" else "0",
+            )
+        }
+        if (enabled) {
+            val missing = VvmRuntimePermissions.missing(this)
+            if (missing.isNotEmpty()) {
+                vvmPermissionLauncher.launch(missing)
+            } else {
+                maybeActivateVvm()
+            }
+        } else {
+            val previouslyActivated = runCatching { settings.visualVoicemailWasActivated() }
+                .getOrDefault(false)
+            if (VvmGate.shouldDeactivate(toggleOn = false, previouslyActivated = previouslyActivated)) {
+                runCatching { VvmActivationController(this).deactivate() }
+            }
+        }
+        syncVoicemailGate()
+        TabBar.onTabScreenStart(this, Tab.RULES)
+    }
+
+    private suspend fun maybeActivateVvm() {
+        val enabled = runCatching {
+            ServiceLocator.settings(this).visualVoicemailEnabled()
+        }.getOrDefault(false)
+        if (!VvmGate.shouldActivate(toggleOn = enabled, carrierConfigValid = carrierVvmConfigValid())) {
+            return
+        }
+        runCatching { VvmActivationController(this).activate() }
+    }
+
+    private fun carrierVvmConfigValid(): Boolean = runCatching {
+        val subId = SubscriptionManager.getDefaultSubscriptionId()
+        if (subId == SubscriptionManager.INVALID_SUBSCRIPTION_ID) return@runCatching false
+        val manager = getSystemService(CarrierConfigManager::class.java) ?: return@runCatching false
+        val config = manager.getConfigForSubId(subId) ?: return@runCatching false
+        VvmCarrierConfig.isValid(config.getString(CarrierConfigManager.KEY_VVM_TYPE_STRING))
+    }.getOrDefault(false)
 
     /**
      * §12 gated hide-chip: the Voicemail chip in the "Hide tabs" group is

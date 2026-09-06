@@ -24,6 +24,11 @@ object VvmImapHostPolicy {
         lastStatusHost = host
     }
 
+    /** Forget the STATUS host — toggle-off / SIM yank must leave no socket target. */
+    fun clear() {
+        lastStatusHost = null
+    }
+
     /**
      * True only when [host] equals the last STATUS host. Before any STATUS
      * notification has been seen, or when [host] differs from it, the connection
