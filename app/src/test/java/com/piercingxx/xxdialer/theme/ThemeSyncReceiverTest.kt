@@ -58,6 +58,16 @@ class ThemeSyncReceiverTest {
     // ---- wiring: the manifest declares the receiver for the launcher broadcast ----
 
     @Test
+    fun `onReceive applies the ground to the resumed activity`() {
+        val src = sequenceOf(
+            File("src/main/java/com/piercingxx/xxdialer/theme/ThemeSyncReceiver.kt"),
+            File("app/src/main/java/com/piercingxx/xxdialer/theme/ThemeSyncReceiver.kt"),
+        ).first { it.exists() }.readText()
+        assertTrue(src.contains("ThemeGroundApplier.apply"))
+        assertTrue(src.contains("resumedActivity()"))
+    }
+
+    @Test
     fun `manifest declares the theme-sync receiver component`() {
         assertTrue(manifestText.contains(".theme.ThemeSyncReceiver"))
     }

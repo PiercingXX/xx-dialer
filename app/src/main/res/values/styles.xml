@@ -104,7 +104,7 @@
         <item name="android:textStyle">normal</item>
         <item name="android:textAllCaps">true</item>
         <item name="android:textColor">@color/xx_chip_text</item>
-        <item name="chipBackgroundColor">@android:color/transparent</item>
+        <item name="chipBackgroundColor">@color/xx_chip_bg</item>
         <item name="chipStrokeColor">@color/xx_chip_stroke</item>
         <item name="chipStrokeWidth">1dp</item>
         <item name="chipCornerRadius">2dp</item>

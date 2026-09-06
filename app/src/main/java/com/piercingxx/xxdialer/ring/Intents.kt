@@ -16,6 +16,15 @@ object Intents {
     const val EXTRA_FILTER_E164 = "com.piercingxx.xxdialer.extra.FILTER_E164"
 
     /**
+     * Recents chip pre-filter from the missed-call notification: value is
+     * [RECENTS_FILTER_MISSED] so Recents opens on the Missed chip, not All.
+     */
+    const val EXTRA_RECENTS_FILTER = "com.piercingxx.xxdialer.extra.RECENTS_FILTER"
+
+    /** [EXTRA_RECENTS_FILTER] value that selects the Missed chip. */
+    const val RECENTS_FILTER_MISSED = "missed"
+
+    /**
      * Block action executed by the NON-EXPORTED sibling receiver
      * (BlockActionsReceiver, B3): the BlockedNumberContract write is
      * dialer-privileged, so only this app's own PendingIntents may land it.

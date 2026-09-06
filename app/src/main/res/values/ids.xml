@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Holds a TextView's ORIGINAL layout text colour so re-theming can always
+         be computed from it. Without it, remapping the white ramp is one-way:
+         after a light ground the layout colour is gone and a dark preset has
+         nothing to restore. Same stash as Nope-Mode's BrandActivity. -->
+    <item name="tag_original_text_color" type="id" />
+    <item name="tag_original_hint_color" type="id" />
+</resources>

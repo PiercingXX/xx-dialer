@@ -748,11 +748,12 @@ class RulesActivity : AppCompatActivity() {
         ).forEach { chip ->
             chip.setOnCheckedChangeListener { _, _ ->
                 if (suppressPolicies) return@setOnCheckedChangeListener
-                val hidden = buildSet {
-                    if (binding.chipTabRecents.isChecked) add("recents")
-                    if (binding.chipTabKeypad.isChecked) add("keypad")
-                    if (binding.chipTabPeople.isChecked) add("people")
-                }
+                val hidden = TabBar.hiddenNames(
+                    hideRecents = binding.chipTabRecents.isChecked,
+                    hideKeypad = binding.chipTabKeypad.isChecked,
+                    hidePeople = binding.chipTabPeople.isChecked,
+                    hideVoicemail = binding.chipTabVoicemail.isChecked,
+                )
                 lifecycleScope.launch {
                     runCatching { ServiceLocator.settings(this@RulesActivity).setHiddenTabs(hidden) }
                     TabBar.onTabScreenStart(this@RulesActivity, Tab.RULES)

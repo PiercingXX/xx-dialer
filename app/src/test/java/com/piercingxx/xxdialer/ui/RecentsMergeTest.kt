@@ -152,6 +152,17 @@ class RecentsMergeTest {
         assertFalse(RecentsMerge.passes(Filter.SILENCED, blocked))
         assertTrue(RecentsMerge.passes(Filter.BLOCKED, blocked))
         assertFalse(RecentsMerge.passes(Filter.BLOCKED, placedRing))
+
+        val blockedType = placedRing.copy(
+            key = 4,
+            glyph = Glyph.BLOCKED,
+            blockedUpstream = true,
+        )
+        assertTrue(
+            RecentsMerge.passes(Filter.BLOCKED, blockedType),
+            "Blocked chip includes CallLog BLOCKED_TYPE (upstream) rows",
+        )
+        assertFalse(RecentsMerge.passes(Filter.MISSED, blockedType))
     }
 
     // ---- grouping -----------------------------------------------------------

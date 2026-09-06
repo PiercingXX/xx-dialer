@@ -6,6 +6,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.piercingxx.xxdialer.R
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.Robolectric
@@ -13,14 +14,13 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 /**
- * T3 — VoicemailActivity computes and renders the honest state on load, so the
- * final copy is reachable from the running app. Pins that [VoicemailActivity.onCreate]
- * reaches the render path the moment the tab opens: instead of a blank list, the
- * screen shows one honest [VvmListState]. Under Robolectric the INTERNET
- * permission is denied by default, so the honest state is [VvmListState.NetworkRevoked]
- * and its copy — exactly the GrapheneOS revoke scenario the feature exists for.
- * This test fails if the on-load wiring is ever removed, because the empty-state
- * TextView would stay GONE and the honest copy would be unreachable.
+ * T3 — VoicemailActivity computes and renders the honest state on load via
+ * [VvmListState.decide], so the final copy is reachable from the running app.
+ * Pins that [VoicemailActivity.onCreate] reaches the render path the moment
+ * the tab opens: instead of a blank list or a lying Empty, the screen shows
+ * Activating / NoCarrierConfig / NetworkRevoked until the mailbox is actually
+ * healthy. This test fails if the on-load wiring is ever removed, because the
+ * empty-state TextView would stay GONE and the honest copy would be unreachable.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
@@ -38,13 +38,16 @@ class VoicemailActivityStateWiringTest {
         assertNotNull("the empty-state TextView must be present", emptyState)
         assertNotNull("the voicemail list must be present", list)
 
-        // The honest state must have been rendered on load: with the network
-        // revoked the NetworkRevoked state shows its copy and hides the list. If
-        // onCreate never reached the render path, emptyState stays GONE and fails.
-        assertEquals(
-            "the honest NetworkRevoked copy must be rendered on load",
+        // The honest state must have been rendered on load via VvmListState.decide.
+        // Without a SIM / ACTIVATEd mailbox the tab must not lie "Empty".
+        val honest = setOf(
+            activity.getString(R.string.vvm_state_no_config),
+            activity.getString(R.string.vvm_state_activating),
             activity.getString(R.string.vvm_state_network_revoked),
-            emptyState.text.toString(),
+        )
+        assertTrue(
+            "on-load copy must be Activating / NoCarrierConfig / NetworkRevoked, was: ${emptyState.text}",
+            emptyState.text.toString() in honest,
         )
         assertEquals(
             "the empty-state message must be visible on load",

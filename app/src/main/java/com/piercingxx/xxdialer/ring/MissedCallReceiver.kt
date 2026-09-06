@@ -7,6 +7,7 @@ import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.provider.CallLog
 import android.telecom.TelecomManager
 import android.util.Log
 import androidx.core.app.NotificationCompat
@@ -71,7 +72,12 @@ class MissedCallReceiver : BroadcastReceiver() {
 
         if (!MissedNotifPolicy.shouldPost(policy, logRow?.verdict, logRow?.mode)) return
 
-        val notification = buildNotification(context, count, rawNumber ?: e164, logRow)
+        val inboxLines = if (MissedNotifContent.usesInboxStyle(count)) {
+            queryRecentMissedLabels(context, MissedNotifContent.INBOX_LIMIT)
+        } else {
+            emptyList()
+        }
+        val notification = buildNotification(context, count, rawNumber ?: e164, logRow, inboxLines)
         // POST_NOTIFICATIONS may be ungranted; a refused card must not crash.
         try {
             NotificationManagerCompat.from(context).notify(NotifIds.MISSED, notification)
@@ -85,18 +91,58 @@ class MissedCallReceiver : BroadcastReceiver() {
         count: Int,
         number: String?,
         logRow: ScreenLogEntity?,
+        inboxLines: List<String>,
     ): Notification = NotificationCompat.Builder(context, ensureChannel(context))
         .setSmallIcon(android.R.drawable.stat_notify_missed_call)
         .setCategory(NotificationCompat.CATEGORY_MISSED_CALL)
         .setAutoCancel(true)
-        .setContentTitle(if (count > 1) "$count missed calls" else "Missed call") // burst batching §12
-        .setContentText(textFor(count, number, logRow))
-        .setStyle(NotificationCompat.BigTextStyle().bigText(bigTextFor(count, number, logRow)))
+        .setContentTitle(MissedNotifContent.title(count))
         .setContentIntent(contentIntent(context))
         .apply {
-            if (count == 1 && number != null) addActionsFor(context, number)
+            if (MissedNotifContent.usesInboxStyle(count)) {
+                val lines = MissedNotifContent.inboxLines(inboxLines)
+                setContentText(lines.firstOrNull() ?: "Tap to open Recents")
+                val inbox = NotificationCompat.InboxStyle()
+                lines.forEach { inbox.addLine(it) }
+                setStyle(inbox)
+            } else {
+                setContentText(textFor(count, number, logRow))
+                setStyle(NotificationCompat.BigTextStyle().bigText(bigTextFor(count, number, logRow)))
+                if (number != null) addActionsFor(context, number)
+            }
         }
         .build()
+
+    /**
+     * Newest-first labels for the count>1 InboxStyle. Cached name when the
+     * platform has one, otherwise the raw number. Fail empty — never invent.
+     */
+    private fun queryRecentMissedLabels(context: Context, limit: Int): List<String> {
+        val projection = arrayOf(
+            CallLog.Calls.NUMBER,
+            CallLog.Calls.CACHED_NAME,
+            CallLog.Calls.DATE,
+        )
+        return runCatching {
+            context.contentResolver.query(
+                CallLog.Calls.CONTENT_URI,
+                projection,
+                "${CallLog.Calls.TYPE} = ?",
+                arrayOf(CallLog.Calls.MISSED_TYPE.toString()),
+                "${CallLog.Calls.DATE} DESC",
+            )?.use { c ->
+                val numberCol = c.getColumnIndexOrThrow(CallLog.Calls.NUMBER)
+                val nameCol = c.getColumnIndexOrThrow(CallLog.Calls.CACHED_NAME)
+                buildList {
+                    while (c.moveToNext() && size < limit) {
+                        val name = c.getString(nameCol)?.takeIf { it.isNotBlank() }
+                        val number = c.getString(numberCol)?.takeIf { it.isNotBlank() }
+                        (name ?: number)?.let { add(it) }
+                    }
+                }
+            }.orEmpty()
+        }.getOrDefault(emptyList())
+    }
 
     private fun textFor(count: Int, number: String?, row: ScreenLogEntity?): String =
         bigTextFor(count, number, row).replace('\n', ' ')
@@ -188,7 +234,13 @@ class MissedCallReceiver : BroadcastReceiver() {
             PendingIntent.getActivity(
                 context,
                 REQUEST_CONTENT,
-                Intent(context, RecentsActivity::class.java),
+                Intent(context, RecentsActivity::class.java)
+                    .addFlags(
+                        Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or
+                            Intent.FLAG_ACTIVITY_SINGLE_TOP or
+                            Intent.FLAG_ACTIVITY_CLEAR_TOP,
+                    )
+                    .putExtra(Intents.EXTRA_RECENTS_FILTER, Intents.RECENTS_FILTER_MISSED),
                 PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
             )
         }.getOrNull()
