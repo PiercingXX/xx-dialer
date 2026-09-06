@@ -38,6 +38,7 @@ class VvmImapClientTest {
 
     @Test
     fun refusesAnySocketBeforeFirstStatusHost() {
+        VvmImapHostPolicy.clear()
         // No STATUS host recorded — the client must not open a socket at all.
         val client = VvmImapClient(
             creds = VvmSms(type = "STATUS", fields = mapOf("srv" to "mail.unknown.example")),
@@ -71,5 +72,21 @@ class VvmImapClientTest {
 
         assertEquals("mail.allowed.example", openedHost, "the allowed STATUS host must reach the socket site")
         assertTrue(result.isEmpty(), "an empty mailbox yields no messages")
+    }
+
+    @Test
+    fun refusesSocketWhenCanSyncFalse() {
+        VvmImapHostPolicy.recordStatusHost("mail.allowed.example")
+        val client = VvmImapClient(
+            creds = VvmSms(
+                type = "STATUS",
+                fields = mapOf("srv" to "mail.allowed.example", "u" to "alice", "pw" to "secret"),
+            ),
+            openSocket = { _, _, _ -> throw AssertionError("socket must not open when canSync is false") },
+        )
+
+        val result = client.fetch(cellularDataRequired = true, onCellularData = false)
+
+        assertTrue(result.isEmpty(), "cellular-required off-cellular must yield no messages")
     }
 }

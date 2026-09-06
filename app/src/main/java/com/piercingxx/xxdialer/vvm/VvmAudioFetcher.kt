@@ -28,6 +28,11 @@ class VvmAudioFetcher(private val context: Context) {
 
         val intent = Intent(VoicemailContract.ACTION_FETCH_VOICEMAIL).setData(uri)
         context.sendBroadcast(intent)
+        // In-process too: the broadcast used to go into the void. HAS_CONTENT
+        // flips here if IMAP actually returns audio; otherwise the row stays
+        // content-less (honest). Encrypted prefs / IMAP failure must not
+        // abort the broadcast path.
+        runCatching { VvmFetchHandler.handle(context, intent) }
         return true
     }
 

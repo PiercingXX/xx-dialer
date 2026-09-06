@@ -41,6 +41,11 @@ class VvmCredentialStore(private val context: Context) {
             .apply()
     }
 
+    /** Drops the encrypted STATUS record so toggle-off leaves no mailbox secret. */
+    suspend fun clear() = withContext(Dispatchers.IO) {
+        prefs.edit().clear().apply()
+    }
+
     /**
      * Loads the persisted credential record, or null when none has been saved.
      * The password is restored from the encrypted store so the IMAP client

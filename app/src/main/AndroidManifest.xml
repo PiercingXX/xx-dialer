@@ -215,6 +215,16 @@
             android:name=".ring.BlockActionsReceiver"
             android:exported="false"/>
 
+        <!-- ACTION_FETCH_VOICEMAIL used to broadcast into the void. Non-exported:
+             we write provider rows, so a forged fetch must not be injectable. -->
+        <receiver
+            android:name=".vvm.VvmFetchHandler"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.FETCH_VOICEMAIL"/>
+            </intent-filter>
+        </receiver>
+
         <!-- L3: notification "Call back" taps land here and route through
              telecom.CallManager.place (placeCall(), never ACTION_CALL). -->
         <activity

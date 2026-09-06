@@ -11,6 +11,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.piercingxx.xxdialer.R
@@ -24,6 +25,7 @@ import com.piercingxx.xxdialer.vvm.VvmListQuery
 import com.piercingxx.xxdialer.vvm.VvmListRow
 import com.piercingxx.xxdialer.vvm.VvmListState
 import com.piercingxx.xxdialer.vvm.VvmNetworkRevoked
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 
 /**
@@ -220,6 +222,14 @@ class VoicemailActivity : AppCompatActivity() {
     override fun onStart() {
         super.onStart()
         TabBar.onTabScreenStart(this, Tab.VOICEMAIL)
+        // Toggle-off removes the tab. If this instance is still in front,
+        // leave so the fifth slot cannot linger after teardown.
+        lifecycleScope.launch {
+            val enabled = runCatching {
+                ServiceLocator.settings(this@VoicemailActivity).visualVoicemailEnabled()
+            }.getOrDefault(false)
+            if (!enabled) finish()
+        }
     }
 
     /**
