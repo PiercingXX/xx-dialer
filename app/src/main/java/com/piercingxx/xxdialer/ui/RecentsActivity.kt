@@ -2,6 +2,7 @@ package com.piercingxx.xxdialer.ui
 
 import android.content.ContentValues
 import android.content.Intent
+import android.content.res.ColorStateList
 import android.database.ContentObserver
 import android.graphics.Canvas
 import android.graphics.Outline
@@ -29,7 +30,7 @@ import androidx.core.content.res.ResourcesCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.google.android.material.chip.ChipGroup
+import com.google.android.material.chip.Chip
 import com.piercingxx.xxdialer.R
 import com.piercingxx.xxdialer.ServiceLocator
 import com.piercingxx.xxdialer.core.Rules
@@ -42,6 +43,7 @@ import com.piercingxx.xxdialer.databinding.ActivityRecentsBinding
 import com.piercingxx.xxdialer.databinding.ItemRecentHeaderBinding
 import com.piercingxx.xxdialer.databinding.ItemRecentRowBinding
 import com.piercingxx.xxdialer.ring.Intents
+import com.piercingxx.xxdialer.ring.MissedCallsClear
 import com.piercingxx.xxdialer.ui.RecentsMerge.Filter
 import com.piercingxx.xxdialer.ui.RecentsMerge.Grouped
 import com.piercingxx.xxdialer.ui.VerdictLines.Glyph
@@ -101,14 +103,12 @@ class RecentsActivity : AppCompatActivity() {
         binding.recentsList.addItemDecoration(HairlineDivider(this))
 
         binding.recentsChips.setOnCheckedStateChangeListener { _, checkedIds ->
-            filter = when (checkedIds.firstOrNull()) {
-                R.id.recents_chip_missed -> Filter.MISSED
-                R.id.recents_chip_silenced -> Filter.SILENCED
-                R.id.recents_chip_blocked -> Filter.BLOCKED
-                else -> Filter.ALL
-            }
+            filter = RecentsFilterIntent.filterForChipId(checkedIds.firstOrNull())
+            restyleRecentsChips()
+            if (filter == Filter.MISSED) MissedCallsClear.clear(this)
             rerender()
         }
+        restyleRecentsChips()
 
         binding.recentsStarToggle.setOnClickListener {
             starredCollapsed = !starredCollapsed
@@ -119,16 +119,20 @@ class RecentsActivity : AppCompatActivity() {
             rerender()
         }
 
-        readDeepLink(intent.getStringExtra(Intents.EXTRA_FILTER_E164))
+        applyIntent(intent)
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        readDeepLink(intent.getStringExtra(Intents.EXTRA_FILTER_E164))
+        setIntent(intent)
+        applyIntent(intent)
     }
 
     override fun onResume() {
         super.onResume()
+        if (MissedCallsClear.shouldClear(recentsVisible = true, missedFilterActive = filter == Filter.MISSED)) {
+            MissedCallsClear.clear(this)
+        }
         reload()
     }
 
@@ -149,6 +153,44 @@ class RecentsActivity : AppCompatActivity() {
     private fun readDeepLink(extra: String?) {
         deepLinkE164 = extra?.takeIf { it.isNotBlank() }
         if (deepLinkE164 != null) rerender()
+    }
+
+    /**
+     * Missed-call notification extra: open Recents already on the Missed chip.
+     * ChipGroup.check fires the checked listener (chips are checkable), which
+     * also clears the lifetime missed badge.
+     */
+    private fun applyIntent(intent: Intent?) {
+        readDeepLink(intent?.getStringExtra(Intents.EXTRA_FILTER_E164))
+        RecentsFilterIntent.filterOf(intent?.getStringExtra(Intents.EXTRA_RECENTS_FILTER))?.let { next ->
+            filter = next
+            binding.recentsChips.check(RecentsFilterIntent.chipIdFor(next))
+            restyleRecentsChips()
+            rerender()
+        }
+    }
+
+    /** Selected chip = Widget.Xx.Chip.Selected invert; others stay hairline. */
+    private fun restyleRecentsChips() {
+        listOf(
+            binding.recentsChipAll,
+            binding.recentsChipMissed,
+            binding.recentsChipSilenced,
+            binding.recentsChipBlocked,
+        ).forEach { chip -> styleChip(chip, chip.isChecked) }
+    }
+
+    private fun styleChip(chip: Chip, selected: Boolean) {
+        chip.chipBackgroundColor = ColorStateList.valueOf(
+            getColor(if (selected) R.color.pxx_emphasis_bg else android.R.color.transparent),
+        )
+        chip.setTextColor(
+            if (selected) getColor(R.color.pxx_emphasis_fg)
+            else ContextCompat.getColor(this, R.color.pxx_white_50),
+        )
+        chip.chipStrokeColor = ColorStateList.valueOf(
+            getColor(if (selected) R.color.pxx_emphasis_bg else R.color.pxx_white_25),
+        )
     }
 
     // ---- data loading ---------------------------------------------------------

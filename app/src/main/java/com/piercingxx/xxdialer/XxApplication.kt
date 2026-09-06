@@ -19,6 +19,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import java.lang.ref.WeakReference
 
 /**
  * Boot glue only (design §12 Setup, §17 WS1): seed the `setting` defaults,
@@ -33,6 +34,11 @@ class XxApplication : Application() {
 
     /** Foreground-transition detector for the §9 sweep (0 → 1 started activities). */
     private var startedActivities = 0
+
+    /** The activity currently resumed, if any — live theme-sync target. */
+    @Volatile private var resumedActivityRef: WeakReference<Activity>? = null
+
+    fun resumedActivity(): Activity? = resumedActivityRef?.get()
 
     override fun onCreate() {
         super.onCreate()
@@ -61,11 +67,16 @@ class XxApplication : Application() {
         }
         registerActivityLifecycleCallbacks(object : ActivityLifecycleCallbacksAdapter() {
             override fun onActivityResumed(activity: Activity) {
+                resumedActivityRef = WeakReference(activity)
                 // Family theme sync (BRAND-GUIDE §3.3): repaint the ground
                 // from the persisted launcher broadcast on every resume, so a
                 // theme change landing while backgrounded shows on return.
                 // No-op until a broadcast has ever landed.
                 runCatching { ThemeGroundApplier.apply(activity) }
+            }
+
+            override fun onActivityPaused(activity: Activity) {
+                if (resumedActivityRef?.get() === activity) resumedActivityRef = null
             }
 
             override fun onActivityStarted(activity: Activity) {

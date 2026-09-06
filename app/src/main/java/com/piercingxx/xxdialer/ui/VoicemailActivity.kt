@@ -5,6 +5,8 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
 import android.provider.VoicemailContract
+import android.telephony.CarrierConfigManager
+import android.telephony.SubscriptionManager
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -14,12 +16,15 @@ import androidx.recyclerview.widget.RecyclerView
 import com.piercingxx.xxdialer.R
 import com.piercingxx.xxdialer.databinding.ActivityVoicemailBinding
 import com.piercingxx.xxdialer.databinding.ItemVoicemailRowBinding
+import com.piercingxx.xxdialer.ServiceLocator
 import com.piercingxx.xxdialer.vvm.VvmAudioPlayer
+import com.piercingxx.xxdialer.vvm.VvmCarrierConfig
 import com.piercingxx.xxdialer.vvm.VvmDetailPlayer
 import com.piercingxx.xxdialer.vvm.VvmListQuery
 import com.piercingxx.xxdialer.vvm.VvmListRow
 import com.piercingxx.xxdialer.vvm.VvmListState
 import com.piercingxx.xxdialer.vvm.VvmNetworkRevoked
+import kotlinx.coroutines.runBlocking
 
 /**
  * The voicemail detail actions that can fail (todo.md VVM detail, T2). Each maps
@@ -166,23 +171,51 @@ class VoicemailActivity : AppCompatActivity() {
     }
 
     /**
-     * T3: computes and renders the honest [VvmListState] on load, so the final
-     * copy is reachable from the running app instead of a blank screen. The
-     * network-revoke check runs first (a revoked INTERNET permission means the
-     * mailbox cannot be reached at all); otherwise the mailbox rows are queried
-     * and rendered, which maps an empty mailbox to the honest Empty state and a
-     * non-empty one to the list. Called from [onCreate] so the tab explains
-     * itself the moment it opens.
+     * T3: computes and renders the honest [VvmListState] on load via
+     * [VvmListState.decide], so a missing carrier config or a mailbox that
+     * has not ACTIVATEd is Activating / NoCarrierConfig — never a fake Empty.
+     * Called from [onCreate] so the tab explains itself the moment it opens.
      */
     fun renderStateOnLoad() {
         val internetGranted = checkSelfPermission(Manifest.permission.INTERNET) ==
             PackageManager.PERMISSION_GRANTED
-        if (isNetworkRevoked(internetGranted)) {
-            renderState(VvmListState.NetworkRevoked)
-        } else {
-            renderRows(queryList())
+        val networkRevoked = isNetworkRevoked(internetGranted)
+        val rows = if (networkRevoked) emptyList() else queryList()
+        val state = VvmListState.decide(
+            carrierConfigValid = isCarrierConfigValid(),
+            activated = isMailboxActivated() || rows.isNotEmpty(),
+            networkRevoked = networkRevoked,
+            imapError = false,
+            voicemailCount = rows.size,
+        )
+        if (state is VvmListState.List) {
+            adapter?.submit(rows)
         }
+        renderState(state)
     }
+
+    /**
+     * Carrier VVM protocol from [CarrierConfigManager.KEY_VVM_TYPE_STRING].
+     * Missing SIM / empty type is [VvmListState.NoCarrierConfig] — never a
+     * fake-empty mailbox, and never a guessed IMAP host.
+     */
+    fun isCarrierConfigValid(): Boolean = runCatching {
+        val subId = SubscriptionManager.getDefaultSubscriptionId()
+        if (subId == SubscriptionManager.INVALID_SUBSCRIPTION_ID) return@runCatching false
+        val manager = getSystemService(CarrierConfigManager::class.java) ?: return@runCatching false
+        val config = manager.getConfigForSubId(subId) ?: return@runCatching false
+        VvmCarrierConfig.isValid(config.getString(CarrierConfigManager.KEY_VVM_TYPE_STRING))
+    }.getOrDefault(false)
+
+    /**
+     * Persisted "we sent ACTIVATE" flag. Absent/unreadable fails toward
+     * not-activated so the tab says Activating rather than lying Empty.
+     */
+    fun isMailboxActivated(): Boolean = runCatching {
+        runBlocking {
+            ServiceLocator.settings(this@VoicemailActivity).visualVoicemailWasActivated()
+        }
+    }.getOrDefault(false)
 
     override fun onStart() {
         super.onStart()

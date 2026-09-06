@@ -56,6 +56,11 @@ class ThemeSyncReceiver(
             },
             store = storeFactory(context),
         )
+        // Resume-only apply misses a broadcast that lands while Recents/Keypad
+        // is already visible. Repaint the resumed activity in place.
+        val activity = (context.applicationContext as? com.piercingxx.xxdialer.XxApplication)
+            ?.resumedActivity()
+        if (activity != null) runCatching { ThemeGroundApplier.apply(activity) }
     }
 
     companion object {

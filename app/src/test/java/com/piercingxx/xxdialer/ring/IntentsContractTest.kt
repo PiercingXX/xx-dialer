@@ -13,6 +13,8 @@ class IntentsContractTest {
     @Test
     fun `filter extra literal stays pinned`() {
         assertEquals("com.piercingxx.xxdialer.extra.FILTER_E164", Intents.EXTRA_FILTER_E164)
+        assertEquals("com.piercingxx.xxdialer.extra.RECENTS_FILTER", Intents.EXTRA_RECENTS_FILTER)
+        assertEquals("missed", Intents.RECENTS_FILTER_MISSED)
     }
 
     @Test

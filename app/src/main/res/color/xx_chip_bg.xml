@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Chip fill: transparent at rest; Widget.Xx.Chip.Selected invert when checked. -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_checked="true" android:color="@color/pxx_emphasis_bg"/>
+    <item android:state_selected="true" android:color="@color/pxx_emphasis_bg"/>
+    <item android:color="@android:color/transparent"/>
+</selector>

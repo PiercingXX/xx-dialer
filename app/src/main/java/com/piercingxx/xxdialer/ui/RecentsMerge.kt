@@ -136,7 +136,7 @@ object RecentsMerge {
         Filter.ALL -> true
         Filter.MISSED -> call.missed
         Filter.SILENCED -> call.glyph == Glyph.SILENCED
-        Filter.BLOCKED -> call.glyph == Glyph.BLOCKED
+        Filter.BLOCKED -> call.glyph == Glyph.BLOCKED || call.blockedUpstream
     }
 
     // ---- grouping of consecutive same-number calls (default ON) -------------

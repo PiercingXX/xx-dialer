@@ -7,6 +7,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
 import androidx.core.view.WindowCompat
+import com.piercingxx.xxdialer.R
 
 /**
  * Applies the persisted launcher-synced [ThemeGround] to a live activity —
@@ -17,9 +18,10 @@ import androidx.core.view.WindowCompat
  * text already reads on.
  *
  * Wired from XxApplication's activity-lifecycle callbacks on every
- * `onResume`, so a broadcast landing while the app is backgrounded repaints
- * the next time any screen shows. No persisted ground (no broadcast has ever
- * landed) leaves the built-in AMOLED theme untouched.
+ * `onResume`, and from [ThemeSyncReceiver] against the resumed activity so a
+ * broadcast that lands while Recents/Keypad is already visible repaints in
+ * place. No persisted ground (no broadcast has ever landed) leaves the
+ * built-in AMOLED theme untouched.
  *
  * Scope limits, deliberately (the same scope as Nope-Mode's BackgroundTheme):
  * the light-ground foreground pass remaps the white type ramp on the views
@@ -62,32 +64,48 @@ object ThemeGroundApplier {
         val root = content.getChildAt(0) ?: return
         root.setBackgroundColor(ground.background)
 
-        // Light grounds flip the foreground ramp: every white-based text
-        // color becomes the dark foreground at the same opacity stop, so the
-        // 90/80/50/25 hierarchy survives the flip.
-        if (ground.lightGround) remapWhiteRamp(root)
+        // Two-way ramp: light grounds darken the white type ramp; dark
+        // grounds restore the stashed original. Matching on the *current*
+        // colour is one-way — after Paper remapped body text to #1A1A1A,
+        // AMOLED had nothing white left to put back.
+        remapRamp(root, ground.lightGround)
     }
 
     /**
-     * Recursively remap white-ramp text ([WHITE_FOREGROUND] RGB at any alpha)
-     * to [DARK_FOREGROUND] at the same alpha. Non-white text — ink-on-Signal
-     * emphasis, status colors — is left alone.
+     * Recursively remap white-ramp text. Each view's ORIGINAL colour is
+     * stashed in a tag the first time it is seen (Nope-Mode BrandActivity),
+     * and every later decision is made from that rather than from whatever
+     * is on screen now.
      */
-    private fun remapWhiteRamp(view: View) {
+    private fun remapRamp(view: View, lightGround: Boolean) {
         if (view is TextView) {
-            view.setTextColor(darkened(view.currentTextColor) ?: view.currentTextColor)
+            val original = view.getTag(R.id.tag_original_text_color) as? Int
+                ?: view.currentTextColor.also { view.setTag(R.id.tag_original_text_color, it) }
+            view.setTextColor(remapForeground(original, lightGround))
             view.hintTextColors?.defaultColor?.let { hint ->
-                darkened(hint)?.let { view.setHintTextColor(it) }
+                val originalHint = view.getTag(R.id.tag_original_hint_color) as? Int
+                    ?: hint.also { view.setTag(R.id.tag_original_hint_color, it) }
+                view.setHintTextColor(remapForeground(originalHint, lightGround))
             }
         }
         if (view is ViewGroup) {
-            for (i in 0 until view.childCount) remapWhiteRamp(view.getChildAt(i))
+            for (i in 0 until view.childCount) remapRamp(view.getChildAt(i), lightGround)
         }
     }
+}
 
-    /** [color] moved to the dark foreground keeping its alpha, or null if not white-based. */
-    private fun darkened(color: Int): Int? {
-        if (color and 0x00FFFFFF != 0x00FFFFFF) return null
-        return (color and 0xFF000000.toInt()) or (DARK_FOREGROUND and 0x00FFFFFF)
-    }
+/**
+ * White-ramp remap, pure: light grounds swap white RGB for [DARK_FOREGROUND]
+ * at the same alpha; dark grounds return the original. Non-white colours
+ * (ink-on-Signal, status) pass through unchanged.
+ */
+fun remapForeground(original: Int, lightGround: Boolean): Int {
+    if (!lightGround) return original
+    return darkened(original) ?: original
+}
+
+/** [color] moved to the dark foreground keeping its alpha, or null if not white-based. */
+internal fun darkened(color: Int): Int? {
+    if (color and 0x00FFFFFF != 0x00FFFFFF) return null
+    return (color and 0xFF000000.toInt()) or (DARK_FOREGROUND and 0x00FFFFFF)
 }

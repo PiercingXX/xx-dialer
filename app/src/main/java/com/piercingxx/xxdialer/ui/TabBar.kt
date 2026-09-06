@@ -64,15 +64,41 @@ object TabBar {
     }.toSet()
 
     /**
+     * Persistable hidden-tab names from the Rules "Hide tabs" chips. Voicemail
+     * is included — omitting it left Hide Voicemail as a no-op across process
+     * death (todo.md V3).
+     */
+    fun hiddenNames(
+        hideRecents: Boolean,
+        hideKeypad: Boolean,
+        hidePeople: Boolean,
+        hideVoicemail: Boolean,
+    ): Set<String> = buildSet {
+        if (hideRecents) add(Tab.RECENTS.name.lowercase())
+        if (hideKeypad) add(Tab.KEYPAD.name.lowercase())
+        if (hidePeople) add(Tab.PEOPLE.name.lowercase())
+        if (hideVoicemail) add(Tab.VOICEMAIL.name.lowercase())
+    }
+
+    /**
      * Tab-hiding setting (§12). The current tab always survives — a screen
      * the user is standing on never loses its own marker — and Rules is
-     * unhideable so the setting can always be reached to undo itself.
+     * unhideable so the setting can always be reached to undo itself. Hidden
+     * tabs GONE their hairline indicator with the label (no ghost slot).
      */
     fun applyHidden(activity: Activity, current: Tab, hiddenNames: Set<String>, vvmEnabled: Boolean) {
         val visible = visibleTabs(current, hiddenNames, vvmEnabled)
         Tab.entries.forEach { tab ->
+            val shown = tab in visible
             activity.findViewById<View>(tab.itemId)?.visibility =
-                if (tab in visible) View.VISIBLE else View.GONE
+                if (shown) View.VISIBLE else View.GONE
+            // Hairline must GONE with the label. INVISIBLE still occupies a
+            // layout_weight slot, which is the blank fifth tab when VVM is off.
+            activity.findViewById<View>(tab.indicatorId)?.visibility = when {
+                !shown -> View.GONE
+                tab == current -> View.VISIBLE
+                else -> View.INVISIBLE
+            }
         }
     }
 
