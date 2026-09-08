@@ -67,8 +67,9 @@ before the rename, and Android keys everything off the package. Uninstall the
 old one first, then re-grant both roles through Setup — roles, the Room
 database, the channels and the theme prefs do not follow a rename.
 
-The probe builds separately: `./gradlew :probe:assembleDebug`, then
-[PROBE.md](PROBE.md).
+The WS0 probe is a **test-only** APK with no launcher icon
+(`./gradlew :probe:installProbe`). Procedure: [PROBE.md](PROBE.md).
+Do not install it as a daily-driver app.
 
 ## Docs 📚
 

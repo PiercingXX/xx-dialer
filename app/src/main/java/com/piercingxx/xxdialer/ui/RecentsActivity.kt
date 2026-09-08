@@ -350,7 +350,8 @@ class RecentsActivity : AppCompatActivity() {
             return
         }
         binding.recentsStarBar.visibility = View.VISIBLE
-        binding.recentsStarToggle.text = if (starredCollapsed) "★ show" else "★ collapse"
+        binding.recentsStarToggle.text =
+            if (starredCollapsed) "${GroupGlyphs.STAR} show" else "${GroupGlyphs.STAR} collapse"
         strip.visibility = if (starredCollapsed) View.GONE else View.VISIBLE
         if (!starredCollapsed) names.forEach { strip.addView(monogramView(it)) }
     }
@@ -676,8 +677,8 @@ class RecentsActivity : AppCompatActivity() {
                 b.rowRule.setTextColor(
                     ContextCompat.getColor(
                         context,
-                        if (row.line.glyph == Glyph.BLOCKED && row.call.reasonRaw.isNotEmpty()) {
-                            R.color.pxx_error
+                        if (row.line.glyph == Glyph.BLOCKED) {
+                            R.color.pxx_signal
                         } else {
                             R.color.pxx_white_80
                         },

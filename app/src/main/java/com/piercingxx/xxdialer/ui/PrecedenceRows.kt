@@ -31,15 +31,15 @@ internal object PrecedenceRows {
         return listOf(
             Row(1, "Emergency callback window", "Ring · any time", "default", Kind.RING),
             Row(2, "Contact set to send-to-voicemail", "→ voicemail", null, Kind.INFO),
-            Row(3, "System blocklist · block pattern", "Block", null, Kind.BLOCK),
+            Row(3, "${GroupGlyphs.BLOCK} System blocklist · block pattern", "Block", null, Kind.BLOCK),
             when (stirAction) {
                 StirAction.BLOCK -> Row(4, "STIR failed — forged caller ID", "Block", null, Kind.BLOCK)
                 StirAction.SILENCE -> Row(4, "STIR failed — forged caller ID", "Silence", null, Kind.SILENCE)
                 StirAction.OFF -> Row(4, "STIR failed — forged caller ID", "off", null, Kind.INFO)
             },
-            Row(5, "★ Starred contact", "Ring · any time", "default", Kind.RING),
-            Row(6, "Business tier, inside $biz", "Ring", "default", Kind.RING),
-            Row(7, "Business tier, outside $biz", "Silence", null, Kind.SILENCE),
+            Row(5, "${GroupGlyphs.STAR} Starred contact", "Ring · any time", "default", Kind.RING),
+            Row(6, "${GroupGlyphs.BUSINESS} Business tier, inside $biz", "Ring", "default", Kind.RING),
+            Row(7, "${GroupGlyphs.BUSINESS} Business tier, outside $biz", "Silence", null, Kind.SILENCE),
             Row(8, "Saved contact", "Ring · any time", "default", Kind.RING),
             Row(9, "You called them, last 48 h", "Ring · any time", "unknown", Kind.RING),
             Row(10, "Silence pattern rule", "Silence", null, Kind.SILENCE),

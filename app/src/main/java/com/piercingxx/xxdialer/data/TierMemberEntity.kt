@@ -1,15 +1,15 @@
 package com.piercingxx.xxdialer.data
 
 import androidx.room.Entity
-import androidx.room.PrimaryKey
 
 /**
- * Business-tier membership (§9, §11): the LOOKUP_KEYs XX-Dialer itself owns,
- * assigned in-app because GrapheneOS stock Contacts offers no groups.
+ * Family group membership (§9, §11): LOOKUP_KEY + tier. `biz` is Business;
+ * any other non-reserved name is a user group. Composite PK so one contact
+ * can be in Business and Family at once.
  */
-@Entity(tableName = "tier_member")
+@Entity(tableName = "tier_member", primaryKeys = ["lookupKey", "tier"])
 data class TierMemberEntity(
-    @PrimaryKey val lookupKey: String,
+    val lookupKey: String,
     val tier: String,
     val addedAt: Long,
 )

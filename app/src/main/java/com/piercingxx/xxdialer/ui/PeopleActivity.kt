@@ -2,9 +2,9 @@ package com.piercingxx.xxdialer.ui
 
 import android.content.ContentValues
 import android.content.Intent
-import android.content.res.ColorStateList
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
+import android.provider.BlockedNumberContract
 import android.provider.ContactsContract
 import android.view.ViewGroup
 import android.widget.TextView
@@ -18,7 +18,6 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.piercingxx.xxdialer.ServiceLocator
-import com.piercingxx.xxdialer.data.ContactMirror
 import com.piercingxx.xxdialer.data.ContactMirrorEntity
 import com.piercingxx.xxdialer.data.TierMemberEntity
 import com.piercingxx.xxdialer.R
@@ -31,8 +30,8 @@ import com.piercingxx.xxdialer.util.E164
 import kotlinx.coroutines.launch
 
 /**
- * People tab (§12.3): the mirrored address book, sectioned ★ Starred /
- * Business / Everyone, with the contact sheet carrying tier controls. Under
+ * People tab (§12.3): the mirrored address book, sectioned Starred /
+ * Business / Family / Everyone, with the contact sheet carrying tier controls. Under
  * Contact Scopes the list may be partial or empty — the empty-grant card says
  * why (§4.5) and everything stays alive; star writes report honestly instead
  * of pretending.
@@ -56,6 +55,12 @@ class PeopleActivity : AppCompatActivity() {
 
     /** Last biz-key snapshot so the query re-render skips the DB. */
     private var lastBizKeys: Set<String> = emptySet()
+
+    /** Custom-group Family membership (LOOKUP_KEY). */
+    private var lastFamilyKeys: Set<String> = emptySet()
+
+    /** Blocked-number membership (LOOKUP_KEY). */
+    private var lastBlockedKeys: Set<String> = emptySet()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -91,14 +96,21 @@ class PeopleActivity : AppCompatActivity() {
             val bizKeys = runCatching { db.tierMemberDao().bizKeys() }
                 .getOrDefault(emptyList())
                 .toSet()
+            val familyKeys = runCatching { db.tierMemberDao().customGroups() }
+                .getOrDefault(emptyList())
+                .filter { it.tier.equals("Family", ignoreCase = true) }
+                .map { it.lookupKey }
+                .toSet()
             lastBizKeys = bizKeys
+            lastFamilyKeys = familyKeys
+            lastBlockedKeys = blockedLookupKeys(rows)
             render(rows, bizKeys)
         }
     }
 
     /**
-     * Section assignment priority: ★ Starred > Business > Everyone — every
-     * contact appears exactly once (the mockup's Roscoe-under-Everyone case).
+     * Section assignment priority: Starred > Business > Family > Everyone —
+     * every contact appears exactly once (the mockup's Roscoe-under-Everyone case).
      */
     private fun render(allRows: List<ContactMirrorEntity>, bizKeys: Set<String>) {
         lastRows = allRows
@@ -114,9 +126,15 @@ class PeopleActivity : AppCompatActivity() {
             val sorted = rows.distinctBy { it.lookupKey }.sortedBy { it.displayName.lowercase() }
             val starred = sorted.filter { it.starred }
             val biz = sorted.filter { !it.starred && it.lookupKey in bizKeys }
-            val everyone = sorted.filter { !it.starred && it.lookupKey !in bizKeys }
-            starred.applyTo(items) { "★ STARRED — ALWAYS RING" }
-            biz.applyTo(items) { "BUSINESS — RING $businessWindowText" }
+            val family = sorted.filter {
+                !it.starred && it.lookupKey !in bizKeys && it.lookupKey in lastFamilyKeys
+            }
+            val everyone = sorted.filter {
+                !it.starred && it.lookupKey !in bizKeys && it.lookupKey !in lastFamilyKeys
+            }
+            starred.applyTo(items) { "${GroupGlyphs.STAR} STARRED — ALWAYS RING" }
+            biz.applyTo(items) { "${GroupGlyphs.BUSINESS} BUSINESS — RING $businessWindowText" }
+            family.applyTo(items) { "${GroupGlyphs.FAMILY} FAMILY" }
             everyone.applyTo(items) { "EVERYONE" }
             // bizTier lives outside `all()`; fill it for badges and the sheet
             sorted.forEach { it.bizTier = it.lookupKey in bizKeys }
@@ -152,19 +170,13 @@ class PeopleActivity : AppCompatActivity() {
             .distinct()
             .ifEmpty { listOf(current.e164) }
             .joinToString("\n")
-        sheet.sheetStarLabel.text = "★ Starred — rings any time"
-        sheet.sheetBizLabel.text = "Business tier — rings $businessWindowText"
+        sheet.sheetStarLabel.text = "${GroupGlyphs.STAR} Starred — rings any time"
+        sheet.sheetBizLabel.text = "${GroupGlyphs.BUSINESS} Business tier — rings $businessWindowText"
         sheet.sheetRingtoneNote.isVisible = current.customRingtone != null
         sheet.sheetRingtoneNote.text =
             "custom ringtone set — plays over any tier tone"
 
         fun paint() {
-            sheet.sheetStarIcon.setImageResource(
-                if (current.starred) R.drawable.ic_star_filled
-                else R.drawable.ic_star_outline,
-            )
-            sheet.sheetStarIcon.imageTintList =
-                ColorStateList.valueOf(ContextCompat.getColor(this, R.color.pxx_signal))
             // A refused write leaves state unchanged; without the guard the
             // isChecked rollback here re-fires the listener into a second
             // spurious write (the suppressPolicies pattern from Rules).
@@ -174,7 +186,23 @@ class PeopleActivity : AppCompatActivity() {
             suppressSheet = false
         }
 
+        fun paintGroups() {
+            lifecycleScope.launch {
+                val names = runCatching {
+                    ServiceLocator.db(this@PeopleActivity).tierMemberDao().customGroups()
+                        .filter { it.lookupKey == current.lookupKey }
+                        .map { it.tier }
+                        .sortedWith(String.CASE_INSENSITIVE_ORDER)
+                }.getOrDefault(emptyList())
+                sheet.sheetGroups.text = GroupGlyphs.labeledList(names, "Add to group")
+            }
+        }
+
         paint()
+        paintGroups()
+        sheet.sheetGroups.setOnClickListener {
+            PeopleGroupPicker.show(this, lifecycleScope, current.lookupKey) { paintGroups() }
+        }
 
         sheet.sheetStarSwitch.setOnCheckedChangeListener { _, want ->
             if (suppressSheet) return@setOnCheckedChangeListener
@@ -201,7 +229,7 @@ class PeopleActivity : AppCompatActivity() {
                         db.tierMemberDao()
                             .upsert(TierMemberEntity(current.lookupKey, "biz", System.currentTimeMillis()))
                     } else {
-                        db.tierMemberDao().delete(current.lookupKey)
+                        db.tierMemberDao().delete(current.lookupKey, "biz")
                     }
                 }
                 current.bizTier = want
@@ -271,6 +299,14 @@ class PeopleActivity : AppCompatActivity() {
     private fun toast(msg: String) =
         Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
 
+    private fun blockedLookupKeys(rows: List<ContactMirrorEntity>): Set<String> =
+        rows.mapNotNull { row ->
+            val blocked = runCatching {
+                BlockedNumberContract.isBlocked(this, row.e164)
+            }.getOrDefault(false)
+            if (blocked) row.lookupKey else null
+        }.toSet()
+
     // ---- list ------------------------------------------------------------------
 
     private sealed interface PeopleItem {
@@ -306,6 +342,7 @@ class PeopleActivity : AppCompatActivity() {
                 val padH = resources.getDimensionPixelSize(R.dimen.xx_gutter)
                 val label = TextView(parent.context).apply {
                     setTextAppearance(R.style.TextAppearance_Xx_Chip)
+                    setTextColor(ContextCompat.getColor(parent.context, R.color.pxx_signal))
                     setPadding(padH, padV, padH, padV)
                 }
                 HeaderHolder(label)
@@ -335,9 +372,14 @@ class PeopleActivity : AppCompatActivity() {
             row.avatar.text = Monograms.initials(person.displayName)
             row.name.text = person.displayName.ifEmpty { "(unnamed)" }
             row.number.text = person.e164
-            row.starBadge.isVisible = person.starred
-            row.bizBadge.isVisible = person.bizTier
-            row.bizBadge.text = "BIZ"
+            val marks = GroupGlyphs.marks(
+                starred = person.starred,
+                business = person.bizTier,
+                family = person.lookupKey in lastFamilyKeys,
+                blocked = person.lookupKey in lastBlockedKeys,
+            )
+            row.tierMarks.text = marks
+            row.tierMarks.isVisible = marks.isNotEmpty()
             row.root.setOnClickListener { openSheet(person) }
         }
 

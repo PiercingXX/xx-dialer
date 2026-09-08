@@ -35,6 +35,11 @@ is in the tree. Do not reopen unless it regresses.
 
 ## Workstreams
 
+The WS0 probe (`:probe`) is **test-only** and has **no launcher icon**.
+Install only with `./gradlew :probe:installProbe`. Uninstall when the
+dump is done. Never leave `com.piercingxx.xxdialer.probe` on the daily
+driver as a suite app.
+
 ### V0 — Carrier dump (blocks honest IMAP)
 
 - [ ] Run the probe on caiman (`PROBE.md`). Capture `docs/vvm-carrier-config.txt`

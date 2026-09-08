@@ -148,6 +148,37 @@ tasks.matching { it.name == "assembleDebug" }.configureEach {
     finalizedBy(verifyVvmInternetOnly)
 }
 
+// `./gradlew installDebug` at the repo root would otherwise install this
+// next to the real dialer and put "XX-Probe" on the launcher. Probe is
+// test-only and opt-in: :probe:installProbe.
+tasks.configureEach {
+    if (name == "installDebug" || name == "installRelease") {
+        enabled = false
+        group = null
+        description = "Disabled — use :probe:installProbe (test-only, no launcher)."
+    }
+}
+
+tasks.register("installProbe") {
+    group = "install"
+    description = "adb install -t the test-only probe APK (no launcher icon)."
+    dependsOn("assembleDebug")
+    doLast {
+        val apk = layout.buildDirectory.file("outputs/apk/debug/probe-debug.apk").get().asFile
+        if (!apk.isFile) {
+            throw GradleException(":probe:installProbe — missing $apk")
+        }
+        val adb = sequenceOf(
+            System.getenv("ANDROID_HOME"),
+            System.getenv("ANDROID_SDK_ROOT"),
+        ).filterNotNull().map { File(it, "platform-tools/adb") }.firstOrNull { it.isFile }
+            ?: File(System.getProperty("user.home"), "Android/Sdk/platform-tools/adb")
+        exec {
+            commandLine(adb.absolutePath, "install", "-t", "-r", apk.absolutePath)
+        }
+    }
+}
+
 dependencies {
     implementation("androidx.core:core-ktx:1.15.0")
     implementation("androidx.appcompat:appcompat:1.7.0")

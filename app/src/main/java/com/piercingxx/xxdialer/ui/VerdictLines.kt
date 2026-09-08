@@ -6,8 +6,8 @@ import com.piercingxx.xxdialer.core.Rules
 
 /**
  * Renders the R7 verdict line for a Recents row (design §12.1):
- * `✓ rang` / `→ Silenced · Unknown, outside 09–17` / `✗ Blocked · pattern
- * 425-555-XXXX`. The screen_log row stores the Reason enum NAME, so dynamic
+ * `✓ rang` / `→ Silenced · Unknown, outside 09–17` / Nerd-ban Blocked · pattern
+ * 425-555-XXXX. The screen_log row stores the Reason enum NAME, so dynamic
  * data (window bounds, pattern mask, weekday of the last outgoing call) is
  * substituted here from live rules — never from stale label text. Pure JVM.
  */
@@ -38,7 +38,7 @@ object VerdictLines {
             verdict == "Block" -> blocked(e164, reason, rules)
             verdict == "Silence" -> silenced(e164, reason, rules)
             verdict == "Ring" -> rang(reason, recentOutgoingWeekday)
-            blockedUpstream -> Line(Glyph.BLOCKED, "✗ Blocked · upstream setting")
+            blockedUpstream -> Line(Glyph.BLOCKED, "${GroupGlyphs.BLOCK} Blocked · upstream setting")
             else -> return Line(Glyph.NONE, "")
         }
         // §6 observe mode is part of the record on every disposition — and
@@ -58,7 +58,7 @@ object VerdictLines {
             Reason.PATTERN_SILENCED -> patternDetail(rules.silencePatterns, e164)
             else -> "blocklist" // USER_BLOCKED and any unmapped fallback
         }
-        return Line(Glyph.BLOCKED, "✗ Blocked · $detail")
+        return Line(Glyph.BLOCKED, "${GroupGlyphs.BLOCK} Blocked · $detail")
     }
 
     private fun silenced(e164: String?, reason: Reason?, rules: Rules): Line {

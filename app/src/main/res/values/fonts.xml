@@ -3,8 +3,9 @@
   BRAND-GUIDE.md §4: monospace IS the identity. Space Mono for display,
   JetBrains Mono for body/UI.
 
-  Both faces now ship as real TTFs in res/font/ (§12.1 type ramp). The
-  indirection stays, as same-type font aliases: layouts reference
+  Both faces now ship as real TTFs in res/font/ (§12.1 type ramp). Body
+  is JetBrains Mono Nerd so Star / Business / Family / Block paint as
+  white PUA glyphs. The indirection stays: layouts reference
   @font/font_display / @font/font_body, so swapping a face is a one-line
   change here.
 -->

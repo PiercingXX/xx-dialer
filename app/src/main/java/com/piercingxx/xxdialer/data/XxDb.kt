@@ -39,8 +39,31 @@ object XxDb {
         }
     }
 
+    val MIGRATION_2_3 = object : Migration(2, 3) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS tier_member_v3 (
+                    lookupKey TEXT NOT NULL,
+                    tier TEXT NOT NULL,
+                    addedAt INTEGER NOT NULL,
+                    PRIMARY KEY(lookupKey, tier)
+                )
+                """.trimIndent(),
+            )
+            db.execSQL(
+                """
+                INSERT INTO tier_member_v3 (lookupKey, tier, addedAt)
+                SELECT lookupKey, tier, addedAt FROM tier_member
+                """.trimIndent(),
+            )
+            db.execSQL("DROP TABLE tier_member")
+            db.execSQL("ALTER TABLE tier_member_v3 RENAME TO tier_member")
+        }
+    }
+
     fun build(context: Context): XxDatabase =
         Room.databaseBuilder(context.applicationContext, XxDatabase::class.java, XxDatabase.NAME)
-            .addMigrations(MIGRATION_1_2)
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
             .build()
 }

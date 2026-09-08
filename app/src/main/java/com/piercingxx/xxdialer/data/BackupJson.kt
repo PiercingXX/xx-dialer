@@ -177,7 +177,7 @@ object BackupJson {
         requireNotNull(p) { "payload is null" }
         p.tiers.forEachIndexed { i, t ->
             require(t.lookupKey.isNotBlank()) { "tier[$i]: blank lookupKey" }
-            require(t.tier == TIER_BIZ) { "tier[$i]: unknown tier '${t.tier}'" }
+            require(t.tier.isNotBlank() && t.tier != "star") { "tier[$i]: bad tier '${t.tier}'" }
         }
         p.patterns.forEachIndexed { i, r ->
             require(r.e164Prefix.isNotBlank()) { "pattern[$i]: blank prefix" }

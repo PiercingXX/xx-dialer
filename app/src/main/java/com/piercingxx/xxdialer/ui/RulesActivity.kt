@@ -1229,7 +1229,7 @@ class RulesActivity : AppCompatActivity() {
     }
 
     private fun describe(verdict: Verdict): String = when (verdict) {
-        is Verdict.Block -> "✗ BLOCKED"
+        is Verdict.Block -> "${GroupGlyphs.BLOCK} BLOCKED"
         is Verdict.Silence -> "→ SILENCED"
         is Verdict.Ring -> when (verdict.tone.name) {
             "UNKNOWN" -> "✓ RINGS · unknown tone"
