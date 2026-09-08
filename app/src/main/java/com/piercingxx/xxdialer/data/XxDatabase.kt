@@ -18,7 +18,7 @@ import androidx.room.RoomDatabase
         SettingEntity::class,
         EmergencyMarkerEntity::class,
     ],
-    version = 2,
+    version = 3,
     exportSchema = false,
 )
 abstract class XxDatabase : RoomDatabase() {

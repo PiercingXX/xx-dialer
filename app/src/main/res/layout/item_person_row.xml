@@ -1,9 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- One mirrored contact (§12.3): deterministic monogram avatar (photos may
-     not exist under Scopes), name, number, star/biz badges on the right.
-     Badge text is set in code — no new string resources here. -->
+     not exist under Scopes), name, number, white Nerd tier marks on the right.
+     Mark text is set in code — no new string resources here. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:minHeight="@dimen/xx_row_height"
@@ -48,21 +47,14 @@
             android:ellipsize="end" />
     </LinearLayout>
 
-    <ImageView
-        android:id="@+id/starBadge"
-        android:layout_width="16dp"
-        android:layout_height="16dp"
-        android:layout_marginStart="10dp"
-        android:src="@drawable/ic_star_filled"
-        app:tint="@color/pxx_signal"
-        android:visibility="gone" />
-
     <TextView
-        android:id="@+id/bizBadge"
-        style="@style/TextAppearance.Xx.Chip"
+        android:id="@+id/tierMarks"
+        style="@style/TextAppearance.Xx.Body"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="12dp"
+        android:textColor="@color/pxx_signal"
+        android:textSize="16sp"
         android:visibility="gone" />
 
 </LinearLayout>

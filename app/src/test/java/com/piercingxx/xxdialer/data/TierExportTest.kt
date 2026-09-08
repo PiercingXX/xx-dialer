@@ -25,6 +25,34 @@ class TierExportTest {
     }
 
     @Test
+    fun `biz write contract is lookup key only`() {
+        assertEquals("lookup_key = ?", TierExport.BIZ_DELETE_SELECTION)
+        assertEquals(mapOf("lookup_key" to "abc123/"), TierExport.bizInsertPairs("abc123/"))
+        assertEquals(arrayOf("abc123/").toList(), TierExport.bizDeleteArgs("abc123/").toList())
+    }
+
+    @Test
+    fun `custom group names are reserved-checked`() {
+        assertTrue(TierExport.isReservedGroup("star"))
+        assertTrue(TierExport.isReservedGroup("Business"))
+        assertTrue(TierExport.isReservedGroup("biz"))
+        assertEquals("Family", TierExport.groupTier(" Family "))
+        assertEquals(null, TierExport.groupTier("star"))
+    }
+
+    @Test
+    fun `provider writes biz membership instead of no-op stubs`() {
+        val src = sequenceOf(
+            File("src/main/java/com/piercingxx/xxdialer/data/TierExportProvider.kt"),
+            File("app/src/main/java/com/piercingxx/xxdialer/data/TierExportProvider.kt"),
+        ).first { it.exists() }.readText()
+        assertTrue(src.contains(".upsert("))
+        assertTrue(src.contains(".delete(key, BackupJson.TIER_BIZ)"))
+        assertTrue(src.contains("BackupJson.TIER_BIZ"))
+        assertTrue(src.contains("PATH_GROUPS"))
+    }
+
+    @Test
     fun `manifest exports the tier provider behind the signature permission`() {
         val xml = manifest()
         assertTrue(xml.contains("android:name=\".data.TierExportProvider\""))

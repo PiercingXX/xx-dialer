@@ -24,8 +24,8 @@ class PrecedenceRowsTest {
     @Test
     fun `business rows print the live business window`() {
         val rows = PrecedenceRows.build(unknown, business)
-        assertEquals("Business tier, inside 09:00–19:00", rows[5].condition)
-        assertEquals("Business tier, outside 09:00–19:00", rows[6].condition)
+        assertEquals("${GroupGlyphs.BUSINESS} Business tier, inside 09:00–19:00", rows[5].condition)
+        assertEquals("${GroupGlyphs.BUSINESS} Business tier, outside 09:00–19:00", rows[6].condition)
     }
 
     @Test
@@ -38,7 +38,7 @@ class PrecedenceRowsTest {
     @Test
     fun `edited windows flow into labels`() {
         val rows = PrecedenceRows.build(Window(600, 900, 127), Window(480, 720, 127))
-        assertEquals("Business tier, inside 08:00–12:00", rows[5].condition)
+        assertEquals("${GroupGlyphs.BUSINESS} Business tier, inside 08:00–12:00", rows[5].condition)
         assertEquals("Unknown, inside 10:00–15:00", rows[10].condition)
     }
 

@@ -48,7 +48,7 @@ class VerdictLinesTest {
             e164, "Block", "PATTERN_BLOCKED", false,
             rules.copy(blockPatterns = listOf(PatternRule("1425555", 4))),
         )
-        assertEquals("✗ Blocked · pattern 425-555-XXXX", line.text)
+        assertEquals("${GroupGlyphs.BLOCK} Blocked · pattern 425-555-XXXX", line.text)
         assertEquals(VerdictLines.Glyph.BLOCKED, line.glyph)
     }
 
@@ -64,7 +64,7 @@ class VerdictLinesTest {
     @Test
     fun a_deleted_pattern_degrades_to_the_bare_word() {
         val line = VerdictLines.annotate(e164, "Block", "PATTERN_BLOCKED", false, Rules())
-        assertEquals("✗ Blocked · pattern", line.text)
+        assertEquals("${GroupGlyphs.BLOCK} Blocked · pattern", line.text)
     }
 
     // ---- business window ------------------------------------------------------
@@ -133,7 +133,7 @@ class VerdictLinesTest {
     @Test
     fun upstream_blocks_annotate_from_calllog_block_types() {
         val line = VerdictLines.annotate(null, null, "", false, rules, blockedUpstream = true)
-        assertEquals("✗ Blocked · upstream setting", line.text)
+        assertEquals("${GroupGlyphs.BLOCK} Blocked · upstream setting", line.text)
         assertEquals(VerdictLines.Glyph.BLOCKED, line.glyph)
     }
 
@@ -147,13 +147,13 @@ class VerdictLinesTest {
     @Test
     fun blocklist_blocks_name_the_mechanism() {
         val line = VerdictLines.annotate(e164, "Block", "USER_BLOCKED", false, rules)
-        assertEquals("✗ Blocked · blocklist", line.text)
+        assertEquals("${GroupGlyphs.BLOCK} Blocked · blocklist", line.text)
     }
 
     @Test
     fun stir_failures_keep_their_name() {
         assertEquals(
-            "✗ Blocked · STIR failed",
+            "${GroupGlyphs.BLOCK} Blocked · STIR failed",
             VerdictLines.annotate(e164, "Block", "STIR_FAILED", false, rules).text,
         )
         assertEquals(

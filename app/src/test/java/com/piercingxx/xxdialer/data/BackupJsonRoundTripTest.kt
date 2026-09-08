@@ -99,12 +99,15 @@ class BackupJsonRoundTripTest {
     }
 
     @Test
-    fun `non-business tier membership is rejected`() {
-        val wrongTier = payload.copy(tiers = listOf(TierMemberEntity("abc123/", "family", 1L)))
-        assertTrue(BackupJson.validate(wrongTier).isFailure)
+    fun `star and blank tiers are rejected, custom groups are kept`() {
+        val starTier = payload.copy(tiers = listOf(TierMemberEntity("abc123/", "star", 1L)))
+        assertTrue(BackupJson.validate(starTier).isFailure)
 
         val blankKey = payload.copy(tiers = listOf(TierMemberEntity("", "biz", 1L)))
         assertTrue(BackupJson.validate(blankKey).isFailure)
+
+        val family = payload.copy(tiers = listOf(TierMemberEntity("abc123/", "family", 1L)))
+        assertTrue(BackupJson.validate(family).isSuccess)
     }
 
     @Test

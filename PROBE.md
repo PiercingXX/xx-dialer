@@ -23,9 +23,21 @@ factory reset stays a lesson, not a repeat.
 
 ## Build and install
 
+This is **not a suite app**. `testOnly`, no `LAUNCHER` icon. Do not run
+`./gradlew installDebug` at the repo root — that used to drop XX-Probe on
+the home list. `:probe:installDebug` is disabled.
+
+```
+./gradlew :probe:installProbe
+adb shell am start -n com.piercingxx.xxdialer.probe/.MainActivity
+```
+
+Equivalent by hand (`-t` is required because the APK is test-only):
+
 ```
 ./gradlew :probe:assembleDebug
-adb install -r probe/build/outputs/apk/debug/probe-debug.apk
+adb install -t -r probe/build/outputs/apk/debug/probe-debug.apk
+adb shell am start -n com.piercingxx.xxdialer.probe/.MainActivity
 ```
 
 Before installing, snapshot the current role holders so teardown can restore
