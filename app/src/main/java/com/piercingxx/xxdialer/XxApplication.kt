@@ -11,6 +11,7 @@ import android.os.Bundle
 import android.telephony.TelephonyManager
 import android.util.Log
 import com.piercingxx.xxdialer.data.SettingsRepository
+import com.piercingxx.xxdialer.log.AppLog
 import com.piercingxx.xxdialer.ring.SilencedNotifier
 import com.piercingxx.xxdialer.theme.ThemeGroundApplier
 import com.piercingxx.xxdialer.ui.RulesActivity
@@ -42,6 +43,9 @@ class XxApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        AppLog.init(this)
+        AppLog.installCrashHandler()
+        AppLog.i("app", "start")
         // Region for national-format normalization (§8): the SIM knows better
         // than a hardcoded default; absence keeps the built-in fallback.
         runCatching {

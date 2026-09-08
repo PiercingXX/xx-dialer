@@ -800,6 +800,15 @@
                     android:layout_weight="1"
                     android:layout_marginStart="12dp" />
             </LinearLayout>
+
+            <Button
+                android:id="@+id/appLogsButton"
+                style="@style/Widget.Xx.ButtonSecondary"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="@dimen/xx_gutter"
+                android:layout_marginRight="@dimen/xx_gutter"
+                android:layout_marginTop="@dimen/xx_chip_gap" />
         </LinearLayout>
     </ScrollView>
 
