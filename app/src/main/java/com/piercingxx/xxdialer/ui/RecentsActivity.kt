@@ -37,6 +37,7 @@ import com.piercingxx.xxdialer.core.Rules
 import com.piercingxx.xxdialer.data.ContactMirrorEntity
 import com.piercingxx.xxdialer.data.ScreenLogEntity
 import com.piercingxx.xxdialer.data.SettingsRepository
+import com.piercingxx.xxdialer.data.StealthBlock
 import com.piercingxx.xxdialer.data.TierMemberEntity
 import com.piercingxx.xxdialer.telecom.CallManager
 import com.piercingxx.xxdialer.databinding.ActivityRecentsBinding
@@ -228,9 +229,12 @@ class RecentsActivity : AppCompatActivity() {
         val namesByE164 = HashMap<String, String>()
         for (row in mirror) namesByE164.putIfAbsent(row.e164, row.displayName)
 
-        val mergedCalls = RecentsMerge.merge(platformCalls, logs).map { call ->
-            call.copy(displayName = call.e164?.let(namesByE164::get))
-        }
+        val hiddenE164s = runCatching {
+            StealthBlock.hiddenE164s(ServiceLocator.db(this))
+        }.getOrDefault(emptySet())
+        val mergedCalls = RecentsMerge.merge(platformCalls, logs)
+            .map { call -> call.copy(displayName = call.e164?.let(namesByE164::get)) }
+            .filter { !RecentsMerge.isStealthHidden(it, hiddenE164s) }
         val linesById = mergedCalls.associate { call ->
             call.key to VerdictLines.annotate(
                 e164 = call.e164,

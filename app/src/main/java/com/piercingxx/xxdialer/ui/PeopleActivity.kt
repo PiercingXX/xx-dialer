@@ -19,6 +19,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.piercingxx.xxdialer.ServiceLocator
 import com.piercingxx.xxdialer.data.ContactMirrorEntity
+import com.piercingxx.xxdialer.data.StealthBlock
 import com.piercingxx.xxdialer.data.TierMemberEntity
 import com.piercingxx.xxdialer.R
 import com.piercingxx.xxdialer.databinding.ActivityPeopleBinding
@@ -62,6 +63,9 @@ class PeopleActivity : AppCompatActivity() {
     /** Blocked-number membership (LOOKUP_KEY). */
     private var lastBlockedKeys: Set<String> = emptySet()
 
+    /** Contacts "Blocked" group — hidden from the open list. */
+    private var lastGroupBlockedKeys: Set<String> = emptySet()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityPeopleBinding.inflate(layoutInflater)
@@ -103,7 +107,10 @@ class PeopleActivity : AppCompatActivity() {
                 .toSet()
             lastBizKeys = bizKeys
             lastFamilyKeys = familyKeys
-            lastBlockedKeys = blockedLookupKeys(rows)
+            lastGroupBlockedKeys = runCatching {
+                db.tierMemberDao().keysFor(StealthBlock.GROUP).toSet()
+            }.getOrDefault(emptySet())
+            lastBlockedKeys = blockedLookupKeys(rows) + lastGroupBlockedKeys
             render(rows, bizKeys)
         }
     }
@@ -118,8 +125,11 @@ class PeopleActivity : AppCompatActivity() {
         // unmatched search.
         binding.emptyGrantCard.isVisible = allRows.isEmpty()
         val needle = query.trim().lowercase()
-        val rows = if (needle.isEmpty()) allRows else allRows.filter {
-            it.displayName.lowercase().contains(needle) || it.e164.contains(needle)
+        val rows = allRows.filter { row ->
+            val hidden = needle.isEmpty() && row.lookupKey in lastGroupBlockedKeys
+            if (hidden) return@filter false
+            if (needle.isEmpty()) return@filter true
+            row.displayName.lowercase().contains(needle) || row.e164.contains(needle)
         }
         val items = mutableListOf<PeopleItem>()
         if (rows.isNotEmpty()) {
@@ -201,7 +211,10 @@ class PeopleActivity : AppCompatActivity() {
         paint()
         paintGroups()
         sheet.sheetGroups.setOnClickListener {
-            PeopleGroupPicker.show(this, lifecycleScope, current.lookupKey) { paintGroups() }
+            PeopleGroupPicker.show(this, lifecycleScope, current.lookupKey) {
+                paintGroups()
+                load()
+            }
         }
 
         sheet.sheetStarSwitch.setOnCheckedChangeListener { _, want ->

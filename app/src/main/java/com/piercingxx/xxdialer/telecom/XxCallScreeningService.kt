@@ -31,7 +31,7 @@ import java.time.LocalDateTime
  */
 class XxCallScreeningService : CallScreeningService() {
 
-    private data class Outcome(val block: Boolean, val row: ScreenLogEntity)
+    private data class Outcome(val block: Boolean, val stealth: Boolean, val row: ScreenLogEntity)
 
     /** Off-main screening: respondToCall is legal until the platform's 5 s deadline. */
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -55,7 +55,7 @@ class XxCallScreeningService : CallScreeningService() {
                 withTimeoutOrNull(SCREEN_BUDGET_MS) { screenAndLog(details) }
             }.onFailure { Log.w(TAG, "screening failed; allowing", it) }.getOrNull()
 
-            val response = if (outcome?.block == true) block() else allow()
+            val response = if (outcome?.block == true) block(stealth = outcome.stealth) else allow()
             runCatching { respondToCall(details, response) } // once per call, this sole site
                 .onFailure { Log.w(TAG, "respond failed; platform deadline allows", it) }
         }
@@ -97,9 +97,10 @@ class XxCallScreeningService : CallScreeningService() {
         val verdict = RingPolicy.decide(now, facts, rules)
         val mirrorSaved = facts.saved
         val voicemail = verdict is Verdict.Silence && verdict.reason == Reason.SEND_TO_VOICEMAIL
-        val wantsBlock = verdict is Verdict.Block && !mirrorSaved
+        val stealth = facts.groupBlocked
+        val wantsBlock = (verdict is Verdict.Block && !mirrorSaved) || stealth
         val observing = settings.enforcementMode() == Mode.OBSERVING
-        val reject = (wantsBlock || voicemail) && !observing
+        val reject = stealth || ((wantsBlock || voicemail) && !observing)
 
         val row = ScreenLogEntity(
             id = 0,
@@ -118,7 +119,7 @@ class XxCallScreeningService : CallScreeningService() {
         // time by the InCallService, which owns the full verdict. The observe
         // gate lives HERE (todo #6): observed blocks are logged but allowed.
         if (wantsBlock || reject) persist(row)
-        return Outcome(block = reject, row = row)
+        return Outcome(block = reject, stealth = stealth, row = row)
     }
 
     private suspend fun persist(row: ScreenLogEntity) {
@@ -129,11 +130,11 @@ class XxCallScreeningService : CallScreeningService() {
         }.onFailure { Log.w(TAG, "screen-log write failed", it) }
     }
 
-    private fun block(): CallScreeningService.CallResponse =
+    private fun block(stealth: Boolean = false): CallScreeningService.CallResponse =
         CallScreeningService.CallResponse.Builder()
             .setDisallowCall(true)
             .setRejectCall(true)
-            .setSkipNotification(false) // blocked calls stay visible in Recents (R7/§8)
+            .setSkipNotification(stealth) // Blocked group: no missed banner
             .setSkipCallLog(false)
             .build()
 

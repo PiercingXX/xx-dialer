@@ -14,6 +14,8 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.res.ResourcesCompat
 import com.piercingxx.xxdialer.R
 import com.piercingxx.xxdialer.ServiceLocator
+import com.piercingxx.xxdialer.data.BlockedGroupSync
+import com.piercingxx.xxdialer.data.StealthBlock
 import com.piercingxx.xxdialer.data.TierExport
 import com.piercingxx.xxdialer.data.TierMemberEntity
 import kotlinx.coroutines.CoroutineScope
@@ -31,7 +33,9 @@ object PeopleGroupPicker {
         if (lookupKey.isEmpty()) return
         scope.launch {
             val dao = ServiceLocator.db(context).tierMemberDao()
-            val names = runCatching { dao.customGroupNames() }.getOrDefault(emptyList())
+            val names = (listOf(StealthBlock.GROUP) +
+                runCatching { dao.customGroupNames() }.getOrDefault(emptyList()))
+                .distinctBy { it.lowercase() }
             val mine = runCatching { dao.customGroups() }
                 .getOrDefault(emptyList())
                 .filter { it.lookupKey == lookupKey }
@@ -47,9 +51,19 @@ object PeopleGroupPicker {
                     } else {
                         scope.launch {
                             val name = names[which]
+                            val stored = mine.firstOrNull { it.equals(name, ignoreCase = true) }
                             runCatching {
-                                if (name in mine) dao.delete(lookupKey, name)
-                                else dao.upsert(TierMemberEntity(lookupKey, name, System.currentTimeMillis()))
+                                if (stored != null) {
+                                    dao.delete(lookupKey, stored)
+                                    if (StealthBlock.isGroup(name)) {
+                                        BlockedGroupSync.sync(context, lookupKey, blocked = false)
+                                    }
+                                } else {
+                                    dao.upsert(TierMemberEntity(lookupKey, name, System.currentTimeMillis()))
+                                    if (StealthBlock.isGroup(name)) {
+                                        BlockedGroupSync.sync(context, lookupKey, blocked = true)
+                                    }
+                                }
                             }
                             onChanged()
                         }
@@ -104,6 +118,9 @@ object PeopleGroupPicker {
                     runCatching {
                         ServiceLocator.db(context).tierMemberDao()
                             .upsert(TierMemberEntity(lookupKey, name, System.currentTimeMillis()))
+                        if (StealthBlock.isGroup(name)) {
+                            BlockedGroupSync.sync(context, lookupKey, blocked = true)
+                        }
                     }
                     onChanged()
                 }

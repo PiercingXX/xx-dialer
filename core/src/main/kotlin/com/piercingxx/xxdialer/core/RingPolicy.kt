@@ -14,6 +14,7 @@ object RingPolicy {
 
     private fun baseVerdict(now: LocalDateTime, facts: CallerFacts, rules: Rules): Verdict = when {
         facts.emergencyWindow -> Verdict.Ring(Tone.DEFAULT) // row 1
+        facts.groupBlocked -> Verdict.Block // explicit Blocked group — even if saved
         // Row 2 interpretation: SEND_TO_VOICEMAIL is routed by the platform
         // itself; policy records why the phone stayed quiet rather than
         // deciding anything about the call.

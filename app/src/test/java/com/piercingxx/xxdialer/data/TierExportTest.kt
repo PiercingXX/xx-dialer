@@ -37,6 +37,8 @@ class TierExportTest {
         assertTrue(TierExport.isReservedGroup("Business"))
         assertTrue(TierExport.isReservedGroup("biz"))
         assertEquals("Family", TierExport.groupTier(" Family "))
+        assertEquals("Blocked", TierExport.groupTier("blocked"))
+        assertEquals("Blocked", TierExport.groupTier("Block"))
         assertEquals(null, TierExport.groupTier("star"))
     }
 

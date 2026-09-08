@@ -14,6 +14,7 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.piercingxx.xxdialer.ServiceLocator
 import com.piercingxx.xxdialer.data.ScreenLogEntity
+import com.piercingxx.xxdialer.data.StealthBlock
 import com.piercingxx.xxdialer.telecom.LogRows
 import com.piercingxx.xxdialer.ui.RecentsActivity
 import com.piercingxx.xxdialer.util.E164
@@ -65,6 +66,10 @@ class MissedCallReceiver : BroadcastReceiver() {
         val count = intent.getIntExtra(TelecomManager.EXTRA_NOTIFICATION_COUNT, 1)
         val rawNumber = intent.getStringExtra(EXTRA_PHONE_NUMBER)
         val e164 = rawNumber?.let { E164.normalize(it) }
+        val hidden = runCatching {
+            StealthBlock.isHiddenNumber(ServiceLocator.db(context), e164)
+        }.getOrDefault(false)
+        if (hidden) return
 
         val logRow = e164?.let { number ->
             runCatching { ServiceLocator.db(context).screenLogDao().latestFor(number) }.getOrNull()

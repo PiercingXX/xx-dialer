@@ -2,11 +2,15 @@ package com.piercingxx.xxdialer.data
 
 import android.content.ContentProvider
 import android.content.ContentValues
+import android.content.Context
 import android.content.UriMatcher
 import android.database.Cursor
 import android.database.MatrixCursor
 import android.net.Uri
+import android.provider.CallLog
+import android.provider.ContactsContract
 import com.piercingxx.xxdialer.ServiceLocator
+import com.piercingxx.xxdialer.util.E164
 import kotlinx.coroutines.runBlocking
 
 /**
@@ -32,6 +36,7 @@ class TierExportProvider : ContentProvider() {
                     WINDOW -> windowCursor(ctx)
                     BIZ -> bizCursor(ctx)
                     GROUPS -> groupsCursor(ctx)
+                    HISTORY -> historyCursor(ctx, selectionArgs)
                     else -> null
                 }
             }
@@ -42,6 +47,7 @@ class TierExportProvider : ContentProvider() {
         WINDOW -> "vnd.android.cursor.item/vnd.${TierExport.AUTHORITY}.window"
         BIZ -> "vnd.android.cursor.dir/vnd.${TierExport.AUTHORITY}.biz"
         GROUPS -> "vnd.android.cursor.dir/vnd.${TierExport.AUTHORITY}.groups"
+        HISTORY -> "vnd.android.cursor.dir/vnd.${TierExport.AUTHORITY}.history"
         else -> null
     }
 
@@ -59,6 +65,7 @@ class TierExportProvider : ContentProvider() {
             runBlocking {
                 ServiceLocator.db(ctx).tierMemberDao()
                     .upsert(TierMemberEntity(key, tier, System.currentTimeMillis()))
+                if (StealthBlock.isGroup(tier)) BlockedGroupSync.sync(ctx, key, blocked = true)
             }
             ctx.contentResolver.notifyChange(uri, null)
             Uri.withAppendedPath(uri, Uri.encode(key))
@@ -83,7 +90,12 @@ class TierExportProvider : ContentProvider() {
                 val tier = TierExport.groupTier(name) ?: return 0
                 if (key.isEmpty()) return 0
                 runCatching {
-                    runBlocking { ServiceLocator.db(ctx).tierMemberDao().delete(key, tier) }
+                    runBlocking {
+                        ServiceLocator.db(ctx).tierMemberDao().delete(key, tier)
+                        if (StealthBlock.isGroup(tier)) {
+                            BlockedGroupSync.sync(ctx, key, blocked = false)
+                        }
+                    }
                     ctx.contentResolver.notifyChange(uri, null)
                     1
                 }.getOrDefault(0)
@@ -129,14 +141,87 @@ class TierExportProvider : ContentProvider() {
         return cursor
     }
 
+    private suspend fun historyCursor(ctx: Context, selectionArgs: Array<out String>?): Cursor {
+        val lookupKey = selectionArgs?.firstOrNull()?.trim().orEmpty()
+        val cursor = MatrixCursor(TierExport.HISTORY_COLUMNS)
+        if (lookupKey.isEmpty()) return cursor
+        val wanted = numbersFor(ctx, lookupKey)
+        if (wanted.isEmpty()) return cursor
+        ctx.contentResolver.query(
+            CallLog.Calls.CONTENT_URI,
+            arrayOf(
+                CallLog.Calls.DATE,
+                CallLog.Calls.TYPE,
+                CallLog.Calls.DURATION,
+                CallLog.Calls.NUMBER,
+            ),
+            null,
+            null,
+            "${CallLog.Calls.DATE} DESC",
+        )?.use { log ->
+            val dateCol = log.getColumnIndex(CallLog.Calls.DATE)
+            val typeCol = log.getColumnIndex(CallLog.Calls.TYPE)
+            val durCol = log.getColumnIndex(CallLog.Calls.DURATION)
+            val numCol = log.getColumnIndex(CallLog.Calls.NUMBER)
+            var scanned = 0
+            var kept = 0
+            while (log.moveToNext() && scanned < HISTORY_SCAN && kept < HISTORY_KEEP) {
+                scanned++
+                val raw = if (numCol >= 0) log.getString(numCol) else null
+                val e164 = raw?.let { E164.normalize(it) } ?: raw?.trim()
+                if (e164.isNullOrEmpty() || e164 !in wanted) continue
+                cursor.addRow(
+                    arrayOf(
+                        if (dateCol >= 0) log.getLong(dateCol) else 0L,
+                        if (typeCol >= 0) log.getInt(typeCol) else 0,
+                        if (durCol >= 0) log.getInt(durCol) else 0,
+                        raw,
+                    ),
+                )
+                kept++
+            }
+        }
+        return cursor
+    }
+
+    private suspend fun numbersFor(ctx: Context, lookupKey: String): Set<String> {
+        val mirrored = runCatching {
+            ServiceLocator.db(ctx).contactMirrorDao().all()
+                .filter { it.lookupKey == lookupKey }
+                .mapNotNull { E164.normalize(it.e164) ?: it.e164.trim().takeIf(String::isNotEmpty) }
+        }.getOrDefault(emptyList())
+        val fromContacts = mutableListOf<String>()
+        runCatching {
+            ctx.contentResolver.query(
+                ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+                arrayOf(ContactsContract.CommonDataKinds.Phone.NUMBER),
+                "${ContactsContract.Contacts.LOOKUP_KEY} = ?",
+                arrayOf(lookupKey),
+                null,
+            )?.use { cursor ->
+                val col = cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER)
+                if (col < 0) return@use
+                while (cursor.moveToNext()) {
+                    val raw = cursor.getString(col) ?: continue
+                    fromContacts += E164.normalize(raw) ?: raw.trim()
+                }
+            }
+        }
+        return (mirrored + fromContacts).filter { it.isNotEmpty() }.toSet()
+    }
+
     companion object {
         private const val WINDOW = 1
         private const val BIZ = 2
         private const val GROUPS = 3
+        private const val HISTORY = 4
+        private const val HISTORY_SCAN = 1000
+        private const val HISTORY_KEEP = 40
         private val MATCHER = UriMatcher(UriMatcher.NO_MATCH).apply {
             addURI(TierExport.AUTHORITY, TierExport.PATH_WINDOW, WINDOW)
             addURI(TierExport.AUTHORITY, TierExport.PATH_BIZ, BIZ)
             addURI(TierExport.AUTHORITY, TierExport.PATH_GROUPS, GROUPS)
+            addURI(TierExport.AUTHORITY, TierExport.PATH_HISTORY, HISTORY)
         }
     }
 }

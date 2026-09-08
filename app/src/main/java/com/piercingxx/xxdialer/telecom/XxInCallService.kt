@@ -456,7 +456,12 @@ class XxInCallService : InCallService() {
             .getOrDefault(-1L)
 
         // GATE, last in the chain: observe mode changes only this line (todo #6).
-        val effective = if (mode == Mode.OBSERVING) Verdict.Ring(Tone.DEFAULT) else verdict
+        // The Blocked group is an explicit hide — it stays rejected even while watching.
+        val effective = when {
+            facts.groupBlocked -> verdict
+            mode == Mode.OBSERVING -> Verdict.Ring(Tone.DEFAULT)
+            else -> verdict
+        }
 
         reconcileWarnings()
 
