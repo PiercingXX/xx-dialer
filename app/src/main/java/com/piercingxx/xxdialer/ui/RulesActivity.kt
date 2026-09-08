@@ -47,6 +47,7 @@ import com.piercingxx.xxdialer.data.BackupJson
 import com.piercingxx.xxdialer.data.PatternRuleEntity
 import com.piercingxx.xxdialer.data.ScreenLogEntity
 import com.piercingxx.xxdialer.data.SettingsRepository
+import com.piercingxx.xxdialer.log.LogsUi
 import com.piercingxx.xxdialer.databinding.ActivityRulesBinding
 import com.piercingxx.xxdialer.databinding.ItemRuleRowBinding
 import com.piercingxx.xxdialer.databinding.ViewPatternBuilderBinding
@@ -258,6 +259,7 @@ class RulesActivity : AppCompatActivity() {
         }
         binding.clearHistoryButton.setOnClickListener { confirmClearHistory() }
         binding.clearLogButton.setOnClickListener { confirmClearLog() }
+        binding.appLogsButton.setOnClickListener { LogsUi.show(this) }
         binding.importBlocklistButton.setOnClickListener {
             importBlocklistDoc.launch(arrayOf("text/plain"))
         }
@@ -354,6 +356,7 @@ class RulesActivity : AppCompatActivity() {
         binding.importBlocklistButton.text = "Import blocklist"
         binding.clearHistoryButton.text = "Clear call history"
         binding.clearLogButton.text = "Clear screening log"
+        binding.appLogsButton.text = "Logs"
     }
 
     // ---- load / render -----------------------------------------------------------
