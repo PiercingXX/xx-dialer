@@ -165,6 +165,15 @@ class RecentsMergeTest {
         assertFalse(RecentsMerge.passes(Filter.MISSED, blockedType))
     }
 
+    @Test
+    fun stealth_blocked_numbers_leave_recents() {
+        val shown = RecentsMerge.merge(
+            listOf(call(id = 1, e164 = "+14155550100"), call(id = 2, e164 = "+14155550999")),
+            emptyList(),
+        ).filter { !RecentsMerge.isStealthHidden(it, setOf("+14155550100")) }
+        assertEquals(listOf("+14155550999"), shown.map { it.e164 })
+    }
+
     // ---- grouping -----------------------------------------------------------
 
     private fun numbered(n: Int, at: Long = t0 - n * 1_000L) =

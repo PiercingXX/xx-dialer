@@ -139,6 +139,10 @@ object RecentsMerge {
         Filter.BLOCKED -> call.glyph == Glyph.BLOCKED || call.blockedUpstream
     }
 
+    /** Blocked-group numbers stay off Recents; Contacts detail is the only window. */
+    fun isStealthHidden(call: MergedCall, hiddenE164s: Set<String>): Boolean =
+        call.e164 != null && call.e164 in hiddenE164s
+
     // ---- grouping of consecutive same-number calls (default ON) -------------
 
     sealed interface Grouped {

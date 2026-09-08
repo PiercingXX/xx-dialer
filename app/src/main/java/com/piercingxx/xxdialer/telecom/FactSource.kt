@@ -6,6 +6,7 @@ import android.util.Log
 import com.piercingxx.xxdialer.core.CallerFacts
 import com.piercingxx.xxdialer.data.ContactMirror
 import com.piercingxx.xxdialer.data.ContactMirrorEntity
+import com.piercingxx.xxdialer.data.StealthBlock
 import com.piercingxx.xxdialer.data.XxDatabase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -37,6 +38,9 @@ class FactSource(private val db: XxDatabase, private val context: Context) {
         includeEnhancements: Boolean = true,
     ): CallerFacts {
         val mirror = mirrorOverride ?: warmMirror(numberE164)
+        val groupBlocked = mirror != null && runCatching {
+            db.tierMemberDao().keysFor(StealthBlock.GROUP).contains(mirror.lookupKey)
+        }.getOrDefault(false)
         return CallerFacts(
             number = numberE164,
             saved = mirror?.saved == true,
@@ -44,6 +48,7 @@ class FactSource(private val db: XxDatabase, private val context: Context) {
             bizTier = mirror?.bizTier == true,
             sendToVoicemail = mirror?.sendToVoicemail == true,
             userBlocked = false, // patterns are evaluated inside decide() via rules; system blocklist never reaches us (§4.4)
+            groupBlocked = groupBlocked,
             stirFailed = stirFailed,
             repeatCaller = if (includeEnhancements) repeatCaller(numberE164, nowEpochMillis) else false,
             recentOutgoing = if (includeEnhancements) recentOutgoing(numberE164, nowEpochMillis) else false,

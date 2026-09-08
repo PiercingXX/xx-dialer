@@ -63,6 +63,8 @@ data class CallerFacts(
     val emergencyWindow: Boolean,
     /** Presentation is not ALLOWED. Distinct from [number] == null (unparseable). */
     val withheld: Boolean = false,
+    /** Contacts "Blocked" group — hide and reject even when observing. */
+    val groupBlocked: Boolean = false,
 )
 
 /**

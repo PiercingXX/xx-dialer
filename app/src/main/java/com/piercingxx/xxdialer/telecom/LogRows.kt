@@ -27,7 +27,7 @@ object LogRows {
     private fun blockReason(facts: CallerFacts, rules: Rules): Reason {
         val number = facts.number
         return when {
-            facts.userBlocked -> Reason.USER_BLOCKED // row 3, explicit signal — never exemptable
+            facts.groupBlocked || facts.userBlocked -> Reason.USER_BLOCKED
             number != null && rules.blockPatterns.any { it.matches(number) } ->
                 Reason.PATTERN_BLOCKED // row 3, pattern arm
             facts.stirFailed -> Reason.STIR_FAILED // row 4

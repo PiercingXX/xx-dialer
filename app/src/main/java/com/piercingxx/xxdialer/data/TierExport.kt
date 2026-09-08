@@ -18,20 +18,27 @@ object TierExport {
     const val PATH_WINDOW = "window"
     const val PATH_BIZ = "biz"
     const val PATH_GROUPS = "groups"
+    const val PATH_HISTORY = "history"
 
     const val WINDOW_URI = "content://$AUTHORITY/$PATH_WINDOW"
     const val BIZ_URI = "content://$AUTHORITY/$PATH_BIZ"
     const val GROUPS_URI = "content://$AUTHORITY/$PATH_GROUPS"
+    const val HISTORY_URI = "content://$AUTHORITY/$PATH_HISTORY"
 
     const val COL_START_MINUTE = "start_minute"
     const val COL_END_MINUTE = "end_minute"
     const val COL_DAYS_MASK = "days_mask"
     const val COL_LOOKUP_KEY = "lookup_key"
     const val COL_GROUP_NAME = "group_name"
+    const val COL_DATE = "date"
+    const val COL_TYPE = "type"
+    const val COL_DURATION = "duration"
+    const val COL_NUMBER = "number"
 
     val WINDOW_COLUMNS = arrayOf(COL_START_MINUTE, COL_END_MINUTE, COL_DAYS_MASK)
     val BIZ_COLUMNS = arrayOf(COL_LOOKUP_KEY)
     val GROUP_COLUMNS = arrayOf(COL_GROUP_NAME, COL_LOOKUP_KEY)
+    val HISTORY_COLUMNS = arrayOf(COL_DATE, COL_TYPE, COL_DURATION, COL_NUMBER)
 
     fun isReservedGroup(name: String): Boolean = when (name.trim().lowercase()) {
         "", "star", "biz", "business" -> true
@@ -41,6 +48,7 @@ object TierExport {
     fun groupTier(name: String): String? {
         val n = name.trim()
         if (isReservedGroup(n)) return null
+        if (StealthBlock.isGroup(n)) return StealthBlock.GROUP
         return n
     }
 

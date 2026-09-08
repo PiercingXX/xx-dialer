@@ -31,9 +31,11 @@ class RingPolicyTest {
         cnapName: String? = null,
         emergencyWindow: Boolean = false,
         withheld: Boolean = false,
+        groupBlocked: Boolean = false,
     ) = CallerFacts(
         number, saved, starred, bizTier, sendToVoicemail, userBlocked,
         stirFailed, repeatCaller, recentOutgoing, cnapName, emergencyWindow, withheld,
+        groupBlocked,
     )
 
     private fun rules(
@@ -104,6 +106,16 @@ class RingPolicyTest {
     @Test
     fun row3_userBlocked_blocks() {
         val verdict = RingPolicy.decide(noon, facts(userBlocked = true), rules())
+        assertEquals(Verdict.Block, verdict)
+    }
+
+    @Test
+    fun blockedGroup_hidesSavedAndStarred() {
+        val verdict = RingPolicy.decide(
+            noon,
+            facts(saved = true, starred = true, groupBlocked = true),
+            rules(),
+        )
         assertEquals(Verdict.Block, verdict)
     }
 
