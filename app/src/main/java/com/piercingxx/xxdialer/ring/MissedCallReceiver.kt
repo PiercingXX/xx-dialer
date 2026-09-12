@@ -63,7 +63,9 @@ class MissedCallReceiver : BroadcastReceiver() {
             ServiceLocator.settings(context).silencedNotifPolicy()
         }.getOrDefault(POLICY_IMMEDIATE)
 
-        val count = intent.getIntExtra(TelecomManager.EXTRA_NOTIFICATION_COUNT, 1)
+        val telecomCount = intent.getIntExtra(TelecomManager.EXTRA_NOTIFICATION_COUNT, 1)
+        val unseen = queryUnseenMissedCount(context)
+        val count = MissedNotifContent.displayCount(telecomCount, unseen)
         val rawNumber = intent.getStringExtra(EXTRA_PHONE_NUMBER)
         val e164 = rawNumber?.let { E164.normalize(it) }
         val hidden = runCatching {
@@ -121,6 +123,7 @@ class MissedCallReceiver : BroadcastReceiver() {
     /**
      * Newest-first labels for the count>1 InboxStyle. Cached name when the
      * platform has one, otherwise the raw number. Fail empty — never invent.
+     * Only rows the user has not already seen in Recents.
      */
     private fun queryRecentMissedLabels(context: Context, limit: Int): List<String> {
         val projection = arrayOf(
@@ -128,12 +131,13 @@ class MissedCallReceiver : BroadcastReceiver() {
             CallLog.Calls.CACHED_NAME,
             CallLog.Calls.DATE,
         )
+        val (selection, args) = unseenMissedQuery(context)
         return runCatching {
             context.contentResolver.query(
                 CallLog.Calls.CONTENT_URI,
                 projection,
-                "${CallLog.Calls.TYPE} = ?",
-                arrayOf(CallLog.Calls.MISSED_TYPE.toString()),
+                selection,
+                args,
                 "${CallLog.Calls.DATE} DESC",
             )?.use { c ->
                 val numberCol = c.getColumnIndexOrThrow(CallLog.Calls.NUMBER)
@@ -147,6 +151,34 @@ class MissedCallReceiver : BroadcastReceiver() {
                 }
             }.orEmpty()
         }.getOrDefault(emptyList())
+    }
+
+    private fun queryUnseenMissedCount(context: Context): Int {
+        val (selection, args) = unseenMissedQuery(context)
+        return runCatching {
+            context.contentResolver.query(
+                CallLog.Calls.CONTENT_URI,
+                arrayOf(CallLog.Calls._ID),
+                selection,
+                args,
+                null,
+            )?.use { it.count }
+        }.getOrNull() ?: 0
+    }
+
+    /**
+     * After Recents has been opened, count missed rows newer than that visit.
+     * Before the first visit, [CallLog.Calls.NEW] is the honest unread flag.
+     */
+    private fun unseenMissedQuery(context: Context): Pair<String, Array<String>> {
+        val since = MissedCallsClear.viewedAt(context)
+        return if (since > 0L) {
+            "${CallLog.Calls.TYPE} = ? AND ${CallLog.Calls.DATE} > ?" to
+                arrayOf(CallLog.Calls.MISSED_TYPE.toString(), since.toString())
+        } else {
+            "${CallLog.Calls.TYPE} = ? AND ${CallLog.Calls.NEW} = 1" to
+                arrayOf(CallLog.Calls.MISSED_TYPE.toString())
+        }
     }
 
     private fun textFor(count: Int, number: String?, row: ScreenLogEntity?): String =

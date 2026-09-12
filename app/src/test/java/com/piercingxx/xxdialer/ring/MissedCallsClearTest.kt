@@ -38,6 +38,8 @@ class MissedCallsClearTest {
         assertTrue(clear.contains("cancelMissedCallsNotification"))
         assertTrue(clear.contains("NotifIds.MISSED"))
         assertTrue(clear.contains("CallLog.Calls.NEW"))
+        assertTrue(clear.contains("markViewed"))
+        assertTrue(clear.contains("KEY_VIEWED_AT") || clear.contains("viewed_at"))
     }
 
     private fun source(relative: String): String =

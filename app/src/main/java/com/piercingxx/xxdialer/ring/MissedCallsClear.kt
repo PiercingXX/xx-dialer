@@ -36,6 +36,7 @@ object MissedCallsClear {
         recentsVisible || missedFilterActive
 
     fun clear(context: Context) {
+        markViewed(context)
         runCatching {
             context.getSystemService(TelecomManager::class.java)
                 ?.cancelMissedCallsNotification()
@@ -52,4 +53,19 @@ object MissedCallsClear {
             NotificationManagerCompat.from(context).cancel(NotifIds.MISSED)
         }
     }
+
+    fun markViewed(context: Context) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .edit()
+            .putLong(KEY_VIEWED_AT, System.currentTimeMillis())
+            .apply()
+    }
+
+    /** Epoch millis Recents was last shown; 0 before the first clear. */
+    fun viewedAt(context: Context): Long =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getLong(KEY_VIEWED_AT, 0L)
+
+    private const val PREFS = "xx_dialer_missed"
+    private const val KEY_VIEWED_AT = "viewed_at"
 }

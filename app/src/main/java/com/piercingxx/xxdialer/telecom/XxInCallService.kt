@@ -26,9 +26,11 @@ import com.piercingxx.xxdialer.core.Verdict
 import com.piercingxx.xxdialer.data.ContactMirror
 import com.piercingxx.xxdialer.data.ContactMirrorEntity
 import com.piercingxx.xxdialer.data.ScreenLogEntity
+import com.piercingxx.xxdialer.ring.CallPerson
 import com.piercingxx.xxdialer.ring.CallRinger
 import com.piercingxx.xxdialer.ring.NotifIds
 import com.piercingxx.xxdialer.ring.RingRouter
+import com.piercingxx.xxdialer.ring.RingTonePlayback
 import com.piercingxx.xxdialer.ring.SilencedNotifier
 import com.piercingxx.xxdialer.ui.CallGrid
 import com.piercingxx.xxdialer.ui.InCallActivity
@@ -79,6 +81,7 @@ class XxInCallService : InCallService() {
         val e164: String?,
         val cnap: String?,
         val tier: String?,
+        val lookupKey: String?,
     )
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -152,13 +155,8 @@ class XxInCallService : InCallService() {
         CallGrid.callAdded(call)
         when (call.state) {
             Call.STATE_RINGING -> {
-                if (call.details.extras?.getBoolean(Call.EXTRA_SILENT_RINGING_REQUESTED) == true) {
-                    // §4.3 obligation: a silent-ringing call must not ring at all.
-                    val entry = Entry(logId = -1, entity = null, verdictName = VERDICT_NONE, answered = false)
-                    entries[call] = entry
-                    logPlatformSilenced(call, entry) // R7: even this call explains itself
-                    return
-                }
+                // Silent-ringing is decided after facts: starred contacts (and
+                // emergency callbacks) still ring through Nope-Mode / DND.
                 entries[call] = Entry(logId = -1, entity = null, verdictName = "", answered = false)
                 scope.launch {
                     runCatching { ringPipeline(call) }
@@ -226,6 +224,7 @@ class XxInCallService : InCallService() {
                     presented.e164,
                     presented.cnap,
                     presented.tier,
+                    presented.lookupKey,
                     fullScreen = !hasOffHookPeer(call),
                 )
             }.onFailure { Log.w(TAG, "ringer downgrade failed", it) }
@@ -512,6 +511,12 @@ class XxInCallService : InCallService() {
         val line = contextLine(LogRows.tier(facts), reason, cnap)
         val registry = ServiceLocator.channelRegistry(this)
         val waitingOverActive = hasOffHookPeer(call)
+        val silentRequested = details.extras?.getBoolean(Call.EXTRA_SILENT_RINGING_REQUESTED) == true
+        val playTone = RingTonePlayback.allowTone(
+            silentRequested = silentRequested,
+            starred = facts.starred,
+            emergencyWindow = facts.emergencyWindow,
+        )
 
         val repeat = runCatching {
             ServiceLocator.settings(this).ringRepeat()
@@ -519,15 +524,20 @@ class XxInCallService : InCallService() {
 
         when (val choice = RingRouter(registry).route(effective, facts, mirror)) {
             is RingRouter.Choice.Ring -> {
-                val replay = RingRepeatPolicy.insistent(repeat) && !waitingOverActive
+                val replay = playTone && RingTonePlayback.selfPlay(
+                    insistent = RingRepeatPolicy.insistent(repeat),
+                    waitingOverActive = waitingOverActive,
+                    dndFiltering = interruptionIsFiltering(),
+                )
                 postIncoming(
                     call,
-                    if (waitingOverActive || replay) {
+                    if (!playTone || waitingOverActive || replay) {
                         registry.channelIdFor(PURPOSE_RING_SILENT)
                     } else {
                         choice.channelId
                     },
                     displayName, line, number, cnap, LogRows.tier(facts),
+                    mirror?.lookupKey,
                     fullScreen = !waitingOverActive,
                 )
                 if (replay) startRepeatingRing(choice, repeat)
@@ -537,6 +547,7 @@ class XxInCallService : InCallService() {
                     call,
                     registry.channelIdFor(PURPOSE_RING_SILENT),
                     displayName, line, number, cnap, LogRows.tier(facts),
+                    mirror?.lookupKey,
                     fullScreen = !waitingOverActive,
                 )
             RingRouter.Choice.None -> {
@@ -561,11 +572,12 @@ class XxInCallService : InCallService() {
         e164: String?,
         cnap: String?,
         tier: String?,
+        lookupKey: String?,
         fullScreen: Boolean,
     ): Boolean {
         if (call.state != Call.STATE_RINGING) return false
         if (CallGrid.isAnswering(call) || entries[call]?.answered == true) return false
-        val person = Person.Builder().setName(displayName).setImportant(true).build()
+        val person = CallPerson.incoming(displayName, e164, lookupKey)
         val show = showIntent(displayName, e164, contextLine, cnap, tier)
         val builder = Notification.Builder(this, channelId)
             .setSmallIcon(R.drawable.ic_phone_incoming)
@@ -574,7 +586,12 @@ class XxInCallService : InCallService() {
             .setContentIntent(show)
             .setContentTitle(displayName)
             .setContentText(contextLine)
+            .addPerson(person)
             .setStyle(Notification.CallStyle.forIncomingCall(person, declineIntent(), answerIntent()))
+        val tel = CallPerson.telUri(e164)
+        if (tel != null && tel != person.uri) {
+            builder.addPerson(Person.Builder().setUri(tel).setName(displayName).build())
+        }
         val fsiAllowed = fullScreen &&
             (android.os.Build.VERSION.SDK_INT < 34 || notificationManager().canUseFullScreenIntent())
         if (fsiAllowed) {
@@ -592,7 +609,7 @@ class XxInCallService : InCallService() {
                 return false
             }
         }
-        presentedIncoming = Presented(call, displayName, contextLine, e164, cnap, tier)
+        presentedIncoming = Presented(call, displayName, contextLine, e164, cnap, tier, lookupKey)
         return true
     }
 
@@ -624,13 +641,18 @@ class XxInCallService : InCallService() {
                 val repeat = runCatching {
                     ServiceLocator.settings(this@XxInCallService).ringRepeat()
                 }.getOrDefault(RingRepeat.ONCE)
-                val replay = RingRepeatPolicy.insistent(repeat) && !hasOffHookPeer(call)
+                val replay = RingTonePlayback.selfPlay(
+                    insistent = RingRepeatPolicy.insistent(repeat),
+                    waitingOverActive = hasOffHookPeer(call),
+                    dndFiltering = interruptionIsFiltering(),
+                )
                 val ringingId = registry.channelIdFor(PURPOSE_RING_DEFAULT)
                 val channelId = if (replay) registry.channelIdFor(PURPOSE_RING_SILENT) else ringingId
                 val presented = postIncoming(
                     call, channelId, name, getString(R.string.app_name),
                     DetailsCodec.numberE164(details.handle?.schemeSpecificPart),
                     DetailsCodec.cnapName(details.callerDisplayName, details.callerDisplayNamePresentation),
+                    null,
                     null,
                     fullScreen = !hasOffHookPeer(call),
                 )
@@ -758,35 +780,17 @@ class XxInCallService : InCallService() {
     }
 
     /**
-     * R7 for the platform-silenced path (§4.3): the call never rings by
-     * platform request, but it still gets a screen_log row saying so —
-     * async, and the entry is updated in place when the insert lands so
-     * finalize's answered-update targets the right row.
+     * Priority / none / alarms DND (including Nope-Mode's zen rule).
+     * Unknown filter reads as not filtering so a probe failure cannot
+     * suppress the repeating-ringer path.
      */
-    private fun logPlatformSilenced(call: Call, entry: Entry) {
-        val details = call.details
-        val presentation = details.handlePresentation
-        val number = if (DetailsCodec.isWithheld(presentation)) null else DetailsCodec.numberE164(details.handle?.schemeSpecificPart)
-        val row = ScreenLogEntity(
-            id = 0,
-            at = System.currentTimeMillis(),
-            e164 = number,
-            presentation = presentation,
-            verdict = VERDICT_SILENCE,
-            reason = REASON_PLATFORM_SILENCED,
-            tier = null,
-            stir = DetailsCodec.stirLabel(details.callerNumberVerificationStatus),
-            cnapName = DetailsCodec.cnapName(details.callerDisplayName, details.callerDisplayNamePresentation),
-            mode = "platform",
-            answered = false,
-        )
-        scope.launch {
-            runCatching {
-                val id = ServiceLocator.db(this@XxInCallService).screenLogDao().insert(row)
-                entry.logId = id
-                entry.entity = row
-            }.onFailure { Log.w(TAG, "platform-silenced log failed", it) }
-        }
+    private fun interruptionIsFiltering(): Boolean {
+        val filter = runCatching { notificationManager().currentInterruptionFilter }
+            .getOrNull()
+            ?: return false
+        return filter == NotificationManager.INTERRUPTION_FILTER_PRIORITY ||
+            filter == NotificationManager.INTERRUPTION_FILTER_NONE ||
+            filter == NotificationManager.INTERRUPTION_FILTER_ALARMS
     }
 
     private fun contextLine(tier: String?, reason: Reason?, cnap: String?): CharSequence {
@@ -863,9 +867,6 @@ class XxInCallService : InCallService() {
         const val PURPOSE_ONGOING = "ongoing"
         const val VERDICT_SILENCE = Verdict.TOKEN_SILENCE
         const val VERDICT_BLOCK = Verdict.TOKEN_BLOCK
-        const val VERDICT_NONE = "None"
-        /** Raw reason token for §4.3 platform-requested silence; UI falls back to the raw string. */
-        const val REASON_PLATFORM_SILENCED = "PLATFORM_SILENCED"
         /** Observed screener Block row within this window is the SAME call, not a twin. */
         const val SCREENER_CORRELATION_MS = 10_000L
         const val WITHHELD_LABEL = "Unknown caller"
