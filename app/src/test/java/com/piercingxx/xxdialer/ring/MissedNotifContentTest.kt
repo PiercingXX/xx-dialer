@@ -22,4 +22,11 @@ class MissedNotifContentTest {
             MissedNotifContent.inboxLines(listOf("+15551212", "", "+15550000", "+15559999"), limit = 2),
         )
     }
+
+    @Test
+    fun telecomLifetimeTotalIsNotTheTitleCount() {
+        assertEquals(2, MissedNotifContent.displayCount(telecomCount = 847, unseenMissed = 2))
+        assertEquals(1, MissedNotifContent.displayCount(telecomCount = 847, unseenMissed = 0))
+        assertEquals(5, MissedNotifContent.displayCount(telecomCount = 5, unseenMissed = 5))
+    }
 }

@@ -159,6 +159,10 @@ object CallGrid {
         override fun onStateChanged(call: Call, newState: Int) {
             if (newState == Call.STATE_ACTIVE) recordAnchor(call)
             if (newState == Call.STATE_HOLDING) completeSwapIfHolding(stableKey(call))
+            if (newState == Call.STATE_DISCONNECTED || newState == Call.STATE_DISCONNECTING) {
+                callRemoved(call)
+                return
+            }
             notifyChange()
         }
         override fun onDetailsChanged(call: Call, details: Call.Details) {

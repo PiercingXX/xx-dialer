@@ -11,6 +11,17 @@ object MissedNotifContent {
 
     fun title(count: Int): String = if (count > 1) "$count missed calls" else "Missed call"
 
+    /**
+     * Telecom's EXTRA_NOTIFICATION_COUNT is a lifetime total on GrapheneOS
+     * when cancelMissedCallsNotification does not reset it. Prefer the number
+     * of missed rows since Recents was last opened; if that query is empty,
+     * this broadcast is still one new event — never the lifetime dump.
+     */
+    fun displayCount(telecomCount: Int, unseenMissed: Int): Int {
+        if (unseenMissed > 0) return unseenMissed
+        return 1
+    }
+
     fun usesInboxStyle(count: Int): Boolean = count > 1
 
     /** Newest-first display lines, already ordered by the caller. */

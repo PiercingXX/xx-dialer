@@ -126,7 +126,7 @@ class InCallActivity : AppCompatActivity() {
         // sees flash before the screen behind them comes back.
         if (exit.fire(grid.isEmpty)) {
             handler.removeCallbacks(tick)
-            if (!isFinishing) finish()
+            if (!isFinishing) finishAndRemoveTask()
             return
         }
         val primary = grid.primary

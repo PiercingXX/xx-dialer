@@ -246,6 +246,11 @@ class IncomingCallActivity : AppCompatActivity() {
             sawRinging = true
             return
         }
+        val grid = CallGrid.snapshot()
+        if (!grid.isEmpty && grid.waiting == null) {
+            finish()
+            return
+        }
         if (sawRinging || settled) finish()
     }
 
