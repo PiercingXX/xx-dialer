@@ -54,6 +54,8 @@ class InCallActivity : AppCompatActivity() {
     /** Latched so the optimistic launch (call not yet added) cannot self-close. */
     private val exit = CallEndExit()
 
+    private val busyTone = SupervisoryTone(this)
+
     private val onGridChange: () -> Unit = { handler.post { renderSnapshot() } }
 
     /** §12.1: 1 s ticks on tabular Space Mono figures — never reflows. */
@@ -113,6 +115,7 @@ class InCallActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        busyTone.stop()
         CallGrid.removeListener(onGridChange)
         super.onDestroy()
     }
@@ -125,6 +128,7 @@ class InCallActivity : AppCompatActivity() {
         // repaint into "No active call" is a frame of wrong state the user
         // sees flash before the screen behind them comes back.
         if (exit.fire(grid.isEmpty)) {
+            busyTone.stop()
             handler.removeCallbacks(tick)
             if (!isFinishing) finishAndRemoveTask()
             return
@@ -135,6 +139,7 @@ class InCallActivity : AppCompatActivity() {
         binding.incallKind.text = when {
             primary == null && grid.waiting == null -> NO_CALL_LABEL
             primary == null -> INCOMING_LABEL
+            primary.line == Line.BUSY -> DisconnectNotice.HEADLINE
             primary.line == Line.OUTGOING -> CALLING_LABEL
             grid.primaryHeld -> HELD_LABEL
             else -> ON_CALL_LABEL
@@ -145,6 +150,7 @@ class InCallActivity : AppCompatActivity() {
         binding.incallName.isVisible = name.isNotEmpty()
 
         val contextLine = when {
+            primary?.line == Line.BUSY -> CallGrid.noticeDetail().orEmpty()
             primaryCall != null -> primaryCall.details.handle?.schemeSpecificPart.orEmpty()
             primary != null && grid.primaryHeld -> STATE_HELD
             primary == null && grid.waiting != null -> WAITING_HINT
@@ -162,6 +168,12 @@ class InCallActivity : AppCompatActivity() {
         binding.waitingName.text = waiting?.label.orEmpty()
 
         renderControls(primary)
+        syncBusyTone(primary)
+    }
+
+    private fun syncBusyTone(primary: Cell?) {
+        val tone = if (primary?.line == Line.BUSY) CallGrid.noticeTone() else null
+        if (tone != null) busyTone.start(tone) else busyTone.stop()
     }
 
     /** Duration anchored at ACTIVE entry; negatives impossible by clamp. */
@@ -181,13 +193,14 @@ class InCallActivity : AppCompatActivity() {
     private fun renderControls(primary: Cell?) {
         setArmed(binding.btnMute, CallGrid.isMuted())
         setArmed(binding.btnSpeaker, CallGrid.isRoutedAwayFromEar())
-        val liveCall = primary != null
+        val liveCall = primary != null && primary.line != Line.BUSY
+        val busy = primary?.line == Line.BUSY
         binding.btnKeypad.isEnabled = liveCall
         binding.btnMute.isEnabled = liveCall &&
-            (primary.line == Line.ACTIVE || primary.line == Line.HELD)
-        binding.btnSpeaker.isEnabled = liveCall
+            (primary?.line == Line.ACTIVE || primary?.line == Line.HELD)
+        binding.btnSpeaker.isEnabled = liveCall || busy
         binding.btnMore.isEnabled = liveCall
-        binding.btnEnd.isEnabled = liveCall || CallGrid.snapshot().waiting != null
+        binding.btnEnd.isEnabled = liveCall || busy || CallGrid.snapshot().waiting != null
     }
 
     /**

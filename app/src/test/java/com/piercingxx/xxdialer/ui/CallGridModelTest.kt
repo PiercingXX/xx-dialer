@@ -41,6 +41,19 @@ class CallGridModelTest {
     }
 
     @Test
+    fun busy_notice_stays_as_primary_until_dismissed() {
+        val grid = reduceGrid(listOf(cell("b", Line.BUSY)))
+        assertEquals("b", grid.primary?.key)
+        assertFalse(grid.isEmpty)
+    }
+
+    @Test
+    fun live_call_outranks_a_busy_notice() {
+        val grid = reduceGrid(listOf(cell("b", Line.BUSY), cell("a", Line.ACTIVE)))
+        assertEquals("a", grid.primary?.key)
+    }
+
+    @Test
     fun outgoing_connecting_call_is_primary_while_dialing() {
         val grid = reduceGrid(listOf(cell("d", Line.OUTGOING)))
         assertEquals("d", grid.primary?.key)

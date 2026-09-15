@@ -26,6 +26,7 @@ import com.piercingxx.xxdialer.core.Verdict
 import com.piercingxx.xxdialer.data.ContactMirror
 import com.piercingxx.xxdialer.data.ContactMirrorEntity
 import com.piercingxx.xxdialer.data.ScreenLogEntity
+import com.piercingxx.xxdialer.log.AppLog
 import com.piercingxx.xxdialer.ring.CallPerson
 import com.piercingxx.xxdialer.ring.CallRinger
 import com.piercingxx.xxdialer.ring.NotifIds
@@ -281,6 +282,13 @@ class XxInCallService : InCallService() {
     }
 
     private fun handleStateChange(call: Call, newState: Int) {
+        if (newState == Call.STATE_DISCONNECTED) {
+            val cause = runCatching { call.details.disconnectCause }.getOrNull()
+            AppLog.i(
+                "call",
+                "disconnected code=${cause?.code} tone=${cause?.tone} reason=${cause?.reason}",
+            )
+        }
         if (newState == Call.STATE_ACTIVE) entries[call]?.answered = true
         // M3: arm the emergency marker from ANY outgoing-state transition.
         // Telecom may deliver SELECT_PHONE_ACCOUNT/PULLING_CALL before (or

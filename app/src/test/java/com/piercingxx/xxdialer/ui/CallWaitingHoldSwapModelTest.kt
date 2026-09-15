@@ -28,6 +28,10 @@ class CallWaitingHoldSwapModelTest {
         android.telecom.Call.STATE_RINGING -> Line.WAITING
         android.telecom.Call.STATE_DIALING,
         android.telecom.Call.STATE_CONNECTING,
+        android.telecom.Call.STATE_SELECT_PHONE_ACCOUNT,
+        android.telecom.Call.STATE_PULLING_CALL,
+        android.telecom.Call.STATE_SIMULATED_RINGING,
+        android.telecom.Call.STATE_DISCONNECTING,
         -> Line.OUTGOING
         else -> Line.ENDED
     }
@@ -88,6 +92,13 @@ class CallWaitingHoldSwapModelTest {
         assertTrue(after.canSwap)
         assertEquals("a", before.primary?.key)
         assertEquals("h", after.primary?.key)
+    }
+
+    @Test
+    fun disconnecting_outgoing_stays_visible_so_busy_can_land() {
+        val grid = grid("d" to android.telecom.Call.STATE_DISCONNECTING)
+        assertEquals("d", grid.primary?.key)
+        assertFalse(grid.isEmpty)
     }
 
     @Test

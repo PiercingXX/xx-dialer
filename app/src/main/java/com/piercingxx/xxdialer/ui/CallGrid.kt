@@ -8,6 +8,7 @@ import android.telecom.CallAudioState
 import android.telecom.CallEndpoint
 import android.telecom.InCallService
 import android.telecom.VideoProfile
+import com.piercingxx.xxdialer.log.AppLog
 import com.piercingxx.xxdialer.util.E164
 import java.util.concurrent.CopyOnWriteArrayList
 
@@ -32,7 +33,7 @@ import java.util.concurrent.CopyOnWriteArrayList
 // ---- pure model (no android.*; JVM-tested) ------------------------------------
 
 /** Coarse per-call line state; mapped from Call.STATE_* at the edge. */
-enum class Line { ACTIVE, HELD, WAITING, OUTGOING, ENDED }
+enum class Line { ACTIVE, HELD, WAITING, OUTGOING, BUSY, ENDED }
 
 data class Cell(val key: String, val label: String, val line: Line)
 
@@ -56,8 +57,12 @@ fun reduceGrid(cells: List<Cell>): Grid {
     val active = live.filter { it.line == Line.ACTIVE }
     val held = live.filter { it.line == Line.HELD }
     val outgoing = live.filter { it.line == Line.OUTGOING }
+    val busy = live.filter { it.line == Line.BUSY }
     val waiting = live.firstOrNull { it.line == Line.WAITING }
-    val primary = active.firstOrNull() ?: outgoing.firstOrNull() ?: held.firstOrNull()
+    val primary = active.firstOrNull()
+        ?: outgoing.firstOrNull()
+        ?: held.firstOrNull()
+        ?: busy.firstOrNull()
     return Grid(
         primary = primary,
         primaryHeld = primary?.line == Line.HELD,
@@ -149,6 +154,12 @@ object CallGrid {
 
     private var swapRequest: SwapRequest? = null
 
+    /**
+     * Survives Telecom destroying the Call on BUSY so the in-call card and
+     * the supervisory tone can stay up until the user taps End.
+     */
+    @Volatile private var busyNotice: BusyNotice? = null
+
     private val swapFallback = Runnable {
         val req = swapRequest ?: return@Runnable
         swapRequest = null
@@ -159,7 +170,12 @@ object CallGrid {
         override fun onStateChanged(call: Call, newState: Int) {
             if (newState == Call.STATE_ACTIVE) recordAnchor(call)
             if (newState == Call.STATE_HOLDING) completeSwapIfHolding(stableKey(call))
-            if (newState == Call.STATE_DISCONNECTED || newState == Call.STATE_DISCONNECTING) {
+            if (newState == Call.STATE_DISCONNECTING) {
+                notifyChange()
+                return
+            }
+            if (newState == Call.STATE_DISCONNECTED) {
+                captureBusyNotice(call)
                 callRemoved(call)
                 return
             }
@@ -172,16 +188,44 @@ object CallGrid {
 
     fun callAdded(call: Call) {
         if (!calls.addIfAbsent(call)) return
+        busyNotice = null
         runCatching { call.registerCallback(callCallback) }
         if (call.state == Call.STATE_ACTIVE) recordAnchor(call)
         notifyChange()
     }
 
     fun callRemoved(call: Call) {
-        if (!calls.remove(call)) return
+        captureBusyNotice(call)
+        if (!calls.remove(call)) {
+            if (busyNotice != null) notifyChange()
+            return
+        }
         runCatching { call.unregisterCallback(callCallback) }
         activeSince.remove(call)
         answering.remove(call)
+        notifyChange()
+    }
+
+    private fun captureBusyNotice(call: Call) {
+        if (busyNotice != null) return
+        val cause = runCatching { call.details.disconnectCause }.getOrNull() ?: return
+        if (!DisconnectNotice.shouldHold(cause.code, cause.tone)) return
+        val tone = DisconnectNotice.toneToPlay(cause.code, cause.tone)
+        busyNotice = BusyNotice(
+            cell = Cell(stableKey(call), displayLabel(call), Line.BUSY),
+            detail = DisconnectNotice.detail(cause.label?.toString()),
+            tone = tone,
+        )
+        AppLog.i("call", "busy hold code=${cause.code} tone=$tone")
+    }
+
+    fun noticeDetail(): String? = busyNotice?.detail
+
+    fun noticeTone(): Int? = busyNotice?.tone
+
+    fun dismissBusyNotice() {
+        if (busyNotice == null) return
+        busyNotice = null
         notifyChange()
     }
 
@@ -200,7 +244,7 @@ object CallGrid {
 
     // ---- snapshot -------------------------------------------------------------
 
-    fun snapshot(): Grid = reduceGrid(calls.map(::cellOf))
+    fun snapshot(): Grid = reduceGrid(calls.map(::cellOf) + listOfNotNull(busyNotice?.cell))
 
     fun cellOf(call: Call): Cell =
         Cell(key = stableKey(call), label = displayLabel(call), line = lineOf(call.state))
@@ -211,6 +255,7 @@ object CallGrid {
         Call.STATE_RINGING -> Line.WAITING
         Call.STATE_DIALING, Call.STATE_CONNECTING, Call.STATE_SELECT_PHONE_ACCOUNT,
         Call.STATE_PULLING_CALL, Call.STATE_SIMULATED_RINGING,
+        Call.STATE_DISCONNECTING,
         -> Line.OUTGOING
         else -> Line.ENDED
     }
@@ -306,9 +351,15 @@ object CallGrid {
     fun endActive(): Boolean {
         val target = calls.firstOrNull { lineOf(it.state) == Line.ACTIVE }
             ?: calls.firstOrNull { lineOf(it.state) == Line.OUTGOING }
-            ?: return false
-        end(target)
-        return true
+        if (target != null) {
+            end(target)
+            return true
+        }
+        if (busyNotice != null) {
+            dismissBusyNotice()
+            return true
+        }
+        return false
     }
 
     fun dtmfStart(digit: Char): Boolean {
@@ -441,6 +492,12 @@ object CallGrid {
     private const val WITHHELD_LABEL = "Unknown caller"
     private const val SWAP_UNHOLD_FALLBACK_MS = 800L
 }
+
+private data class BusyNotice(
+    val cell: Cell,
+    val detail: String,
+    val tone: Int,
+)
 
 /** Built-in vs accessory destinations. Pure so the sheet/toggle rule is JVM-tested. */
 enum class RouteKind { SPEAKER, EARPIECE, BLUETOOTH, WIRED, STREAMING, OTHER }
