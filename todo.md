@@ -141,3 +141,13 @@ The policy engine is the product. Recents must say why a row was quiet.
 4. V0 on the Pixel as soon as a SIM is in it
 5. V4 dogfood
 6. V5 last
+
+---
+
+## WAVE-1 — xx-apps catalog (operator 2026-09-17)
+
+Package `com.piercingxx.xxdialer`. Default-on. No fabric login (IMAP VVM
+stays its own opt-in). xx-apps may uninstall this APK when the Skippy
+user is disabled.
+
+- [ ] Di-E1 — Package id frozen for the store seed. Theme sync stays.
